@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -12,6 +10,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from kuryr_libnetwork import server
+from kuryr_libnetwork.schemata import endpoint_delete
 
-server.start()
+
+LEAVE_SCHEMA = endpoint_delete.ENDPOINT_DELETE_SCHEMA
+LEAVE_SCHEMA[u'title'] = u'Leave endpoint'
+LEAVE_SCHEMA[u'links'] = [{
+    u'method': u'POST',
+    u'href': u'/NetworkDriver.Leave',
+    u'description': u'Unbinds the endpoint from the container.',
+    u'rel': u'self',
+    u'title': u'Leave'
+}]

@@ -1,5 +1,5 @@
 ===============================
-kuryr
+kuryr-libnetwork
 ===============================
 
 .. image:: https://raw.githubusercontent.com/openstack/kuryr/master/doc/images/kuryr_logo.png
@@ -9,9 +9,14 @@ kuryr
 
 Docker for OpenStack Neutron
 
-Kuryr is a Docker network plugin that uses Neutron to provide networking
-services to Docker containers. It provides containerised images for the
-common Neutron plugins.
+Kuryr-libnetwork is `Kuryr's <https://github.com/openstack/kuryr>`_ Docker
+libnetwork driver that uses Neutron to provide networking services. It provides
+containerised images for the common Neutron plugins.
+
+This repo provides libnetwork specific functionalities such as handler methods
+for libnetwork apis. All the logic/utilities that can be shared among
+different container networking frameworks such as Docker's libnetwork,
+K8s's cni and so on, is maintained in seperate Kuryr repo as a common library.
 
 
 * Free software: Apache license
@@ -69,8 +74,8 @@ Edit keystone section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD:
     admin_password = ADMIN_PASSWORD
 
 
-In the same file uncomment the `bindir` parameter with the path for the Kuryr vif binding
-executables:
+In the same file uncomment the `bindir` parameter with the path for the Kuryr
+vif binding executables:
 
 ::
 

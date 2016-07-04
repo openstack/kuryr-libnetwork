@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -12,6 +10,27 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from kuryr_libnetwork import server
+import sys
 
-server.start()
+from oslo_log import log
+
+from kuryr_libnetwork import app
+from kuryr_libnetwork.common import config
+from kuryr_libnetwork import controllers
+
+
+config.init(sys.argv[1:])
+controllers.neutron_client()
+controllers.check_for_neutron_ext_support()
+controllers.check_for_neutron_ext_tag()
+
+log.setup(config.CONF, 'Kuryr')
+
+
+def start():
+    port = int(config.CONF.kuryr_uri.split(':')[-1])
+    app.run("0.0.0.0", port)
+
+
+if __name__ == '__main__':
+    start()
