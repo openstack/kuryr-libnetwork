@@ -217,6 +217,14 @@ def _get_subnets_by_interface_cidr(neutron_network_id,
     return subnets
 
 
+def _get_neutron_port_from_docker_endpoint(endpoint_id):
+    port_name = utils.get_neutron_port_name(endpoint_id)
+    filtered_ports = app.neutron.list_ports(name=port_name)
+    num_ports = len(filtered_ports.get('ports', []))
+    if num_ports == 1:
+        return filtered_ports['ports'][0]['id']
+
+
 def _process_interface_address(port_dict, subnets_dict_by_id,
                                response_interface):
     assigned_address = port_dict['ip_address']
@@ -392,6 +400,109 @@ def _port_active(neutron_port_id, vif_plug_timeout):
         time.sleep(1)
 
     return port_active
+
+
+def _program_expose_ports(options, port_id):
+    exposed_ports = options.get(const.DOCKER_EXPOSED_PORTS_OPTION)
+    if not exposed_ports:
+        return
+
+    sec_group = {
+        'name': utils.get_sg_expose_name(port_id),
+        'description': 'Docker exposed ports created by Kuryr.'
+    }
+    try:
+        sg = app.neutron.create_security_group({'security_group': sec_group})
+        sg_id = sg['security_group']['id']
+
+    except n_exceptions.NeutronClientException as ex:
+        app.logger.error(_LE("Error happend during creating a "
+                             "Neutron security group: %s"), ex)
+        raise exceptions.ExportPortFailure(
+            ("Could not create required security group {0} "
+             "for setting up exported port ").format(sec_group))
+
+    for exposed in exposed_ports:
+        port = exposed['Port']
+        proto = exposed['Proto']
+        try:
+            proto = const.PROTOCOLS[proto]
+        except KeyError:
+            # This should not happen as Docker client catches such errors
+            app.logger.error(_LE("Unrecognizable protocol %s"), proto)
+            app.neutron.delete_security_group(sg_id)
+            raise exceptions.ExportPortFailure(
+                ("Bad protocol number for exposed port. Deleting "
+                 "the security group {0}.").format(sg_id))
+
+        sec_group_rule = {
+            'security_group_id': sg_id,
+            'direction': 'ingress',
+            'port_range_min': port,
+            'port_range_max': port,
+            'protocol': proto
+        }
+
+        try:
+            app.neutron.create_security_group_rule({'security_group_rule':
+                                                    sec_group_rule})
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Error happend during creating a "
+                                 "Neutron security group "
+                                 "rule: %s"), ex)
+            app.neutron.delete_security_group(sg_id)
+            raise exceptions.ExportPortFailure(
+                ("Could not create required security group rules {0} "
+                 "for setting up exported port ").format(sec_group_rule))
+
+    try:
+        sgs = [sg_id]
+        port = app.neutron.show_port(port_id)
+        port = port.get('port')
+        if port:
+            existing_sgs = port.get('security_groups')
+            if existing_sgs:
+                sgs = sgs + existing_sgs
+
+        app.neutron.update_port(port_id,
+                                {'port': {'security_groups': sgs}})
+    except n_exceptions.NeutronClientException as ex:
+        app.logger.error(_LE("Error happend during updating a "
+                             "Neutron port: %s"), ex)
+        app.neutron.delete_security_group(sg_id)
+        raise exceptions.ExportPortFailure(
+            ("Could not update port with required security groups{0} "
+             "for setting up exported port ").format(sgs))
+
+
+def revoke_expose_ports(port_id):
+    sgs = app.neutron.list_security_groups(
+        name=utils.get_sg_expose_name(port_id))
+    sgs = sgs.get('security_groups')
+    removing_sgs = [sg['id'] for sg in sgs]
+
+    existing_sgs = []
+    port = app.neutron.show_port(port_id)
+    port = port.get('port')
+    if port:
+        existing_sgs = port.get('security_groups')
+        for sg in removing_sgs:
+            if sg in existing_sgs:
+                existing_sgs.remove(sg)
+        try:
+            app.neutron.update_port(port_id,
+                                    {'port':
+                                     {'security_groups': existing_sgs}})
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Error happend during updating a "
+                                 "Neutron port with a new list of "
+                                 "security groups: {0}").format(ex))
+    try:
+        for sg in removing_sgs:
+            app.neutron.delete_security_group(sg)
+    except n_exceptions.NeutronClientException as ex:
+        app.logger.error(_LE("Error happend during updating a "
+                             "Neutron security group: {0}").format(ex))
 
 
 @app.route('/Plugin.Activate', methods=['POST'])
@@ -970,7 +1081,7 @@ def network_driver_leave():
 
 @app.route('/NetworkDriver.ProgramExternalConnectivity', methods=['POST'])
 def network_driver_program_external_connectivity():
-    """Peovides external connectivity fora given container.
+    """Provides external connectivity for a given container.
 
     Performs the necessary programming to allow the external connectivity
     dictated by the specified options
@@ -981,8 +1092,12 @@ def network_driver_program_external_connectivity():
     json_data = flask.request.get_json(force=True)
     app.logger.debug("Received JSON data %s for"
                      " /NetworkDriver.ProgramExternalConnectivity", json_data)
-    # TODO(namix): Add support for exposed ports
-    # TODO(namix): Add support for published ports
+    # TODO(banix): Add support for exposed ports
+    port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
+    if port:
+        _program_expose_ports(json_data['Options'], port)
+
+    # TODO(banix): Add support for published ports
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -999,8 +1114,12 @@ def network_driver_revoke_external_connectivity():
     json_data = flask.request.get_json(force=True)
     app.logger.debug("Received JSON data %s for"
                      " /NetworkDriver.RevokeExternalConnectivity", json_data)
-    # TODO(namix): Add support for removal of exposed ports
-    # TODO(namix): Add support for removal of published ports
+    # TODO(banix): Add support for removal of exposed ports
+    port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
+    if port:
+        revoke_expose_ports(port)
+
+    # TODO(banix): Add support for removal of published ports
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
