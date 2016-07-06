@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to kuryr's documentation!
+Welcome to kuryr-libnetwork's documentation!
 ========================================================
 
 Contents:
@@ -12,26 +12,6 @@ Contents:
    :maxdepth: 2
 
    readme
-   installation
-   usage
-   contributing
-   releasenotes
-
-Design and Developer Docs
-==========================
-
-.. toctree::
-   :maxdepth: 1
-
-   devref/index
-
-Kuryr Specs
-===========
-
-.. toctree::
-   :maxdepth: 2
-
-   specs/index
 
 Indices and tables
 ==================

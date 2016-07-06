@@ -193,3 +193,10 @@ i.e 10.0.0.0/16, but with different pool name, neutron_pool2:
       bar
       397badb51ebca09339cb17aaec05e48ffe60659ced6f3fc41b020b0eb506d786
 
+
+External Resources
+------------------
+
+The latest and most in-depth documentation is available at:
+    <https://github.com/openstack/kuryr/tree/master/doc/source>
+
