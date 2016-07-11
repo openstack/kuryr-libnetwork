@@ -27,7 +27,7 @@ class KuryrScenario(scenario.OpenStackScenario):
 
     def __init__(self, context=None, admin_clients=None, clients=None):
         super(KuryrScenario, self).__init__(context, admin_clients, clients)
-        self.docker_client = docker.Client(base_url='tcp://0.0.0.0:2375')
+        self.docker_client = docker.Client(base_url='tcp://0.0.0.0:23750')
 
     @atomic.action_timer("kuryr.list_networks")
     def _list_networks(self, network_list_args):

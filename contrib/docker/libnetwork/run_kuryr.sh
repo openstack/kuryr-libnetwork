@@ -10,7 +10,7 @@ EOF
 
 /usr/sbin/uwsgi \
     --plugin /usr/lib/uwsgi/python \
-    --http-socket :2377 \
+    --http-socket :23750 \
     -w kuryr.server:app \
     --master \
     --processes "$PROCESSES" \
