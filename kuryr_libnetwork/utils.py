@@ -9,7 +9,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-from __future__ import absolute_import
+
 import hashlib
 import os
 import random
@@ -31,8 +31,10 @@ from kuryr.lib._i18n import _LE
 from kuryr.lib import exceptions
 from kuryr_libnetwork.common import constants as const
 
+
 DOCKER_NETNS_BASE = '/var/run/docker/netns'
 PORT_POSTFIX = 'port'
+SG_POSTFIX = 'exposed_ports'
 
 
 def get_neutron_client_simple(url, auth_url, token):
@@ -131,6 +133,15 @@ def get_neutron_subnetpool_name(subnet_cidr):
     """
     name_prefix = cfg.CONF.subnetpool_name_prefix
     return '-'.join([name_prefix, subnet_cidr])
+
+
+def get_sg_expose_name(port_id):
+    """Returns a Neutron security group name.
+
+    :param port_id: The Neutron port id to create a security group for
+    :returns: the Neutron security group name formatted appropriately
+    """
+    return '-'.join([port_id, SG_POSTFIX])
 
 
 def get_dict_format_fixed_ips_from_kv_format(fixed_ips):

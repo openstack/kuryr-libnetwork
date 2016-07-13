@@ -21,26 +21,33 @@ SCHEMA = {
 # Routes are either given a RouteType of 0 and a value for NextHop;
 # or, a RouteType of 1 and no value for NextHop, meaning a connected route.
 ROUTE_TYPE = {
-     "NEXTHOP": 0,
-     "CONNECTED": 1
+    "NEXTHOP": 0,
+    "CONNECTED": 1
+}
+
+PROTOCOLS = {
+    1: 'icmp',
+    6: 'tcp',
+    17: 'udp'
 }
 
 PORT_STATUS_ACTIVE = 'ACTIVE'
 PORT_STATUS_DOWN = 'DOWN'
 
+CONTAINER_VETH_PREFIX = 't_c'
 DEVICE_OWNER = 'kuryr:container'
 NIC_NAME_LEN = 14
 VETH_PREFIX = 'tap'
-CONTAINER_VETH_PREFIX = 't_c'
 
+NET_NAME_PREFIX = 'kuryr-net-'
 NEUTRON_ID_LH_OPTION = 'kuryr.net.uuid.lh'
 NEUTRON_ID_UH_OPTION = 'kuryr.net.uuid.uh'
-NET_NAME_PREFIX = 'kuryr-net-'
 
-REQUEST_ADDRESS_TYPE = 'RequestAddressType'
+DOCKER_EXPOSED_PORTS_OPTION = 'com.docker.network.endpoint.exposedports'
+KURYR_EXISTING_NEUTRON_NET = 'kuryr.net.existing'
 NETWORK_GATEWAY_OPTIONS = 'com.docker.network.gateway'
 NETWORK_GENERIC_OPTIONS = 'com.docker.network.generic'
-NEUTRON_UUID_OPTION = 'neutron.net.uuid'
 NEUTRON_NAME_OPTION = 'neutron.net.name'
-KURYR_EXISTING_NEUTRON_NET = 'kuryr.net.existing'
 NEUTRON_POOL_NAME_OPTION = 'neutron.pool.name'
+NEUTRON_UUID_OPTION = 'neutron.net.uuid'
+REQUEST_ADDRESS_TYPE = 'RequestAddressType'
