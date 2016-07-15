@@ -1,5 +1,5 @@
 [run]
-omit = kuryr/tests/*
+omit = kuryr_libnetwork/tests/*
 
 [report]
 ignore_errors = True
