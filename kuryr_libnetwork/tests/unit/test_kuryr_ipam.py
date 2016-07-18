@@ -238,6 +238,99 @@ class TestKuryrIpam(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual('10.0.0.5/16', decoded_json['Address'])
 
+    @ddt.data((False), (True))
+    def test_ipam_driver_request_specific_address(self, existing_port):
+        requested_address = '10.0.0.5'
+        # faking list_subnetpools
+        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
+        fake_kuryr_subnetpool_id = str(uuid.uuid4())
+        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_name)
+        app.neutron.list_subnetpools(id=fake_kuryr_subnetpool_id).AndReturn(
+            kuryr_subnetpools)
+
+        # faking list_subnets
+        docker_endpoint_id = utils.get_hash()
+        neutron_network_id = str(uuid.uuid4())
+        subnet_v4_id = str(uuid.uuid4())
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            neutron_network_id, docker_endpoint_id, subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr=FAKE_IP4_CIDR).AndReturn(
+            fake_subnet_response)
+        self.mox.StubOutWithMock(app.neutron, 'list_ports')
+
+        # faking update_port or create_port
+        fake_neutron_port_id = str(uuid.uuid4())
+        fake_port = base.TestKuryrBase._get_fake_port(
+            docker_endpoint_id, neutron_network_id,
+            fake_neutron_port_id, const.PORT_STATUS_ACTIVE,
+            subnet_v4_id,
+            neutron_subnet_v4_address=requested_address)
+
+        fixed_ip_existing = [('subnet_id=%s' % subnet_v4_id)]
+        if existing_port:
+            fake_existing_port = fake_port['port']
+            fake_existing_port['binding:host_id'] = ''
+            fake_existing_port['binding:vif_type'] = 'unbound'
+            fake_ports_response = {'ports': [fake_existing_port]}
+        else:
+            fake_ports_response = {'ports': []}
+
+        fixed_ip_existing.append('ip_address=%s' % requested_address)
+        app.neutron.list_ports(fixed_ips=fixed_ip_existing).AndReturn(
+            fake_ports_response)
+
+        if existing_port:
+            update_port = {
+                'admin_state_up': True,
+                'binding:host_id': utils.get_hostname(),
+            }
+            self.mox.StubOutWithMock(app.neutron, 'update_port')
+            app.neutron.update_port(fake_neutron_port_id,
+                                    {'port': update_port}).AndReturn(
+                                        fake_port)
+        else:
+            port_request = {
+                'name': 'kuryr-unbound-port',
+                'admin_state_up': True,
+                'network_id': neutron_network_id,
+                'binding:host_id': utils.get_hostname(),
+            }
+            fixed_ips = port_request['fixed_ips'] = []
+            fixed_ip = {'subnet_id': subnet_v4_id,
+                        'ip_address': requested_address}
+            fixed_ips.append(fixed_ip)
+            self.mox.StubOutWithMock(app.neutron, 'create_port')
+            app.neutron.create_port({'port': port_request}).AndReturn(
+                fake_port)
+
+        # Apply mocks
+        self.mox.ReplayAll()
+
+        # Testing container ip allocation
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': requested_address,
+            'Options': {}
+        }
+        response = self.app.post('/IpamDriver.RequestAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(requested_address + '/16', decoded_json['Address'])
+
     def test_ipam_driver_request_address_overlapping_cidr(self):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')

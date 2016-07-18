@@ -1344,10 +1344,37 @@ def ipam_request_address():
             }
             fixed_ips = port['fixed_ips'] = []
             fixed_ip = {'subnet_id': subnet['id']}
+            num_ports = 0
             if req_address:
                 fixed_ip['ip_address'] = req_address
+                fixed_ip_existing = [('subnet_id=%s' % subnet['id'])]
+                fixed_ip_existing.append('ip_address=%s' % str(req_address))
+                filtered_ports = app.neutron.list_ports(
+                    fixed_ips=fixed_ip_existing)
+                num_ports = len(filtered_ports.get('ports', []))
             fixed_ips.append(fixed_ip)
-            created_port_resp = app.neutron.create_port({'port': port})
+
+            if num_ports:
+                existing_port = filtered_ports['ports'][0]
+                created_port_resp = {'port': existing_port}
+                host = existing_port.get('binding:host_id')
+                vif_type = existing_port.get('binding:vif_type')
+                if not host and vif_type == 'unbound':
+                    updated_port = {
+                        'admin_state_up': True,
+                        'binding:host_id': utils.get_hostname(),
+                    }
+                    created_port_resp = app.neutron.update_port(
+                        existing_port['id'],
+                        {'port': updated_port})
+                else:
+                    raise exceptions.AddressInUseException(
+                        "Requested ip address {0} already belongs to a bound "
+                        "Neutron port: {1}".format(fixed_ip,
+                                                   existing_port['id']))
+            else:
+                created_port_resp = app.neutron.create_port({'port': port})
+
             created_port = created_port_resp['port']
             app.logger.debug("created port %s", created_port)
             allocated_address = created_port['fixed_ips'][0]['ip_address']
