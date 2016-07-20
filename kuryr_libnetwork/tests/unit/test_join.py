@@ -42,7 +42,7 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
 
         return response
 
-    def _port_bind_with_exeption(self, docker_endpiont_id, neutron_port,
+    def _port_bind_with_exeption(self, docker_endpoint_id, neutron_port,
                                  neutron_subnets, ex):
         fake_ifname = 'fake-veth'
         fake_binding_response = (
@@ -53,10 +53,10 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         self.mox.StubOutWithMock(binding, 'port_bind')
         if ex:
             binding.port_bind(
-                docker_endpiont_id, neutron_port, neutron_subnets).AndRaise(ex)
+                docker_endpoint_id, neutron_port, neutron_subnets).AndRaise(ex)
         else:
             binding.port_bind(
-                docker_endpiont_id, neutron_port, neutron_subnets).AndReturn(
+                docker_endpoint_id, neutron_port, neutron_subnets).AndReturn(
                 fake_binding_response)
         self.mox.ReplayAll()
 
