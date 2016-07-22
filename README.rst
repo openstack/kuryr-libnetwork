@@ -16,7 +16,7 @@ containerised images for the common Neutron plugins.
 This repo provides libnetwork specific functionalities such as handler methods
 for libnetwork apis. All the logic/utilities that can be shared among
 different container networking frameworks such as Docker's libnetwork,
-K8s's cni and so on, is maintained in seperate Kuryr repo as a common library.
+K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 
 
 * Free software: Apache license
@@ -169,4 +169,3 @@ External Resources
 
 The latest and most in-depth documentation is available at:
     <https://github.com/openstack/kuryr/tree/master/doc/source>
-
