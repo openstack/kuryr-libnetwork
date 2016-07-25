@@ -41,7 +41,7 @@ function check_docker {
 
 
 # main loop
-if is_service_enabled kuryr; then
+if is_service_enabled kuryr-libnetwork; then
     if [[ "$1" == "stack" && "$2" == "install" ]]; then
         install_etcd_data_store
         setup_develop $KURYR_HOME
