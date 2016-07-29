@@ -269,7 +269,7 @@ def _update_port(port, endpoint_id):
                     'device_owner': const.DEVICE_OWNER,
                     'device_id': endpoint_id}})
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during creating a "
+        app.logger.error(_LE("Error happened during updating a "
                              "Neutron port: %s"), ex)
         raise
     return response_port['port']
@@ -501,7 +501,7 @@ def revoke_expose_ports(port_id):
         for sg in removing_sgs:
             app.neutron.delete_security_group(sg)
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happend during updating a "
+        app.logger.error(_LE("Error happend during deleting a "
                              "Neutron security group: {0}").format(ex))
 
 
@@ -793,7 +793,7 @@ def network_driver_delete_network():
                     app.neutron.delete_subnet(subnet['id'])
             except n_exceptions.Conflict as ex:
                 app.logger.error(_LE(
-                    "Subnet, %s, is in use. Network cant be deleted."),
+                    "Subnet, %s, is in use. Network can't be deleted."),
                         subnet['id'])
                 raise
             except n_exceptions.NeutronClientException as ex:
