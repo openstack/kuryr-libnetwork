@@ -21,6 +21,7 @@ from oslo_log import log
 import pbr.version
 
 from kuryr.lib._i18n import _
+from kuryr.lib import config as lib_config
 
 
 core_opts = [
@@ -28,9 +29,6 @@ core_opts = [
                default=os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                     '../../')),
                help=_('Directory where Kuryr python module is installed.')),
-    cfg.StrOpt('bindir',
-               default='$pybasedir/usr/libexec/kuryr',
-               help=_('Directory for Kuryr vif binding executables.')),
     cfg.StrOpt('kuryr_uri',
                default='http://127.0.0.1:23750',
                help=_('Kuryr URL for accessing Kuryr through json rpc.')),
@@ -38,9 +36,7 @@ core_opts = [
                default=os.environ.get('CAPABILITY_SCOPE', 'local'),
                choices=['local', 'global'],
                help=_('Kuryr plugin scope reported to libnetwork.')),
-    cfg.StrOpt('subnetpool_name_prefix',
-               default='kuryrPool',
-               help=_('Neutron subnetpool name will be prefixed by this.')),
+
     cfg.StrOpt('local_default_address_space',
                default='no_address_space',
                help=_('There is no address-space by default in neutron')),
@@ -48,64 +44,14 @@ core_opts = [
                default='no_address_space',
                help=_('There is no address-space by default in neutron')),
 ]
-neutron_opts = [
-    cfg.StrOpt('neutron_uri',
-               default=os.environ.get('OS_URL', 'http://127.0.0.1:9696'),
-               help=_('Neutron URL for accessing the network service.')),
-    cfg.StrOpt('enable_dhcp',
-               default='True',
-               help=_('Enable or Disable dhcp for neutron subnets.')),
-    cfg.StrOpt('default_subnetpool_v4',
-               default='kuryr',
-               help=_('Name of default subnetpool version 4')),
-    cfg.StrOpt('default_subnetpool_v6',
-               default='kuryr6',
-               help=_('Name of default subnetpool version 6')),
-    cfg.BoolOpt('vif_plugging_is_fatal',
-                default=False,
-                help=_("Whether a plugging operation is failed if the port "
-                       "to plug does not become active")),
-    cfg.IntOpt('vif_plugging_timeout',
-               default=0,
-               help=_("Seconds to wait for port to become active")),
-]
-keystone_opts = [
-    cfg.StrOpt('auth_uri',
-               default=os.environ.get('IDENTITY_URL',
-                                      'http://127.0.0.1:35357/v2.0'),
-               help=_('The URL for accessing the identity service.')),
-    cfg.StrOpt('admin_user',
-               default=os.environ.get('SERVICE_USER'),
-               help=_('The username to auth with the identity service.')),
-    cfg.StrOpt('admin_tenant_name',
-               default=os.environ.get('SERVICE_TENANT_NAME'),
-               help=_('The tenant name to auth with the identity service.')),
-    cfg.StrOpt('admin_password',
-               default=os.environ.get('SERVICE_PASSWORD'),
-               help=_('The password to auth with the identity service.')),
-    cfg.StrOpt('admin_token',
-               default=os.environ.get('SERVICE_TOKEN'),
-               help=_('The admin token.')),
-    cfg.StrOpt('auth_ca_cert',
-               default=os.environ.get('SERVICE_CA_CERT'),
-               help=_('The CA certification file.')),
-    cfg.BoolOpt('auth_insecure',
-                default=False,
-                help=_("Turn off verification of the certificate for ssl")),
-]
-binding_opts = [
-    cfg.StrOpt('veth_dst_prefix',
-               default='eth',
-               help=('The name prefix of the veth endpoint put inside the '
-                     'container.'))
-]
-
 
 CONF = cfg.CONF
 CONF.register_opts(core_opts)
-CONF.register_opts(neutron_opts, group='neutron_client')
-CONF.register_opts(keystone_opts, group='keystone_client')
-CONF.register_opts(binding_opts, 'binding')
+
+CONF.register_opts(lib_config.core_opts)
+CONF.register_opts(lib_config.neutron_opts, group='neutron_client')
+CONF.register_opts(lib_config.keystone_opts, group='keystone_client')
+CONF.register_opts(lib_config.binding_opts, 'binding')
 
 # Setting oslo.log options for logging.
 log.register_options(CONF)

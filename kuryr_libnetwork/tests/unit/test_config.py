@@ -31,7 +31,7 @@ class ConfigurationTest(base.TestKuryrBase):
                                                 '../../../'))
         self.assertEqual(basepath,
                          config.CONF.pybasedir)
-        self.assertEqual(basepath + '/usr/libexec/kuryr',
+        self.assertEqual('/usr/libexec/kuryr',
                          config.CONF.bindir)
         self.assertEqual('http://127.0.0.1:23750',
                          config.CONF.kuryr_uri)
