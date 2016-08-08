@@ -30,12 +30,22 @@ Features
 * TODO
 
 
+Getting Code
+------------
+
+::
+
+    $ git clone https://git.openstack.org/openstack/kuryr-libnetwork
+    $ cd kuryr-libnetwork
+
+
 Prerequisites
 -------------
 
 ::
 
     $ sudo pip install -r requirements.txt
+
 
 Installing Kuryr's libnetwork driver
 ------------------------------------
