@@ -1318,8 +1318,8 @@ def ipam_request_address():
         else:
             subnet = subnets_by_cidr[0]
 
-    if is_gateway:
-        if any(subnet):
+    if any(subnet):
+        if is_gateway:
             # check if request gateway ip same with existed gateway ip
             existed_gateway_ip = subnet.get('gateway_ip', '')
             if req_address == existed_gateway_ip:
@@ -1331,59 +1331,65 @@ def ipam_request_address():
                     "gateway {1} in existed "
                     "network.".format(req_address, existed_gateway_ip))
         else:
-            allocated_address = '/'.join([req_address, pool_prefix_len])
-    else:
-        # allocating address for container port
-        neutron_network_id = subnet['network_id']
-        try:
-            port = {
-                'name': 'kuryr-unbound-port',
-                'admin_state_up': True,
-                'network_id': neutron_network_id,
-                'binding:host_id': utils.get_hostname(),
-            }
-            fixed_ips = port['fixed_ips'] = []
-            fixed_ip = {'subnet_id': subnet['id']}
-            num_ports = 0
-            if req_address:
-                fixed_ip['ip_address'] = req_address
-                fixed_ip_existing = [('subnet_id=%s' % subnet['id'])]
-                fixed_ip_existing.append('ip_address=%s' % str(req_address))
-                filtered_ports = app.neutron.list_ports(
-                    fixed_ips=fixed_ip_existing)
-                num_ports = len(filtered_ports.get('ports', []))
-            fixed_ips.append(fixed_ip)
+            # allocating address for container port
+            neutron_network_id = subnet['network_id']
+            try:
+                port = {
+                    'name': 'kuryr-unbound-port',
+                    'admin_state_up': True,
+                    'network_id': neutron_network_id,
+                    'binding:host_id': utils.get_hostname(),
+                }
+                fixed_ips = port['fixed_ips'] = []
+                fixed_ip = {'subnet_id': subnet['id']}
+                num_ports = 0
+                if req_address:
+                    fixed_ip['ip_address'] = req_address
+                    fixed_ip_existing = [('subnet_id=%s' % subnet['id'])]
+                    fixed_ip_existing.append('ip_address='
+                                             '%s' % str(req_address))
+                    filtered_ports = app.neutron.list_ports(
+                        fixed_ips=fixed_ip_existing)
+                    num_ports = len(filtered_ports.get('ports', []))
+                fixed_ips.append(fixed_ip)
 
-            if num_ports:
-                existing_port = filtered_ports['ports'][0]
-                created_port_resp = {'port': existing_port}
-                host = existing_port.get('binding:host_id')
-                vif_type = existing_port.get('binding:vif_type')
-                if not host and vif_type == 'unbound':
-                    updated_port = {
-                        'admin_state_up': True,
-                        'binding:host_id': utils.get_hostname(),
-                    }
-                    created_port_resp = app.neutron.update_port(
-                        existing_port['id'],
-                        {'port': updated_port})
+                if num_ports:
+                    existing_port = filtered_ports['ports'][0]
+                    created_port_resp = {'port': existing_port}
+                    host = existing_port.get('binding:host_id')
+                    vif_type = existing_port.get('binding:vif_type')
+                    if not host and vif_type == 'unbound':
+                        updated_port = {
+                            'admin_state_up': True,
+                            'binding:host_id': utils.get_hostname(),
+                        }
+                        created_port_resp = app.neutron.update_port(
+                            existing_port['id'],
+                            {'port': updated_port})
+                    else:
+                        raise exceptions.AddressInUseException(
+                            "Requested ip address {0} already belongs to a "
+                            "bound Neutron port: {1}".format(fixed_ip,
+                            existing_port['id']))
                 else:
-                    raise exceptions.AddressInUseException(
-                        "Requested ip address {0} already belongs to a bound "
-                        "Neutron port: {1}".format(fixed_ip,
-                                                   existing_port['id']))
-            else:
-                created_port_resp = app.neutron.create_port({'port': port})
+                    created_port_resp = app.neutron.create_port({'port': port})
 
-            created_port = created_port_resp['port']
-            app.logger.debug("created port %s", created_port)
-            allocated_address = created_port['fixed_ips'][0]['ip_address']
-            allocated_address = '/'.join(
-                [allocated_address, str(cidr.prefixlen)])
-        except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during ip allocation on "
-                                 "Neutron side: %s"), ex)
-            raise
+                created_port = created_port_resp['port']
+                app.logger.debug("created port %s", created_port)
+                allocated_address = created_port['fixed_ips'][0]['ip_address']
+                allocated_address = '/'.join(
+                    [allocated_address, str(cidr.prefixlen)])
+            except n_exceptions.NeutronClientException as ex:
+                app.logger.error(_LE("Error happened during ip allocation on "
+                                     "Neutron side: %s"), ex)
+                raise
+    else:
+        # Auxiliary address or gw_address is received at network creation time.
+        # This address cannot be reserved with neutron at this time as subnet
+        # is not created yet. In /NetworkDriver.CreateNetwork this address will
+        # be reserved with neutron.
+        if req_address:
+            allocated_address = '/'.join([req_address, pool_prefix_len])
 
     return flask.jsonify({'Address': allocated_address})
 
