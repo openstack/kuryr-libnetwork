@@ -517,6 +517,7 @@ def plugin_activate():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#handshake  # noqa
     """
+    app.logger.debug("Received /Plugin.Activate")
     return flask.jsonify(const.SCHEMA['PLUGIN_ACTIVATE'])
 
 
@@ -533,6 +534,7 @@ def plugin_scope():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#set-capability  # noqa
     """
+    app.logger.debug("Received /NetworkDriver.GetCapabilities")
     capabilities = {'Scope': cfg.CONF.capability_scope}
     return flask.jsonify(capabilities)
 
@@ -549,6 +551,7 @@ def network_driver_discover_new():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#discovernew-notification  # noqa
     """
+    app.logger.debug("Received /NetworkDriver.DiscoverNew")
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -564,6 +567,7 @@ def network_driver_discover_delete():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#discoverdelete-notification  # noqa
     """
+    app.logger.debug("Received /NetworkDriver.DiscoverDelete")
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -880,6 +884,7 @@ def network_driver_create_endpoint():
 
 @app.route('/NetworkDriver.EndpointOperInfo', methods=['POST'])
 def network_driver_endpoint_operational_info():
+    app.logger.debug("Received /NetworkDriver.EndpointOperInfo")
     return flask.jsonify(const.SCHEMA['ENDPOINT_OPER_INFO'])
 
 
