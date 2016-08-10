@@ -12,6 +12,7 @@
 
 import mock
 import os
+from six.moves.urllib import parse
 import sys
 
 from neutronclient.common import exceptions as n_exceptions
@@ -51,7 +52,8 @@ class ConfigurationTest(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.app.run')
     def test_start(self, mock_run, mock_sys_argv):
         start()
-        mock_run.assert_called_once_with('127.0.0.1', 23750)
+        kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
+        mock_run.assert_called_once_with(kuryr_uri.hostname, 23750)
 
     def test_check_for_neutron_ext_support_with_ex(self):
         with mock.patch.object(controllers.app.neutron,
