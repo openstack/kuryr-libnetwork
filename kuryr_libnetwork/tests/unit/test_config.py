@@ -12,12 +12,14 @@
 
 import mock
 import os
+import sys
 
 from neutronclient.common import exceptions as n_exceptions
 
 from kuryr.lib import exceptions
 from kuryr_libnetwork.common import config
 from kuryr_libnetwork import controllers
+from kuryr_libnetwork.server import start
 from kuryr_libnetwork.tests.unit import base
 
 
@@ -44,6 +46,12 @@ class ConfigurationTest(base.TestKuryrBase):
 
         self.assertEqual('http://127.0.0.1:35357/v2.0',
                          config.CONF.keystone_client.auth_uri)
+
+    @mock.patch.object(sys, 'argv', return_value='[]')
+    @mock.patch('kuryr_libnetwork.app.run')
+    def test_start(self, mock_run, mock_sys_argv):
+        start()
+        mock_run.assert_called_once_with('127.0.0.1', 23750)
 
     def test_check_for_neutron_ext_support_with_ex(self):
         with mock.patch.object(controllers.app.neutron,

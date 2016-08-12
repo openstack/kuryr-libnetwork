@@ -13,23 +13,22 @@
 import sys
 
 from oslo_log import log
+from six.moves.urllib import parse
 
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import config
 from kuryr_libnetwork import controllers
 
 
-config.init(sys.argv[1:])
-controllers.neutron_client()
-controllers.check_for_neutron_ext_support()
-controllers.check_for_neutron_ext_tag()
-
-log.setup(config.CONF, 'Kuryr')
-
-
 def start():
-    port = int(config.CONF.kuryr_uri.split(':')[-1])
-    app.run("0.0.0.0", port)
+    config.init(sys.argv[1:])
+    controllers.neutron_client()
+    controllers.check_for_neutron_ext_support()
+    controllers.check_for_neutron_ext_tag()
+
+    log.setup(config.CONF, 'Kuryr')
+    kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
+    app.run(kuryr_uri.hostname, kuryr_uri.port)
 
 
 if __name__ == '__main__':
