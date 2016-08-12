@@ -393,7 +393,7 @@ def _port_active(neutron_port_id, vif_plug_timeout):
         else:
             if port['port']['status'] == const.PORT_STATUS_ACTIVE:
                 port_active = True
-        if port_active or (tries >= vif_plug_timeout):
+        if port_active or (vif_plug_timeout > 0 and tries >= vif_plug_timeout):
             break
         LOG.debug('Waiting for port %s to become ACTIVE', neutron_port_id)
         tries += 1
