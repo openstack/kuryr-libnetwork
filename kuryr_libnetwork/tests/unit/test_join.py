@@ -43,7 +43,7 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         return response
 
     def _port_bind_with_exeption(self, docker_endpoint_id, neutron_port,
-                                 neutron_subnets, ex):
+                                 neutron_subnets, neutron_network, ex):
         fake_ifname = 'fake-veth'
         fake_binding_response = (
             fake_ifname,
@@ -53,10 +53,12 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         self.mox.StubOutWithMock(binding, 'port_bind')
         if ex:
             binding.port_bind(
-                docker_endpoint_id, neutron_port, neutron_subnets).AndRaise(ex)
+                docker_endpoint_id, neutron_port, neutron_subnets,
+                neutron_network).AndRaise(ex)
         else:
             binding.port_bind(
-                docker_endpoint_id, neutron_port, neutron_subnets).AndReturn(
+                docker_endpoint_id, neutron_port, neutron_subnets,
+                neutron_network).AndReturn(
                 fake_binding_response)
         self.mox.ReplayAll()
 
@@ -70,7 +72,8 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         fake_container_id = utils.get_hash()
 
         fake_neutron_network_id = str(uuid.uuid4())
-        self._mock_out_network(fake_neutron_network_id, fake_docker_network_id)
+        fake_neutron_network = self._mock_out_network(
+            fake_neutron_network_id, fake_docker_network_id)
         fake_neutron_port_id = str(uuid.uuid4())
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
@@ -97,7 +100,8 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         fake_exception = GivenException(fake_message)
         self._port_bind_with_exeption(
             fake_docker_endpoint_id, fake_neutron_port,
-            fake_neutron_subnets, fake_exception)
+            fake_neutron_subnets, fake_neutron_network['networks'][0],
+            fake_exception)
         self.mox.ReplayAll()
 
         response = self._invoke_join_request(

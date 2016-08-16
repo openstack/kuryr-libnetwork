@@ -769,7 +769,8 @@ class TestKuryr(base.TestKuryrBase):
         fake_container_id = utils.get_hash()
 
         fake_neutron_net_id = str(uuid.uuid4())
-        self._mock_out_network(fake_neutron_net_id, fake_docker_net_id)
+        fake_neutron_network = self._mock_out_network(
+            fake_neutron_net_id, fake_docker_net_id)
         fake_neutron_port_id = str(uuid.uuid4())
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
@@ -792,7 +793,8 @@ class TestKuryr(base.TestKuryrBase):
         fake_neutron_port = fake_neutron_ports_response['ports'][0]
         fake_neutron_subnets = fake_neutron_subnets_response['subnets']
         _, fake_peer_name, _ = self._mock_out_binding(
-            fake_docker_endpoint_id, fake_neutron_port, fake_neutron_subnets)
+            fake_docker_endpoint_id, fake_neutron_port,
+            fake_neutron_subnets, fake_neutron_network['networks'][0])
 
         if vif_plug_is_fatal:
             self.mox.StubOutWithMock(app.neutron, 'show_port')

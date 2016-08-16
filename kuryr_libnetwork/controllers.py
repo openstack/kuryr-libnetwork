@@ -982,7 +982,7 @@ def network_driver_join():
 
         try:
             ifname, peer_name, (stdout, stderr) = binding.port_bind(
-                endpoint_id, neutron_port, all_subnets)
+                endpoint_id, neutron_port, all_subnets, filtered_networks[0])
             app.logger.debug(stdout)
             if stderr:
                 app.logger.error(stderr)

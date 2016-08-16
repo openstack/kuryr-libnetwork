@@ -43,12 +43,15 @@ class TestKuryrBase(TestCase):
         if hasattr(app, 'DEFAULT_POOL_IDS'):
             del app.DEFAULT_POOL_IDS
 
-    def _mock_out_binding(self, endpoint_id, neutron_port, neutron_subnets):
+    def _mock_out_binding(self, endpoint_id, neutron_port,
+                          neutron_subnets, neutron_network=None):
         self.mox.StubOutWithMock(binding, 'port_bind')
         fake_binding_response = (
             'fake-veth', 'fake-veth_c', ('fake stdout', ''))
         binding.port_bind(endpoint_id, neutron_port,
-                          neutron_subnets).AndReturn(fake_binding_response)
+                          neutron_subnets,
+                          neutron_network).AndReturn(
+                          fake_binding_response)
         self.mox.ReplayAll()
         return fake_binding_response
 
@@ -86,7 +89,7 @@ class TestKuryrBase(TestCase):
         app.neutron.list_networks(tags=t).AndReturn(fake_list_response)
 
         self.mox.ReplayAll()
-        return neutron_network_id
+        return fake_list_response
 
     @staticmethod
     def _get_fake_v4_subnetpools(subnetpool_id, prefixes=["192.168.1.0/24"],
