@@ -20,9 +20,9 @@ K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 
 
 * Free software: Apache license
-* Documentation: http://docs.openstack.org/developer/kuryr
-* Source: http://git.openstack.org/cgit/openstack/kuryr
-* Bugs: http://bugs.launchpad.net/kuryr
+* Documentation: http://docs.openstack.org/developer/kuryr-libnetwork
+* Source: http://git.openstack.org/cgit/openstack/kuryr-libnetwork
+* Bugs: http://bugs.launchpad.net/kuryr-libnetwork
 
 Features
 --------
