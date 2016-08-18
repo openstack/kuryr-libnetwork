@@ -9,8 +9,13 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import pbr.version
 
 from kuryr_libnetwork import utils
+
+
+__version__ = pbr.version.VersionInfo(
+    'kuryr-libnetwork').version_string()
 
 
 app = utils.make_json_app(__name__)

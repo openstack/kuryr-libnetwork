@@ -18,9 +18,9 @@ import os
 
 from oslo_config import cfg
 from oslo_log import log
+import pbr.version
 
 from kuryr.lib._i18n import _
-from kuryr.lib import version
 
 
 core_opts = [
@@ -112,5 +112,8 @@ log.register_options(CONF)
 
 
 def init(args, **kwargs):
-    cfg.CONF(args=args, project='kuryr',
-             version=version.version_info.release_string(), **kwargs)
+    cfg.CONF(
+        args=args,
+        project='kuryr',
+        version=pbr.version.VersionInfo('kuryr-libnetwork').version_string(),
+        **kwargs)
