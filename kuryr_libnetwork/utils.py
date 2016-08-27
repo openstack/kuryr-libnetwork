@@ -24,7 +24,7 @@ from werkzeug import exceptions as w_exceptions
 from kuryr.lib._i18n import _LE
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
-from kuryr_libnetwork.common import constants as const
+from kuryr_libnetwork import constants as const
 
 
 SG_POSTFIX = 'exposed_ports'

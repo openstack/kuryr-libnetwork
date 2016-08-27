@@ -21,7 +21,7 @@ from kuryr.lib import binding
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
-from kuryr_libnetwork.common import constants as const
+from kuryr_libnetwork import constants as const
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
 

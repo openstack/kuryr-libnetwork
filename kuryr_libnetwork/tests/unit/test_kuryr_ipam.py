@@ -15,8 +15,8 @@ from oslo_serialization import jsonutils
 import uuid
 
 from kuryr.lib import utils as lib_utils
-from kuryr_libnetwork.common import config
-from kuryr_libnetwork.common import constants as const
+from kuryr_libnetwork import config
+from kuryr_libnetwork import constants as const
 from kuryr_libnetwork.controllers import app
 from kuryr_libnetwork.tests.unit import base
 

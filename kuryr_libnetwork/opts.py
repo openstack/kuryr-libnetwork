@@ -20,7 +20,7 @@ import itertools
 from oslo_log import _options
 
 from kuryr.lib import config as lib_config
-from kuryr_libnetwork.common import config
+from kuryr_libnetwork import config
 
 
 _core_opts_with_logging = config.core_opts

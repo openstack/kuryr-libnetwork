@@ -14,7 +14,7 @@ from neutronclient.tests.unit import test_cli20
 
 from kuryr.lib import binding
 from kuryr_libnetwork import app
-from kuryr_libnetwork.common import constants as const
+from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
 from kuryr_libnetwork import utils
 

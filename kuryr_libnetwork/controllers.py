@@ -29,8 +29,8 @@ from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr.lib._i18n import _LE, _LI, _LW
 from kuryr_libnetwork import app
-from kuryr_libnetwork.common import config
-from kuryr_libnetwork.common import constants as const
+from kuryr_libnetwork import config
+from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import schemata
 from kuryr_libnetwork import utils
 
@@ -86,8 +86,8 @@ def get_neutron_client():
         return neutron_client
     except Exception:
             pass
-    cfg.CONF.import_group('neutron_client', 'kuryr_libnetwork.common.config')
-    cfg.CONF.import_group('keystone_client', 'kuryr_libnetwork.common.config')
+    cfg.CONF.import_group('neutron_client', 'kuryr_libnetwork.config')
+    cfg.CONF.import_group('keystone_client', 'kuryr_libnetwork.config')
 
     keystone_conf = cfg.CONF.keystone_client
     username = keystone_conf.admin_user

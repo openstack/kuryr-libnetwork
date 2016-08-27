@@ -27,7 +27,7 @@ from kuryr.lib import config as lib_config
 core_opts = [
     cfg.StrOpt('pybasedir',
                default=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                    '../../')),
+                                                    '../')),
                help=_('Directory where Kuryr python module is installed.')),
     cfg.StrOpt('kuryr_uri',
                default='http://127.0.0.1:23750',

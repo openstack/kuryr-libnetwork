@@ -16,7 +16,7 @@ from oslo_log import log
 from six.moves.urllib import parse
 
 from kuryr_libnetwork import app
-from kuryr_libnetwork.common import config
+from kuryr_libnetwork import config
 from kuryr_libnetwork import controllers
 
 
