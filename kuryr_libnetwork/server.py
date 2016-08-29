@@ -22,11 +22,11 @@ from kuryr_libnetwork import controllers
 
 def start():
     config.init(sys.argv[1:])
+    log.setup(config.CONF, 'kuryr')
     controllers.neutron_client()
     controllers.check_for_neutron_ext_support()
     controllers.check_for_neutron_ext_tag()
 
-    log.setup(config.CONF, 'Kuryr')
     kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
     app.run(kuryr_uri.hostname, kuryr_uri.port)
 
