@@ -129,14 +129,14 @@ if is_service_enabled kuryr-libnetwork; then
         #               If Kuryr start up in "post-config" phase, there is no way to make sure
         #               Kuryr can start before neutron-server, so Kuryr start in "extra" phase.
         #               Bug: https://bugs.launchpad.net/kuryr/+bug/1587522
-        run_process kuryr "sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr SERVICE_USER=admin SERVICE_PASSWORD=$SERVICE_PASSWORD SERVICE_TENANT_NAME=admin SERVICE_TOKEN=$SERVICE_TOKEN IDENTITY_URL=http://127.0.0.1:5000/v2.0 python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file /etc/kuryr/kuryr.conf"
+        run_process kuryr-libnetwork "sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr SERVICE_USER=admin SERVICE_PASSWORD=$SERVICE_PASSWORD SERVICE_TENANT_NAME=admin SERVICE_TOKEN=$SERVICE_TOKEN IDENTITY_URL=http://127.0.0.1:5000/v2.0 python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file /etc/kuryr/kuryr.conf"
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
 
     fi
 
     if [[ "$1" == "unstack" ]]; then
-        stop_process kuryr
+        stop_process kuryr-libnetwork
         stop_process etcd-server
         stop_process docker-engine
     fi
