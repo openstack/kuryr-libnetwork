@@ -19,6 +19,7 @@ import itertools
 
 from oslo_log import _options
 
+from kuryr.lib import config as lib_config
 from kuryr_libnetwork.common import config
 
 
@@ -29,9 +30,9 @@ _core_opts_with_logging += _options.generic_log_opts
 
 _kuryr_libnetwork_opts = [
     (None, list(itertools.chain(_core_opts_with_logging))),
-    ('neutron_client', config.neutron_opts),
-    ('keystone_client', config.keystone_opts),
-    ('binding', config.binding_opts),
+    ('neutron_client', lib_config.neutron_opts),
+    ('keystone_client', lib_config.keystone_opts),
+    ('binding', lib_config.binding_opts),
 ]
 
 
