@@ -138,6 +138,7 @@ if is_service_enabled kuryr-libnetwork; then
     if [[ "$1" == "unstack" ]]; then
         stop_process kuryr-libnetwork
         stop_process etcd-server
+        rm -rf $DEST/etcd/
         stop_process docker-engine
     fi
 fi
