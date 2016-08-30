@@ -15,6 +15,7 @@ import uuid
 import ddt
 from oslo_serialization import jsonutils
 
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import constants as const
 from kuryr_libnetwork.tests.unit import base
@@ -25,7 +26,7 @@ from kuryr_libnetwork import utils
 class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
     def _ids(self):
-        docker_network_id = utils.get_hash()
+        docker_network_id = lib_utils.get_hash()
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         fake_response = {
             'networks':

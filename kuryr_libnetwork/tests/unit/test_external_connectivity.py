@@ -15,6 +15,7 @@ import uuid
 import ddt
 from oslo_serialization import jsonutils
 
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import constants
 from kuryr_libnetwork.tests.unit import base
@@ -39,8 +40,8 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
     @ddt.unpack
     def test_network_driver_program_external_connectivity(self, existing_sg,
                                                           num_ports):
-        fake_docker_net_id = utils.get_hash()
-        fake_docker_endpoint_id = utils.get_hash()
+        fake_docker_net_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
 
         fake_neutron_net_id = str(uuid.uuid4())
         fake_neutron_port_id = str(uuid.uuid4())
@@ -66,7 +67,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             'description': 'Docker exposed ports created by Kuryr.'
         }
         self.mox.StubOutWithMock(app.neutron, 'create_security_group')
-        fake_neutron_sec_group_id = utils.get_hash()
+        fake_neutron_sec_group_id = lib_utils.get_hash()
         fake_neutron_sec_group_response = {'security_group':
                                            {'id': fake_neutron_sec_group_id}}
         app.neutron.create_security_group({'security_group':
@@ -120,12 +121,12 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
 
     @ddt.data((False), (True))
     def test_network_driver_revoke_external_connectivity(self, existing_sg):
-        fake_docker_net_id = utils.get_hash()
-        fake_docker_endpoint_id = utils.get_hash()
+        fake_docker_net_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
 
         fake_neutron_net_id = str(uuid.uuid4())
         fake_neutron_port_id = str(uuid.uuid4())
-        fake_neutron_sec_group_id = utils.get_hash()
+        fake_neutron_sec_group_id = lib_utils.get_hash()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)

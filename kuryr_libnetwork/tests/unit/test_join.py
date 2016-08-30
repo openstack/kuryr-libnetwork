@@ -19,6 +19,7 @@ from werkzeug import exceptions as w_exceptions
 
 from kuryr.lib import binding
 from kuryr.lib import exceptions
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import constants as const
 from kuryr_libnetwork.tests.unit import base
@@ -65,9 +66,9 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
     @ddt.data(exceptions.VethCreationFailure,
               processutils.ProcessExecutionError)
     def test_join_veth_failures(self, GivenException):
-        fake_docker_network_id = utils.get_hash()
-        fake_docker_endpoint_id = utils.get_hash()
-        fake_container_id = utils.get_hash()
+        fake_docker_network_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+        fake_container_id = lib_utils.get_hash()
 
         fake_neutron_network_id = str(uuid.uuid4())
         self._mock_out_network(fake_neutron_network_id, fake_docker_network_id)
@@ -110,9 +111,9 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
         self.assertIn(fake_message, decoded_json['Err'])
 
     def test_join_bad_request(self):
-        fake_docker_network_id = utils.get_hash()
+        fake_docker_network_id = lib_utils.get_hash()
         invalid_docker_endpoint_id = 'id-should-be-hexdigits'
-        fake_container_id = utils.get_hash()
+        fake_container_id = lib_utils.get_hash()
 
         response = self._invoke_join_request(
             fake_docker_network_id, invalid_docker_endpoint_id,

@@ -14,11 +14,11 @@ import ddt
 from oslo_serialization import jsonutils
 import uuid
 
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork.common import config
 from kuryr_libnetwork.common import constants as const
 from kuryr_libnetwork.controllers import app
 from kuryr_libnetwork.tests.unit import base
-from kuryr_libnetwork import utils
 
 
 FAKE_IP4_CIDR = '10.0.0.0/16'
@@ -55,7 +55,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertEqual(expected, decoded_json)
 
     def test_ipam_driver_request_pool_with_user_pool(self):
-        pool_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        pool_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': 16,
@@ -178,7 +178,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -186,7 +186,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools)
 
         # faking list_subnets
-        docker_endpoint_id = utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = str(uuid.uuid4())
         subnet_v4_id = str(uuid.uuid4())
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -213,7 +213,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': 'kuryr-unbound-port',
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'binding:host_id': utils.get_hostname(),
+            'binding:host_id': lib_utils.get_hostname(),
         }
         fixed_ips = port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': subnet_v4_id}
@@ -243,7 +243,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -279,7 +279,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -287,7 +287,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools)
 
         # faking list_subnets
-        docker_endpoint_id = utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = str(uuid.uuid4())
         subnet_v4_id = str(uuid.uuid4())
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -328,7 +328,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         if existing_port:
             update_port = {
                 'admin_state_up': True,
-                'binding:host_id': utils.get_hostname(),
+                'binding:host_id': lib_utils.get_hostname(),
             }
             self.mox.StubOutWithMock(app.neutron, 'update_port')
             app.neutron.update_port(fake_neutron_port_id,
@@ -339,7 +339,7 @@ class TestKuryrIpam(base.TestKuryrBase):
                 'name': 'kuryr-unbound-port',
                 'admin_state_up': True,
                 'network_id': neutron_network_id,
-                'binding:host_id': utils.get_hostname(),
+                'binding:host_id': lib_utils.get_hostname(),
             }
             fixed_ips = port_request['fixed_ips'] = []
             fixed_ip = {'subnet_id': subnet_v4_id,
@@ -373,7 +373,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
         fake_kuryr_subnetpool_id2 = str(uuid.uuid4())
 
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -381,7 +381,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools)
 
         # faking list_subnets
-        docker_endpoint_id = utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
 
         neutron_network_id = str(uuid.uuid4())
         neutron_network_id2 = str(uuid.uuid4())
@@ -419,7 +419,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': 'kuryr-unbound-port',
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'binding:host_id': utils.get_hostname(),
+            'binding:host_id': lib_utils.get_hostname(),
         }
         port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': neutron_subnet_v4_id}
@@ -448,7 +448,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -456,7 +456,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools)
 
         # faking list_subnets
-        docker_endpoint_id = utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = str(uuid.uuid4())
         subnet_v4_id = str(uuid.uuid4())
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -496,7 +496,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         # faking list_subnetpools
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
-        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
@@ -504,7 +504,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools)
 
         # faking list_subnets
-        docker_endpoint_id = utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = str(uuid.uuid4())
         subnet_v4_id = str(uuid.uuid4())
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -556,8 +556,8 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_ip4 = '10.0.0.5'
 
         # faking list_subnets
-        docker_network_id = utils.get_hash()
-        docker_endpoint_id = utils.get_hash()
+        docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = docker_network_id = str(uuid.uuid4())
         subnet_v4_id = str(uuid.uuid4())
         fake_v4_subnet = self._get_fake_v4_subnet(

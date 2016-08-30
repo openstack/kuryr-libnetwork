@@ -10,8 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from kuryr.lib import utils as lib_utils
 from kuryr.tests.fullstack import kuryr_base
-from kuryr import utils
+
+from kuryr_libnetwork import utils
 
 
 class ContainerTest(kuryr_base.KuryrBaseTest):
@@ -34,7 +36,7 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
                 }
             ]
         }
-        net_name = utils.get_random_string(8)
+        net_name = lib_utils.get_random_string(8)
         res = self.docker_client.create_network(name=net_name,
                                                 driver='kuryr',
                                                 ipam=fake_ipam)
@@ -54,7 +56,7 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
 
     def test_connect_disconnect_container(self):
         # Test if support connect/disconnect operations
-        container_name = utils.get_random_string(8)
+        container_name = lib_utils.get_random_string(8)
         container = self.docker_client.create_container(
             image='busybox:1',
             command='/bin/sleep 600',

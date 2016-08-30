@@ -14,9 +14,9 @@ import ddt
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
 
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork.tests.unit import base
-from kuryr_libnetwork import utils
 
 
 @ddt.ddt
@@ -43,7 +43,7 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
     @ddt.data(exceptions.Unauthorized, exceptions.Forbidden,
               exceptions.NotFound)
     def test_request_pool_create_failures(self, GivenException):
-        pool_name = utils.get_neutron_subnetpool_name("10.0.0.0/16")
+        pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': 16,
@@ -81,7 +81,7 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
 
     def test_request_pool_list_subnetpool_failure(self):
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
-        pool_name = utils.get_neutron_subnetpool_name("10.0.0.0/16")
+        pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
         fake_name = pool_name
         ex = exceptions.Unauthorized
         app.neutron.list_subnetpools(name=fake_name).AndRaise(ex)

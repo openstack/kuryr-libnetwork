@@ -11,8 +11,10 @@
 # under the License.
 
 
+from kuryr.lib import utils as lib_utils
 from kuryr.tests.fullstack import kuryr_base
-from kuryr import utils
+
+from kuryr_libnetwork import utils
 
 
 class NetworkTest(kuryr_base.KuryrBaseTest):
@@ -39,7 +41,7 @@ class NetworkTest(kuryr_base.KuryrBaseTest):
                 }
             ]
         }
-        net_name = utils.get_random_string(8)
+        net_name = lib_utils.get_random_string(8)
         res = self.docker_client.create_network(name=net_name, driver='kuryr',
                                                 ipam=fake_ipam)
         net_id = res['Id']
@@ -58,7 +60,7 @@ class NetworkTest(kuryr_base.KuryrBaseTest):
            docker driver, It tests that it was created correctly, but
            not added to Neutron
         """
-        net_name = utils.get_random_string(8)
+        net_name = lib_utils.get_random_string(8)
         res = self.docker_client.create_network(name=net_name)
         net_id = res['Id']
         network = self.neutron_client.list_networks(
@@ -101,7 +103,7 @@ class NetworkTest(kuryr_base.KuryrBaseTest):
                 }
             ]
         }
-        net_name = utils.get_random_string(8)
+        net_name = lib_utils.get_random_string(8)
         res = self.docker_client.create_network(name=net_name, driver='kuryr',
                                                 ipam=fake_ipam_1)
         net_id1 = res['Id']
