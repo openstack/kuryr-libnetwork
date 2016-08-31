@@ -238,6 +238,41 @@ class TestKuryrIpam(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual('10.0.0.5/16', decoded_json['Address'])
 
+    def test_ipam_driver_request_address_when_subnet_not_exist(self):
+        requested_address = '10.0.0.5'
+        # faking list_subnetpools
+        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
+        fake_kuryr_subnetpool_id = str(uuid.uuid4())
+        fake_name = utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_name)
+        app.neutron.list_subnetpools(id=fake_kuryr_subnetpool_id).AndReturn(
+            kuryr_subnetpools)
+
+        # faking list_subnets
+        fake_subnet_response = {'subnets': []}
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr=FAKE_IP4_CIDR).AndReturn(
+            fake_subnet_response)
+
+        # Apply mocks
+        self.mox.ReplayAll()
+
+        # Testing container ip allocation
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': requested_address,
+            'Options': {}
+        }
+        response = self.app.post('/IpamDriver.RequestAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(requested_address + '/16', decoded_json['Address'])
+
     @ddt.data((False), (True))
     def test_ipam_driver_request_specific_address(self, existing_port):
         requested_address = '10.0.0.5'
