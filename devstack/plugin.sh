@@ -74,7 +74,7 @@ if is_service_enabled kuryr-libnetwork; then
             else
                 echo -n "${KURYR_CONFIG} and the  default config missing. Auto generating and copying one... "
                 cd ${KURYR_HOME}
-                oslo-config-generator --config-file=${KURYR_CONFIG_GENERATOR}
+                tools/generate_config_file_samples.sh
                 sudo cp ${KURYR_DEFAULT_CONFIG}.sample ${KURYR_DEFAULT_CONFIG}
                 sudo cp ${KURYR_DEFAULT_CONFIG} ${KURYR_CONFIG}
                 cd -
