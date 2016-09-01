@@ -26,6 +26,7 @@ from oslo_utils import excutils
 
 from kuryr.lib import binding
 from kuryr.lib import exceptions
+from kuryr.lib import utils as lib_utils
 from kuryr.lib._i18n import _LE, _LI, _LW
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import config
@@ -100,12 +101,12 @@ def get_neutron_client():
     neutron_uri = cfg.CONF.neutron_client.neutron_uri
     if username and password:
         # Authenticate with password crentials
-        neutron_client = utils.get_neutron_client(
+        neutron_client = lib_utils.get_neutron_client(
             url=neutron_uri, username=username, tenant_name=tenant_name,
             password=password, auth_url=auth_uri,
             ca_cert=ca_cert, insecure=insecure)
     else:
-        neutron_client = utils.get_neutron_client_simple(
+        neutron_client = lib_utils.get_neutron_client_simple(
             url=neutron_uri, auth_url=auth_uri, token=auth_token)
     return neutron_client
 
@@ -245,7 +246,7 @@ def _create_port(endpoint_id, neutron_network_id, interface_mac, fixed_ips):
         'network_id': neutron_network_id,
         'device_owner': const.DEVICE_OWNER,
         'device_id': endpoint_id,
-        'binding:host_id': utils.get_hostname(),
+        'binding:host_id': lib_utils.get_hostname(),
         'fixed_ips': fixed_ips
     }
     if interface_mac:
@@ -320,7 +321,8 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
     filtered_ports = app.neutron.list_ports(fixed_ips=fixed_ips)
     num_port = len(filtered_ports.get('ports', []))
     if not num_port:
-        fixed_ips = utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips)
+        fixed_ips = (
+            lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
         response_port = _create_port(endpoint_id, neutron_network_id,
             interface_mac, fixed_ips)
     elif num_port == 1:
@@ -1210,7 +1212,7 @@ def ipam_request_pool():
             cidr = netaddr.IPNetwork(requested_pool)
         subnet_cidr = _get_subnet_cidr_using_cidr(cidr)
         if not pool_name:
-            pool_name = utils.get_neutron_subnetpool_name(subnet_cidr)
+            pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
             pools = _get_subnetpools_by_attrs(name=pool_name)
             if len(pools):
                 raise exceptions.KuryrException(
@@ -1343,7 +1345,7 @@ def ipam_request_address():
                     'name': 'kuryr-unbound-port',
                     'admin_state_up': True,
                     'network_id': neutron_network_id,
-                    'binding:host_id': utils.get_hostname(),
+                    'binding:host_id': lib_utils.get_hostname(),
                 }
                 fixed_ips = port['fixed_ips'] = []
                 fixed_ip = {'subnet_id': subnet['id']}
@@ -1366,7 +1368,7 @@ def ipam_request_address():
                     if not host and vif_type == 'unbound':
                         updated_port = {
                             'admin_state_up': True,
-                            'binding:host_id': utils.get_hostname(),
+                            'binding:host_id': lib_utils.get_hostname(),
                         }
                         created_port_resp = app.neutron.update_port(
                             existing_port['id'],

@@ -16,6 +16,7 @@ import ddt
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
 
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork.common import constants
 from kuryr_libnetwork.tests.unit import base
@@ -88,7 +89,7 @@ class TestKuryrEndpointFailures(base.TestKuryrFailures):
             'port': {
                 'name': utils.get_neutron_port_name(docker_endpoint_id),
                 'admin_state_up': True,
-                "binding:host_id": utils.get_hostname(),
+                "binding:host_id": lib_utils.get_hostname(),
                 'device_owner': constants.DEVICE_OWNER,
                 'device_id': docker_endpoint_id,
                 'fixed_ips': [{
@@ -110,7 +111,7 @@ class TestKuryrEndpointFailures(base.TestKuryrFailures):
                 "name": utils.get_neutron_port_name(docker_endpoint_id),
                 "allowed_address_pairs": [],
                 "admin_state_up": True,
-                "binding:host_id": utils.get_hostname(),
+                "binding:host_id": lib_utils.get_hostname(),
                 "network_id": neutron_network_id,
                 "tenant_id": "d6700c0c9ffa4f1cb322cd4a1f3906fa",
                 "device_owner": constants.DEVICE_OWNER,
@@ -170,8 +171,8 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
     @ddt.data(exceptions.Unauthorized, exceptions.Forbidden,
               exceptions.NotFound, exceptions.ServiceUnavailable)
     def test_create_endpoint_port_failures(self, GivenException):
-        fake_docker_network_id = utils.get_hash()
-        fake_docker_endpoint_id = utils.get_hash()
+        fake_docker_network_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_network_id = str(uuid.uuid4())
         fake_neutron_subnet_v4_id = str(uuid.uuid4())
         fake_neutron_subnet_v6_id = str(uuid.uuid4())
@@ -212,7 +213,7 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
         self.assertEqual({'Err': GivenException.message}, decoded_json)
 
     def test_create_endpoint_bad_request(self):
-        fake_docker_network_id = utils.get_hash()
+        fake_docker_network_id = lib_utils.get_hash()
         invalid_docker_endpoint_id = 'id-should-be-hexdigits'
 
         response = self._invoke_create_request(
@@ -238,7 +239,7 @@ class TestKuryrEndpointDeleteFailures(TestKuryrEndpointFailures):
         return response
 
     def test_delete_endpoint_bad_request(self):
-        fake_docker_network_id = utils.get_hash()
+        fake_docker_network_id = lib_utils.get_hash()
         invalid_docker_endpoint_id = 'id-should-be-hexdigits'
 
         response = self._invoke_delete_request(
