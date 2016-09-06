@@ -14,7 +14,7 @@ Structure
   are able to use absolute paths in rally tasks.
   Files will be located in ~/.rally/extra/*
 
-* kuryr.yaml is a task that is run in gates against OpenStack with
+* kuryr-libnetwork.yaml is a task that is run in gates against OpenStack with
   Kuryr and Neutron deployed
 
 Useful links
