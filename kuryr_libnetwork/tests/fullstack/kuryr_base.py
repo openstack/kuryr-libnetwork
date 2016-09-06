@@ -14,7 +14,7 @@ import docker
 
 from oslotest import base
 
-from kuryr import controllers
+from kuryr_libnetwork import controllers
 
 
 class KuryrBaseTest(base.BaseTestCase):

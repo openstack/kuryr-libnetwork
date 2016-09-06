@@ -11,8 +11,7 @@
 # under the License.
 
 from kuryr.lib import utils as lib_utils
-from kuryr.tests.fullstack import kuryr_base
-
+from kuryr_libnetwork.tests.fullstack import kuryr_base
 from kuryr_libnetwork import utils
 
 
