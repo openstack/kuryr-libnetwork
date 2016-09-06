@@ -2,7 +2,7 @@
 
 set -xe
 
-KURYR_DIR="$BASE/new/kuryr"
+KURYR_LIBNETWORK_DIR="$BASE/new/kuryr-libnetwork"
 TEMPEST_DIR="$BASE/new/tempest"
 SCRIPTS_DIR="/usr/os-testr-env/bin/"
 
@@ -45,8 +45,8 @@ owner=stack
 sudo_env=
 
 # Set owner permissions according to job's requirements.
-cd "$KURYR_DIR"
-sudo chown -R $owner:stack "$KURYR_DIR"
+cd "$KURYR_LIBNETWORK_DIR"
+sudo chown -R $owner:stack "$KURYR_LIBNETWORK_DIR"
 
 # Run tests
 echo "Running Kuryr $venv tests"
