@@ -13,8 +13,6 @@
 
 SCHEMA = {
     "PLUGIN_ACTIVATE": {"Implements": ["NetworkDriver", "IpamDriver"]},
-    # TODO(tfukushima): This is mocked and should be replaced with real data.
-    "ENDPOINT_OPER_INFO": {"Value": {}},
     "SUCCESS": {}
 }
 

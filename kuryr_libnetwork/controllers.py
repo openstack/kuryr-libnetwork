@@ -193,6 +193,15 @@ def _get_neutron_port_from_docker_endpoint(endpoint_id):
         return filtered_ports['ports'][0]['id']
 
 
+def _get_neutron_port_status_from_docker_endpoint(endpoint_id):
+    response_port_status = {}
+    port_name = utils.get_neutron_port_name(endpoint_id)
+    filtered_ports = _get_ports_by_attrs(name=port_name)
+    if filtered_ports:
+        response_port_status['status'] = filtered_ports[0]['status']
+    return response_port_status
+
+
 def _process_interface_address(port_dict, subnets_dict_by_id,
                                response_interface):
     assigned_address = port_dict['ip_address']
@@ -853,8 +862,30 @@ def network_driver_create_endpoint():
 
 @app.route('/NetworkDriver.EndpointOperInfo', methods=['POST'])
 def network_driver_endpoint_operational_info():
-    app.logger.debug("Received /NetworkDriver.EndpointOperInfo")
-    return flask.jsonify(const.SCHEMA['ENDPOINT_OPER_INFO'])
+    """Return Neutron Port status with the given EndpointID.
+
+    This function takes the following JSON data and delegates the actual
+    endpoint query to the Neutron client mapping it into Port status. ::
+
+        {
+            "NetworkID": string,
+            "EndpointID": string
+        }
+
+    See the following link for more details about the spec:
+
+      https://github.com/docker/libnetwork/blob/master/docs/remote.md#endpoint-operational-info  # noqa
+    """
+    json_data = flask.request.get_json(force=True)
+    app.logger.debug("Received JSON data %s for "
+                     "/NetworkDriver.EndpointOperInfo", json_data)
+    jsonschema.validate(json_data, schemata.ENDPOINT_INFO_SCHEMA)
+
+    endpoint_id = json_data['EndpointID']
+    response_port_status = (
+        _get_neutron_port_status_from_docker_endpoint(endpoint_id))
+
+    return flask.jsonify({'Value': response_port_status})
 
 
 @app.route('/NetworkDriver.DeleteEndpoint', methods=['POST'])

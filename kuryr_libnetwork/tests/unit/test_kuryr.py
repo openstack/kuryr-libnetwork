@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import mock
 import uuid
 
 import ddt
@@ -48,9 +49,7 @@ class TestKuryr(base.TestKuryrBase):
         ('/NetworkDriver.GetCapabilities',
          {'Scope': config.CONF.capability_scope}),
         ('/NetworkDriver.DiscoverNew', constants.SCHEMA['SUCCESS']),
-        ('/NetworkDriver.DiscoverDelete', constants.SCHEMA['SUCCESS']),
-        ('/NetworkDriver.EndpointOperInfo',
-         constants.SCHEMA['ENDPOINT_OPER_INFO']))
+        ('/NetworkDriver.DiscoverDelete', constants.SCHEMA['SUCCESS']))
     @ddt.unpack
     def test_remote_driver_endpoint(self, endpoint, expected):
         response = self.app.post(endpoint)
@@ -742,6 +741,63 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         expected = {'Interface': {}}
         self.assertEqual(expected, decoded_json)
+
+    def test_network_driver_endpoint_operational_info_with_no_port(self):
+        docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
+        fake_port_response = {"ports": []}
+
+        with mock.patch.object(app.neutron, 'list_ports') as mock_list_ports:
+            data = {
+                'NetworkID': docker_network_id,
+                'EndpointID': docker_endpoint_id,
+            }
+
+            mock_list_ports.return_value = fake_port_response
+            response = self.app.post('/NetworkDriver.EndpointOperInfo',
+                                     content_type='application/json',
+                                     data=jsonutils.dumps(data))
+            decoded_json = jsonutils.loads(response.data)
+            self.assertEqual(200, response.status_code)
+
+            port_name = utils.get_neutron_port_name(docker_endpoint_id)
+            mock_list_ports.assert_called_once_with(name=port_name)
+
+            self.assertEqual({}, decoded_json['Value'])
+
+    def test_network_driver_endpoint_operational_info(self):
+        docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
+        fake_neutron_net_id = str(uuid.uuid4())
+        fake_port_id = str(uuid.uuid4())
+        fake_port = self._get_fake_port(
+            docker_endpoint_id, fake_neutron_net_id,
+            fake_port_id, constants.PORT_STATUS_ACTIVE)
+
+        fake_port_response = {
+            "ports": [
+                fake_port['port']
+            ]
+        }
+
+        with mock.patch.object(app.neutron, 'list_ports') as mock_list_ports:
+            data = {
+                'NetworkID': docker_network_id,
+                'EndpointID': docker_endpoint_id,
+            }
+
+            mock_list_ports.return_value = fake_port_response
+            response = self.app.post('/NetworkDriver.EndpointOperInfo',
+                                     content_type='application/json',
+                                     data=jsonutils.dumps(data))
+            decoded_json = jsonutils.loads(response.data)
+            self.assertEqual(200, response.status_code)
+
+            port_name = utils.get_neutron_port_name(docker_endpoint_id)
+            mock_list_ports.assert_called_once_with(name=port_name)
+
+            self.assertEqual(fake_port_response['ports'][0]['status'],
+                             decoded_json['Value']['status'])
 
     def test_network_driver_delete_endpoint(self):
         docker_network_id = lib_utils.get_hash()

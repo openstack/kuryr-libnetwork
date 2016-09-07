@@ -12,6 +12,7 @@
 
 from kuryr_libnetwork.schemata import endpoint_create
 from kuryr_libnetwork.schemata import endpoint_delete
+from kuryr_libnetwork.schemata import endpoint_info
 from kuryr_libnetwork.schemata import join
 from kuryr_libnetwork.schemata import leave
 from kuryr_libnetwork.schemata import network_create
@@ -25,6 +26,7 @@ from kuryr_libnetwork.schemata import request_pool
 # Aliases for schemata in each module
 ENDPOINT_CREATE_SCHEMA = endpoint_create.ENDPOINT_CREATE_SCHEMA
 ENDPOINT_DELETE_SCHEMA = endpoint_delete.ENDPOINT_DELETE_SCHEMA
+ENDPOINT_INFO_SCHEMA = endpoint_info.ENDPOINT_INFO_SCHEMA
 JOIN_SCHEMA = join.JOIN_SCHEMA
 LEAVE_SCHEMA = leave.LEAVE_SCHEMA
 NETWORK_CREATE_SCHEMA = network_create.NETWORK_CREATE_SCHEMA
