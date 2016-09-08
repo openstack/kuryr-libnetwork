@@ -36,23 +36,25 @@ class ConfigurationTest(base.TestKuryrBase):
         self.assertEqual('http://127.0.0.1:23750',
                          config.CONF.kuryr_uri)
 
-        self.assertEqual('http://127.0.0.1:9696',
-                         config.CONF.neutron_client.neutron_uri)
-
         self.assertEqual('kuryr',
-                         config.CONF.neutron_client.default_subnetpool_v4)
+                         config.CONF.neutron.default_subnetpool_v4)
 
         self.assertEqual('kuryr6',
-                         config.CONF.neutron_client.default_subnetpool_v6)
-
-        self.assertEqual('http://127.0.0.1:35357/v2.0',
-                         config.CONF.keystone_client.auth_uri)
+                         config.CONF.neutron.default_subnetpool_v6)
 
     @mock.patch.object(sys, 'argv', return_value='[]')
+    @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_tag')
+    @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_support')
+    @mock.patch('kuryr_libnetwork.controllers.neutron_client')
     @mock.patch('kuryr_libnetwork.app.run')
-    def test_start(self, mock_run, mock_sys_argv):
+    def test_start(self, mock_run, mock_neutron_client,
+                   mock_check_neutron_ext_support, mock_check_neutron_ext_tag,
+                   mock_sys_argv):
         start()
         kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
+        mock_neutron_client.assert_called_once()
+        mock_check_neutron_ext_support.assert_called_once()
+        mock_check_neutron_ext_tag.assert_called_once()
         mock_run.assert_called_once_with(kuryr_uri.hostname, 23750)
 
     def test_check_for_neutron_ext_support_with_ex(self):
