@@ -57,6 +57,9 @@ function create_kuryr_account {
 }
 
 function configure_kuryr {
+    local binding_path
+
+    binding_path="$1"
     sudo install -d -o "$STACK_USER" "$KURYR_CONFIG_DIR"
 
     (cd "$KURYR_HOME" && exec ./tools/generate_config_file_samples.sh)
@@ -70,11 +73,14 @@ function configure_kuryr {
         configure_auth_token_middleware "$KURYR_CONFIG" kuryr \
         "$KURYR_AUTH_CACHE_DIR" neutron
     fi
+
+    iniset -sudo ${KURYR_CONFIG} DEFAULT bindir "$binding_path/libexec/kuryr"
 }
 
 
 # main loop
 if is_service_enabled kuryr-libnetwork; then
+    DISTRO_DISTUTILS_DATA_PATH=$(python -c "import distutils.dist;import distutils.command.install;inst = distutils.command.install.install(distutils.dist.Distribution());inst.finalize_options();print inst.install_data")
     if [[ "$1" == "stack" && "$2" == "install" ]]; then
         install_etcd_data_store
         setup_develop $KURYR_HOME
@@ -95,7 +101,7 @@ if is_service_enabled kuryr-libnetwork; then
 
 
         create_kuryr_account
-        configure_kuryr
+        configure_kuryr "${DISTRO_DISTUTILS_DATA_PATH}"
 
         # Run etcd first
         run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
