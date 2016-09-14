@@ -30,8 +30,97 @@ Features
 * TODO
 
 
-Getting Code
-------------
+Getting it running with a service container
+-------------------------------------------
+
+Prerequisites
+~~~~~~~~~~~~~
+
+The necessary components for an operating environment to run Kuryr are:
+
+* Keystone (preferably configured with Keystone v3),
+* Neutron (preferably mitaka or newer),
+* Mariadb (for Neutron and Keystone),
+* Neutron agents for the vendor you choose,
+* Rabbitmq if the Neutron agents for your vendor require it,
+* Docker 1.9+
+
+Building the container
+~~~~~~~~~~~~~~~~~~~~~~
+
+The Dockerfile in the root of this repository can be used to generate a wsgi
+Kuryr Libnetwork server container with docker build::
+
+    docker build -t your_docker_username/libnetwork:latest .
+
+Additionally, you can pull the upstream container::
+
+    docker pull kuryr/libnetwork:latest
+
+Note that you can also specify the tag of a stable release for the above
+command instead of *latest*.
+
+How to run the container
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+First we prepare Docker to find the driver::
+
+    sudo mkdir -p /usr/lib/docker/plugins/kuryr
+    sudo curl -o /usr/lib/docker/plugins/kuryr/kuryr.spec \
+    https://raw.githubusercontent.com/openstack/kuryr-libnetwork/master/etc/kuryr.spec
+    sudo service docker restart
+
+Then we start the container::
+
+    docker run --name kuryr-libnetwork \
+      --net=host \
+      --cap-add=NET_ADMIN \
+      -e SERVICE_USER=admin \
+      -e SERVICE_PROJECT_NAME=admin \
+      -e SERVICE_PASSWORD=admin \
+      -e SERVICE_DOMAIN_NAME=Default \
+      -e USER_DOMAIN_NAME=Default \
+      -e IDENTITY_URL=http://127.0.0.1:35357/v3 \
+      -v /var/log/kuryr:/var/log/kuryr \
+      -v /var/run/openvswitch:/var/run/openvswitch \
+      kuryr/libnetwork
+
+Where:
+* SERVICE_USER, SERVICE_PROJECT_NAME, SERVICE_PASSWORD, SERVICE_DOMAIN_NAME,
+USER_DOMAIN_NAME are OpenStack credentials
+* IDENTITY_URL is the url to the OpenStack Keystone v3 endpoint
+* A volume is created so that the logs are available on the host
+* NET_ADMIN capabilities are given in order to perform network operations on
+the host namespace like ovs-vsctl
+
+Other options you can set as '-e' parameters in Docker run:
+* CAPABILITY_SCOPE can be "local" or "global", the latter being for when there
+is a cluster store plugged into the docker engine.
+* LOG_LEVEL for defining, for example, "DEBUG" logging messages.
+* PROCESSES for defining how many kuryr processes to use to handle the
+libnetwork requests.
+* THREADS for defining how many threads per process to use to handle the
+libnetwork requests.
+
+Note that you will probably have to change the 127.0.0.1 IDENTITY_URL address
+for the address where your Keystone is running. In this case it is 127.0.0.1
+because the example assumes running the container with *--net=host* on an all
+in one deployment where Keystone is also binding locally.
+
+Alternatively, if you have an existing kuryr.conf, you can use it for the
+container::
+
+    docker run --name kuryr-libnetwork \
+      --net host \
+      --cap-add NET_ADMIN \
+      -v /etc/kuryr:/etc/kuryr:ro \
+      -v /var/log/kuryr:/var/log/kuryr:rw \
+      -v /var/run/openvswitch:/var/run/openvswitch:rw \
+      kuryr/libnetwork
+
+
+Getting it from source
+----------------------
 
 ::
 
@@ -40,7 +129,7 @@ Getting Code
 
 
 Prerequisites
--------------
+~~~~~~~~~~~~~
 
 ::
 
@@ -48,7 +137,7 @@ Prerequisites
 
 
 Installing Kuryr's libnetwork driver
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Running the following will grab the requirements and install kuryr::
 
@@ -56,11 +145,11 @@ Running the following will grab the requirements and install kuryr::
 
 
 Configuring Kuryr
------------------
+~~~~~~~~~~~~~~~~~
 
 Generate sample config, `etc/kuryr.conf.sample`, running the following::
 
-    $ tox -e genconfig
+    $ ./tools/generate_config_file_samples.sh
 
 
 Rename and copy config file at required path::
@@ -68,22 +157,27 @@ Rename and copy config file at required path::
     $ cp etc/kuryr.conf.sample /etc/kuryr/kuryr.conf
 
 
-Edit keystone section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
+Edit Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
 
-    auth_uri = http://127.0.0.1:35357/v2.0
-    admin_user = admin
-    admin_tenant_name = service
-    admin_password = ADMIN_PASSWORD
+    [neutron]
+    auth_url = http://127.0.0.1:35357/v3/
+    username = admin
+    user_domain_name = Default
+    password = ADMIN_PASSWORD
+    project_name = service
+    project_domain_name = Default
+    auth_type = password
 
 
 In the same file uncomment the `bindir` parameter with the path for the Kuryr
-vif binding executables::
+vif binding executables. For example, if you installed it on Debian or Ubuntu::
 
+    [DEFAULT]
     bindir = /usr/local/libexec/kuryr
 
 
 Running Kuryr
--------------
+~~~~~~~~~~~~~
 
 Currently, Kuryr utilizes a bash script to start the service. Make sure that
 you have installed `tox` before the execution of the command below::
@@ -106,7 +200,8 @@ Testing Kuryr
 
 For a quick check that Kuryr is working, create a network::
 
-    $ docker network create --driver kuryr test_net
+    $ docker network create --driver kuryr --ipam-driver kuryr \
+    --subnet 10.10.0.0/16 test_net
     785f8c1b5ae480c4ebcb54c1c48ab875754e4680d915b270279e4f6a1aa52283
     $ docker network ls
     NETWORK ID          NAME                DRIVER
