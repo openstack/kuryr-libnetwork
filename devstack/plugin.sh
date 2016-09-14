@@ -39,6 +39,39 @@ function check_docker {
     fi
 }
 
+function create_kuryr_cache_dir {
+    # Create cache dir
+    sudo install -d -o "$STACK_USER" "$KURYR_AUTH_CACHE_DIR"
+    if [[ ! "$KURYR_AUTH_CACHE_DIR" == "" ]]; then
+        rm -f "$KURYR_AUTH_CACHE_DIR"/*
+    fi
+
+}
+
+function create_kuryr_account {
+    if is_service_enabled kuryr-libnetwork; then
+        create_service_user "kuryr"
+        get_or_create_service "kuryr-libnetwork" "kuryr-libnetwork" \
+        "Kuryr-Libnetwork Service"
+    fi
+}
+
+function configure_kuryr {
+    sudo install -d -o "$STACK_USER" "$KURYR_CONFIG_DIR"
+
+    (cd "$KURYR_HOME" && exec ./tools/generate_config_file_samples.sh)
+
+    cp "$KURYR_HOME/etc/kuryr.conf.sample" "$KURYR_CONFIG"
+
+    create_kuryr_cache_dir
+
+    # Neutron API server & Neutron plugin
+    if is_service_enabled kuryr-libnetwork; then
+        configure_auth_token_middleware "$KURYR_CONFIG" kuryr \
+        "$KURYR_AUTH_CACHE_DIR" neutron
+    fi
+}
+
 
 # main loop
 if is_service_enabled kuryr-libnetwork; then
@@ -60,26 +93,9 @@ if is_service_enabled kuryr-libnetwork; then
              echo "Done"
         fi
 
-        if [[ ! -d "${KURYR_CONFIG_DIR}" ]]; then
-            echo -n "${KURYR_CONFIG_DIR} directory is missing. Creating it... "
-            sudo mkdir -p ${KURYR_CONFIG_DIR}
-            echo "Done"
-        fi
 
-        if [[ ! -f "${KURYR_CONFIG}" ]]; then
-            if [[ -f "${KURYR_DEFAULT_CONFIG}" ]]; then
-                echo -n "${KURYR_CONFIG} is missing. Copying the default one... "
-                sudo cp ${KURYR_DEFAULT_CONFIG} ${KURYR_CONFIG}
-                echo "Done"
-            else
-                echo -n "${KURYR_CONFIG} and the  default config missing. Auto generating and copying one... "
-                cd ${KURYR_HOME}
-                tools/generate_config_file_samples.sh
-                sudo cp ${KURYR_DEFAULT_CONFIG}.sample ${KURYR_DEFAULT_CONFIG}
-                sudo cp ${KURYR_DEFAULT_CONFIG} ${KURYR_CONFIG}
-                cd -
-            fi
-        fi
+        create_kuryr_account
+        configure_kuryr
 
         # Run etcd first
         run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
@@ -129,7 +145,7 @@ if is_service_enabled kuryr-libnetwork; then
         #               If Kuryr start up in "post-config" phase, there is no way to make sure
         #               Kuryr can start before neutron-server, so Kuryr start in "extra" phase.
         #               Bug: https://bugs.launchpad.net/kuryr/+bug/1587522
-        run_process kuryr-libnetwork "sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr SERVICE_USER=admin SERVICE_PASSWORD=$SERVICE_PASSWORD SERVICE_TENANT_NAME=admin SERVICE_TOKEN=$SERVICE_TOKEN IDENTITY_URL=http://127.0.0.1:5000/v2.0 python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file /etc/kuryr/kuryr.conf"
+        run_process kuryr-libnetwork "sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
 

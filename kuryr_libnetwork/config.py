@@ -50,9 +50,8 @@ CONF = cfg.CONF
 CONF.register_opts(core_opts)
 
 CONF.register_opts(lib_config.core_opts)
-CONF.register_opts(lib_config.neutron_opts, group='neutron_client')
-CONF.register_opts(lib_config.keystone_opts, group='keystone_client')
 CONF.register_opts(lib_config.binding_opts, 'binding')
+lib_config.register_neutron_opts(CONF)
 
 # Setting oslo.log options for logging.
 log.register_options(CONF)

@@ -18,7 +18,7 @@ import netaddr
 import time
 
 from neutronclient.common import exceptions as n_exceptions
-from neutronclient.neutron import client
+from neutronclient.v2_0 import client
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log
@@ -39,16 +39,12 @@ LOG = log.getLogger(__name__)
 
 MANDATORY_NEUTRON_EXTENSION = "subnet_allocation"
 TAG_NEUTRON_EXTENSION = "tag"
-SUBNET_POOLS_V4 = [cfg.CONF.neutron_client.default_subnetpool_v4]
-SUBNET_POOLS_V6 = [cfg.CONF.neutron_client.default_subnetpool_v6]
+SUBNET_POOLS_V4 = [cfg.CONF.neutron.default_subnetpool_v4]
+SUBNET_POOLS_V6 = [cfg.CONF.neutron.default_subnetpool_v6]
 
 
-def _get_cloud_config(cloud='devstack-admin'):
-    return os_client_config.OpenStackConfig().get_one_cloud(cloud=cloud)
-
-
-def _credentials(cloud='devstack-admin'):
-    """Retrieves credentials to run functional tests
+def _get_cloud_config_auth_data(cloud='devstack-admin'):
+    """Retrieves Keystone auth data to run functional tests
 
     Credentials are either read via os-client-config from the environment
     or from a config file ('clouds.yaml'). Environment variables override
@@ -59,20 +55,13 @@ def _credentials(cloud='devstack-admin'):
     has admin privs. This function will default to getting the devstack-admin
     cloud as that is the current expected behavior.
     """
-    return _get_cloud_config(cloud=cloud).get_auth_args()
+    cloud_config = os_client_config.OpenStackConfig().get_one_cloud(cloud)
+    return cloud_config.get_auth(), cloud_config.get_session()
 
 
 def _get_neutron_client_from_creds():
-    creds = _credentials()
-    username = creds['username']
-    tenant_name = creds['project_name']
-    password = creds['password']
-    auth_url = creds['auth_url'] + "/v2.0"
-    neutron_client = client.Client('2.0', username=username,
-                                   tenant_name=tenant_name,
-                                   password=password,
-                                   auth_url=auth_url)
-    return neutron_client
+    auth_plugin, session = _get_cloud_config_auth_data()
+    return client.Client(session=session, auth=auth_plugin)
 
 
 def get_neutron_client():
@@ -83,40 +72,18 @@ def get_neutron_client():
         # Since this always use admin credentials, next patch will introduce
         # a config parameter that disable this for production environments
         neutron_client = _get_neutron_client_from_creds()
-        return neutron_client
     except Exception:
-            pass
-    cfg.CONF.import_group('neutron_client', 'kuryr_libnetwork.config')
-    cfg.CONF.import_group('keystone_client', 'kuryr_libnetwork.config')
+        neutron_client = lib_utils.get_neutron_client()
 
-    keystone_conf = cfg.CONF.keystone_client
-    username = keystone_conf.admin_user
-    tenant_name = keystone_conf.admin_tenant_name
-    password = keystone_conf.admin_password
-    auth_token = keystone_conf.admin_token
-    auth_uri = keystone_conf.auth_uri.rstrip('/')
-    ca_cert = keystone_conf.auth_ca_cert
-    insecure = keystone_conf.auth_insecure
-
-    neutron_uri = cfg.CONF.neutron_client.neutron_uri
-    if username and password:
-        # Authenticate with password crentials
-        neutron_client = lib_utils.get_neutron_client(
-            url=neutron_uri, username=username, tenant_name=tenant_name,
-            password=password, auth_url=auth_uri,
-            ca_cert=ca_cert, insecure=insecure)
-    else:
-        neutron_client = lib_utils.get_neutron_client_simple(
-            url=neutron_uri, auth_url=auth_uri, token=auth_token)
     return neutron_client
 
 
 def neutron_client():
     if not hasattr(app, 'neutron'):
         app.neutron = get_neutron_client()
-        app.enable_dhcp = cfg.CONF.neutron_client.enable_dhcp
-        app.vif_plug_is_fatal = cfg.CONF.neutron_client.vif_plugging_is_fatal
-        app.vif_plug_timeout = cfg.CONF.neutron_client.vif_plugging_timeout
+        app.enable_dhcp = cfg.CONF.neutron.enable_dhcp
+        app.vif_plug_is_fatal = cfg.CONF.neutron.vif_plugging_is_fatal
+        app.vif_plug_timeout = cfg.CONF.neutron.vif_plugging_timeout
         app.neutron.format = 'json'
 
 
