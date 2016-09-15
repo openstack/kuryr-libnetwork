@@ -133,7 +133,17 @@ if is_service_enabled kuryr-libnetwork; then
         # After an ./unstack it will be stopped. So it is ok if it returns exit-code == 1
         sudo service docker stop || true
 
-        run_process docker-engine "sudo /usr/bin/docker daemon -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT"
+        run_process docker-engine "sudo /usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT"
+
+        # We put the stack user as owner of the socket so we do not need to
+        # run the Docker commands with sudo when developing.
+        echo -n "Waiting for Docker to create its socket file"
+        while [ ! -e "$KURYR_DOCKER_ENGINE_SOCKET_FILE" ]; do
+            echo -n "."
+            sleep 1
+        done
+        echo ""
+        sudo chown "$STACK_USER":docker "$KURYR_DOCKER_ENGINE_SOCKET_FILE"
     fi
 
     if [[ "$1" == "stack" && "$2" == "extra" ]]; then
@@ -162,6 +172,9 @@ if is_service_enabled kuryr-libnetwork; then
         stop_process etcd-server
         rm -rf $DEST/etcd/
         stop_process docker-engine
+        # Stop process does not handle well Docker 1.12+ new multi process
+        # split and doesn't kill them all. Let's leverage Docker's own pidfile
+        sudo kill -s SIGTERM "$(cat /var/run/docker.pid)"
     fi
 fi
 
