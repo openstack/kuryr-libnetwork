@@ -37,7 +37,7 @@ elif [ -x "$ZUUL_CLONER" ]; then
 else
     echo "PIP HARDCODE" > /tmp/tox_install.txt
     pip install -U -egit+https://git.openstack.org/openstack/neutron#egg=neutron
-    pip install -U -egit+https://git.openstack.org/openstack/kuryr#egg=kuryr
+    pip install -U -egit+https://git.openstack.org/openstack/kuryr#egg=kuryr_lib
 fi
 
 pip install -U $* --process-dependency-links --allow-all-external
