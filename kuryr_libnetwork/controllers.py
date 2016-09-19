@@ -59,23 +59,14 @@ def _get_cloud_config_auth_data(cloud='devstack-admin'):
     return cloud_config.get_auth(), cloud_config.get_session()
 
 
-def _get_neutron_client_from_creds():
+def get_neutron_client_from_creds():
     auth_plugin, session = _get_cloud_config_auth_data()
     return client.Client(session=session, auth=auth_plugin)
 
 
 def get_neutron_client():
     """Creates the Neutron client for communicating with Neutron."""
-    try:
-        # First try to retrieve neutron client from a working OS deployment
-        # This is used for gate testing.
-        # Since this always use admin credentials, next patch will introduce
-        # a config parameter that disable this for production environments
-        neutron_client = _get_neutron_client_from_creds()
-    except Exception:
-        neutron_client = lib_utils.get_neutron_client()
-
-    return neutron_client
+    return lib_utils.get_neutron_client()
 
 
 def neutron_client():

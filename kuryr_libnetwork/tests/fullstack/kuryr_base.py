@@ -28,4 +28,4 @@ class KuryrBaseTest(base.BaseTestCase):
         super(KuryrBaseTest, self).setUp()
         self.docker_client = docker.Client(
             base_url='tcp://0.0.0.0:2375')
-        self.neutron_client = controllers.get_neutron_client()
+        self.neutron_client = controllers.get_neutron_client_from_creds()
