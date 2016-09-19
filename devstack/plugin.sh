@@ -50,7 +50,7 @@ function create_kuryr_cache_dir {
 
 function create_kuryr_account {
     if is_service_enabled kuryr-libnetwork; then
-        create_service_user "kuryr"
+        create_service_user "kuryr" "admin"
         get_or_create_service "kuryr-libnetwork" "kuryr-libnetwork" \
         "Kuryr-Libnetwork Service"
     fi
