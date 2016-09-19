@@ -27,8 +27,40 @@ K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 Features
 --------
 
-* TODO
+* Docker libnetwork remote driver
 
+* Docker libnetwork IPAM driver
+
+* Support for Linux Bridge, Open vSwitch, Midonet, and IOvisor port bindings
+
+* Support for using existing Neutron networks::
+
+    docker network create -d kuryr --ipam-driver=kuryr --subnet=10.10.0.0/24 --gateway=10.10.0.1 \
+       -o neutron.net.uuid=d98d1259-03d1-4b45-9b86-b039cba1d90d mynet
+
+    docker network create -d kuryr --ipam-driver=kuryr --subnet=10.10.0.0/24 --gateway=10.10.0.1 \
+       -o neutron.net.name=my_neutron_net mynet
+
+* Support for using existing Neutron ports::
+
+    docker run -it --net=kuryr_net --ip=10.0.0.5 ubuntu
+
+    if a port in the corresponding subnet with the requested ip address
+    already exists and it is unbound, that port is used for the
+    container.
+
+* Support for the Docker "expose" option::
+
+    docker run --net=my_kuryr_net --expose=1234-1238/udp -it ubuntu
+
+    This feature is implemented by using Neutron security groups.
+
+Limitations
+-----------
+
+* Docker 1.12 with SwarmKit (the new Swarm) does not support remote
+  drivers. Therefore, it cannot be used with Kuryr. This limitation is
+  to be removed in Docker 1.13.
 
 Getting it running with a service container
 -------------------------------------------
@@ -40,7 +72,7 @@ The necessary components for an operating environment to run Kuryr are:
 
 * Keystone (preferably configured with Keystone v3),
 * Neutron (preferably mitaka or newer),
-* Mariadb (for Neutron and Keystone),
+* DB management system suh as MySQL or Mariadb (for Neutron and Keystone),
 * Neutron agents for the vendor you choose,
 * Rabbitmq if the Neutron agents for your vendor require it,
 * Docker 1.9+
@@ -157,7 +189,7 @@ Rename and copy config file at required path::
     $ cp etc/kuryr.conf.sample /etc/kuryr/kuryr.conf
 
 
-Edit Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
+For using Keystone v3, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
 
     [neutron]
     auth_url = http://127.0.0.1:35357/v3/
@@ -166,6 +198,16 @@ Edit Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
     password = ADMIN_PASSWORD
     project_name = service
     project_domain_name = Default
+    auth_type = password
+
+
+Alternatively, for using Keystone v2, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
+
+    [neutron]
+    auth_url = http://127.0.0.1:35357/v2.0/
+    username = admin
+    password = ADMIN_PASSWORD
+    project_name = service
     auth_type = password
 
 
