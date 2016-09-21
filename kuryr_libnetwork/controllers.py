@@ -1183,6 +1183,11 @@ def ipam_request_pool():
         else:
             cidr = ipaddress.ip_network(six.text_type(requested_pool))
         subnet_cidr = six.text_type(cidr)
+        subnets_by_cidr = _get_subnets_by_attrs(cidr=subnet_cidr)
+        if len(subnets_by_cidr):
+            app.logger.warning(_LW("There is already existing subnet for the "
+                               "same cidr. Please check and specify pool name "
+                               "in Options."))
         if not pool_name:
             pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
             pools = _get_subnetpools_by_attrs(name=pool_name)

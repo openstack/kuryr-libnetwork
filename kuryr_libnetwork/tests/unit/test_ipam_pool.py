@@ -49,6 +49,11 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
             'default_prefixlen': 16,
             'prefixes': ['10.0.0.0/16']}
 
+        fake_subnet = {"subnets": []}
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr="10.0.0.0/16").AndReturn(
+            fake_subnet)
+
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_name = pool_name
         app.neutron.list_subnetpools(name=fake_name).AndReturn(
@@ -80,6 +85,11 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
         self.assertIn('Pool', decoded_json['Err'])
 
     def test_request_pool_list_subnetpool_failure(self):
+        fake_subnet = {"subnets": []}
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr='10.0.0.0/16').AndReturn(
+            fake_subnet)
+
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
         fake_name = pool_name

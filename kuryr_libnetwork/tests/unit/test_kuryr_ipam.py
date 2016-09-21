@@ -55,6 +55,11 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertEqual(expected, decoded_json)
 
     def test_ipam_driver_request_pool_with_user_pool(self):
+        fake_subnet = {"subnets": []}
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr=FAKE_IP4_CIDR).AndReturn(
+            fake_subnet)
+
         pool_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         new_subnetpool = {
             'name': pool_name,
@@ -95,6 +100,11 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertEqual(fake_kuryr_subnetpool_id, decoded_json['PoolID'])
 
     def test_ipam_driver_request_pool_with_pool_name_option(self):
+        fake_subnet = {"subnets": []}
+        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
+        app.neutron.list_subnets(cidr=FAKE_IP4_CIDR).AndReturn(
+            fake_subnet)
+
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = str(uuid.uuid4())
         fake_name = 'fake_pool_name'
