@@ -76,4 +76,34 @@ if [[ ! -f "${KURYR_CONFIG}" ]]; then
     echo "Done"
 fi
 
-PYTHONPATH=${KURYR_HOME} python ${KURYR_HOME}/scripts/run_server.py  --config-file /etc/kuryr/kuryr.conf $@
+KURYR_USE_UWSGI=${KURYR_USE_UWSGI:-True}
+KURYR_UWSGI_PROCESSES=${KURYR_UWSGI_PROCESSES:-1}
+KURYR_UWSGI_THREADS=${KURYR_UWSGI_THREADS:-1}
+
+UWSGI_BIN=$(which uwsgi)
+if [[ -z "UWSGI_BIN" && $KURYR_USE_UWSGI == "True" ]]; then
+    echo "Requested uwsgi usage, but no uwsgi executable is available. Falling back to run_server.py"
+    echo "To suppress this message set KURYR_USE_UWSGI to False"
+    KURYR_USE_UWSGI="False"
+fi
+
+UWSGI_ADDITIONAL_ARGS=()
+if [[ $KURYR_USE_UWSGI == "True" ]]; then
+    if [[ "$VIRTUAL_ENV" ]]; then
+        UWSGI_ADDITIONAL_ARGS=( --virtualenv $VIRTUAL_ENV )
+    fi
+    echo "Starting uwsgi with ${KURYR_UWSGI_PROCESSES} processes and ${KURYR_UWSGI_THREADS} threads"
+    $UWSGI_BIN \
+        --plugins python \
+        --http-socket :23750 \
+        --wsgi kuryr_libnetwork.server:app \
+        --python-path "${KURYR_HOME}" \
+        --pyargv "--config-file ${KURYR_CONFIG}" \
+        --master \
+        --need-app \
+        --processes "$KURYR_UWSGI_PROCESSES" \
+        --threads "$KURYR_UWSGI_THREADS" \
+        "${UWSGI_ADDITIONAL_ARGS[@]}"
+else
+    PYTHONPATH="${KURYR_HOME}" python "${KURYR_HOME}/scripts/run_server.py"  --config-file "${KURYR_CONFIG}" "$@"
+fi

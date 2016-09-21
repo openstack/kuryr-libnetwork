@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    scripts/run_kuryr.sh now defaults to running api server under uwsgi. This behaviour
+    can be controlled by KURYR_USE_UWSGI env variable (default True).
+    In case it is set to False or uwsgi is abscent api would be run as usual.
