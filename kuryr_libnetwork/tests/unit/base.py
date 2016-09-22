@@ -10,7 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from neutronclient.tests.unit import test_cli20
+from mox3 import mox
+from neutronclient.v2_0 import client
+from oslotest import base
 
 from kuryr.lib import binding
 from kuryr_libnetwork import app
@@ -19,7 +21,11 @@ from kuryr_libnetwork import controllers
 from kuryr_libnetwork import utils
 
 
-class TestCase(test_cli20.CLITestV20Base):
+TOKEN = 'testtoken'
+ENDURL = 'localurl'
+
+
+class TestCase(base.BaseTestCase):
     """Test case base class for all unit tests."""
 
     def setUp(self):
@@ -27,7 +33,7 @@ class TestCase(test_cli20.CLITestV20Base):
         app.config['DEBUG'] = True
         app.config['TESTING'] = True
         self.app = app.test_client()
-        self.app.neutron = self.client
+        self.app.neutron = client.Client(token=TOKEN, endpoint_url=ENDURL)
         app.tag = True
 
 
@@ -36,6 +42,7 @@ class TestKuryrBase(TestCase):
 
     def setUp(self):
         super(TestKuryrBase, self).setUp()
+        self.mox = mox.Mox()
         controllers.neutron_client()
         self.app.neutron.format = 'json'
         self.addCleanup(self.mox.VerifyAll)
