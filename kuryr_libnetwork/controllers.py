@@ -25,6 +25,7 @@ from oslo_log import log
 from oslo_utils import excutils
 
 from kuryr.lib import binding
+from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr.lib._i18n import _LE, _LI, _LW
@@ -211,7 +212,7 @@ def _create_port(endpoint_id, neutron_network_id, interface_mac, fixed_ips):
         'name': utils.get_neutron_port_name(endpoint_id),
         'admin_state_up': True,
         'network_id': neutron_network_id,
-        'device_owner': const.DEVICE_OWNER,
+        'device_owner': lib_const.DEVICE_OWNER,
         'device_id': endpoint_id,
         'binding:host_id': lib_utils.get_hostname(),
         'fixed_ips': fixed_ips
@@ -234,7 +235,7 @@ def _update_port(port, endpoint_id):
                 port['id'],
                 {'port': {
                     'name': port['name'],
-                    'device_owner': const.DEVICE_OWNER,
+                    'device_owner': lib_const.DEVICE_OWNER,
                     'device_id': endpoint_id}})
     except n_exceptions.NeutronClientException as ex:
         app.logger.error(_LE("Error happened during updating a "
@@ -360,7 +361,7 @@ def _port_active(neutron_port_id, vif_plug_timeout):
             app.logger.error(_LE('Could not get the port %s to check '
                                  'its status'), ex)
         else:
-            if port['port']['status'] == const.PORT_STATUS_ACTIVE:
+            if port['port']['status'] == lib_const.PORT_STATUS_ACTIVE:
                 port_active = True
         if port_active or (vif_plug_timeout > 0 and tries >= vif_plug_timeout):
             break

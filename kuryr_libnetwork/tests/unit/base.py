@@ -15,6 +15,7 @@ from neutronclient.v2_0 import client
 from oslotest import base
 
 from kuryr.lib import binding
+from kuryr.lib import constants as lib_const
 from kuryr_libnetwork import app
 from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
@@ -180,7 +181,7 @@ class TestKuryrBase(TestCase):
     @staticmethod
     def _get_fake_port(docker_endpoint_id, neutron_network_id,
                        neutron_port_id,
-                       neutron_port_status=const.PORT_STATUS_DOWN,
+                       neutron_port_status=lib_const.PORT_STATUS_DOWN,
                        neutron_subnet_v4_id=None,
                        neutron_subnet_v6_id=None,
                        neutron_subnet_v4_address="192.168.1.2",
