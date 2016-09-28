@@ -12,9 +12,12 @@
 
 import os_client_config
 
+from collections import defaultdict
 import flask
 import ipaddress
+from itertools import groupby
 import jsonschema
+from operator import itemgetter
 import six
 import time
 
@@ -377,11 +380,13 @@ def _program_expose_ports(options, port_id):
             ("Could not create required security group {0} "
              "for setting up exported port ").format(sec_group))
 
+    proto_port_dict = defaultdict(list)
     for exposed in exposed_ports:
         port = exposed['Port']
         proto = exposed['Proto']
         try:
             proto = const.PROTOCOLS[proto]
+            proto_port_dict[proto].append(port)
         except KeyError:
             # This should not happen as Docker client catches such errors
             app.logger.error(_LE("Unrecognizable protocol %s"), proto)
@@ -390,25 +395,33 @@ def _program_expose_ports(options, port_id):
                 ("Bad protocol number for exposed port. Deleting "
                  "the security group {0}.").format(sg_id))
 
-        sec_group_rule = {
-            'security_group_id': sg_id,
-            'direction': 'ingress',
-            'port_range_min': port,
-            'port_range_max': port,
-            'protocol': proto
-        }
+    for proto, port_list in six.iteritems(proto_port_dict):
+        # Sort the port range list
+        for key, group in groupby(enumerate(sorted(port_list)),
+                                  lambda ix: ix[0] - ix[1]):
+            port_range_list = list(map(itemgetter(1), group))
 
-        try:
-            app.neutron.create_security_group_rule({'security_group_rule':
-                                                    sec_group_rule})
-        except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happend during creating a "
-                                 "Neutron security group "
-                                 "rule: %s"), ex)
-            app.neutron.delete_security_group(sg_id)
-            raise exceptions.ExportPortFailure(
-                ("Could not create required security group rules {0} "
-                 "for setting up exported port ").format(sec_group_rule))
+            port_range_min = min(port_range_list)
+            port_range_max = max(port_range_list)
+            sec_group_rule = {
+                'security_group_id': sg_id,
+                'direction': 'ingress',
+                'port_range_min': port_range_min,
+                'port_range_max': port_range_max,
+                'protocol': proto
+            }
+
+            try:
+                app.neutron.create_security_group_rule({'security_group_rule':
+                                                        sec_group_rule})
+            except n_exceptions.NeutronClientException as ex:
+                app.logger.error(_LE("Error happend during creating a "
+                                     "Neutron security group "
+                                     "rule: %s"), ex)
+                app.neutron.delete_security_group(sg_id)
+                raise exceptions.ExportPortFailure(
+                    ("Could not create required security group rules {0} "
+                     "for setting up exported port ").format(sec_group_rule))
 
     try:
         sgs = [sg_id]

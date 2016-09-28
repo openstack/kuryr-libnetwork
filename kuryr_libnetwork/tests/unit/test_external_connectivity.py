@@ -10,6 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from collections import defaultdict
+from itertools import groupby
+from operator import itemgetter
+import six
 import uuid
 
 import ddt
@@ -23,7 +27,9 @@ from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
 
 PORT = 77
-PROTOCOL = 6
+SINGLE_PORT = 100
+PROTOCOL_TCP = 6
+PROTOCOL_UDP = 17
 
 
 @ddt.ddt
@@ -76,16 +82,29 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
                                            fake_neutron_sec_group_response)
 
         self.mox.StubOutWithMock(app.neutron, 'create_security_group_rule')
+
+        proto_port_dict = defaultdict(list)
         for i in range(num_ports):
-            sec_group_rule = {
-                'security_group_id': fake_neutron_sec_group_id,
-                'direction': 'ingress',
-                'port_range_min': PORT + i,
-                'port_range_max': PORT + i,
-                'protocol': constants.PROTOCOLS[PROTOCOL]
-            }
-            app.neutron.create_security_group_rule({'security_group_rule':
-                                                    sec_group_rule})
+            proto_port_dict[constants.PROTOCOLS[PROTOCOL_TCP]].append(PORT + i)
+            proto_port_dict[constants.PROTOCOLS[PROTOCOL_UDP]].append(PORT + i)
+        proto_port_dict[constants.PROTOCOLS[PROTOCOL_UDP]].append(SINGLE_PORT)
+
+        for proto, port_list in six.iteritems(proto_port_dict):
+            for key, group in groupby(enumerate(sorted(port_list)),
+                                      lambda ix: ix[0] - ix[1]):
+                port_range_list = list(map(itemgetter(1), group))
+
+                port_range_min = min(port_range_list)
+                port_range_max = max(port_range_list)
+                sec_group_rule = {
+                    'security_group_id': fake_neutron_sec_group_id,
+                    'direction': 'ingress',
+                    'port_range_min': port_range_min,
+                    'port_range_max': port_range_max,
+                    'protocol': proto
+                }
+                app.neutron.create_security_group_rule({'security_group_rule':
+                                                        sec_group_rule})
 
         sgs = [fake_neutron_sec_group_id]
         if existing_sg:
@@ -102,7 +121,9 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
 
         port_opt = []
         for i in range(num_ports):
-            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL})
+            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_TCP})
+            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_UDP})
+        port_opt.append({u'Port': SINGLE_PORT, u'Proto': PROTOCOL_UDP})
         options = {'com.docker.network.endpoint.exposedports':
                    port_opt,
                    'com.docker.network.portmap':
