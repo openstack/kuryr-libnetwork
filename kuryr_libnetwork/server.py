@@ -35,7 +35,7 @@ def start():
 
 
 if __name__ == '__main__':
-    start()
+    sys.exit(start())
 elif 'UWSGI_ORIGINAL_PROC_NAME' in os.environ:
     # The module is being loaded by uWSGI to get the Flask app running under
     # it. This allows Neutron to be set, since uWSGI does not run 'start',
