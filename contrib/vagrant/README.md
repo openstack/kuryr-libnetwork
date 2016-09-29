@@ -1,5 +1,5 @@
-vagrant-devstack-Kuryr
-======================
+vagrant-devstack-Kuryr-libnetwork
+=================================
 
 Getting started
 ---------------
@@ -10,8 +10,8 @@ Steps to try vagrant image:
 
  1. Install Vagrant on your local machine. Install one of the current
     providers supported: VirtualBox, Libvirt or Vagrant
- 2. Git clone Kuryr repository.
- 3. Run `cd kuryr/contrib/vagrant`
+ 2. Git clone kuryr-libnetwork repository.
+ 3. Run `cd kuryr-libnetwork/contrib/vagrant`
  4. Run `vagrant up`
     It will take from 10 to 60 minutes, depending on your internet speed.
     Vagrant-cachier can speed up the process [2].
