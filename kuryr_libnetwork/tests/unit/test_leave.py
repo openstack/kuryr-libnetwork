@@ -18,10 +18,10 @@ from oslo_serialization import jsonutils
 from werkzeug import exceptions as w_exceptions
 
 from kuryr.lib import binding
+from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
-from kuryr_libnetwork import constants as const
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
 
@@ -70,7 +70,7 @@ class TestKuryrLeaveFailures(base.TestKuryrFailures):
         fake_neutron_v6_subnet_id = str(uuid.uuid4())
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_network_id,
-            fake_neutron_port_id, const.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
         app.neutron.list_ports(name=neutron_port_name).AndReturn(
             fake_neutron_ports_response)

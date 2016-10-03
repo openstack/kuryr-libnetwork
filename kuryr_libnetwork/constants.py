@@ -29,14 +29,6 @@ PROTOCOLS = {
     17: 'udp'
 }
 
-PORT_STATUS_ACTIVE = 'ACTIVE'
-PORT_STATUS_DOWN = 'DOWN'
-
-CONTAINER_VETH_PREFIX = 't_c'
-DEVICE_OWNER = 'kuryr:container'
-NIC_NAME_LEN = 14
-VETH_PREFIX = 'tap'
-
 NET_NAME_PREFIX = 'kuryr-net-'
 NEUTRON_ID_LH_OPTION = 'kuryr.net.uuid.lh'
 NEUTRON_ID_UH_OPTION = 'kuryr.net.uuid.uh'

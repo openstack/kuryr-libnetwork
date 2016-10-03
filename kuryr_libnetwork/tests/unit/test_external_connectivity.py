@@ -15,6 +15,7 @@ import uuid
 import ddt
 from oslo_serialization import jsonutils
 
+from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import constants
@@ -52,7 +53,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         fake_neutron_v6_subnet_id = str(uuid.uuid4())
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
-            fake_neutron_port_id, constants.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
         if existing_sg:
             fake_neutron_existing_sec_group_id = str(uuid.uuid4())
@@ -134,7 +135,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         fake_neutron_v6_subnet_id = str(uuid.uuid4())
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
-            fake_neutron_port_id, constants.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
         if existing_sg:
             fake_neutron_existing_sec_group_id = str(uuid.uuid4())

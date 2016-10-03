@@ -14,6 +14,7 @@ import ddt
 from oslo_serialization import jsonutils
 import uuid
 
+from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import config
 from kuryr_libnetwork import constants as const
@@ -216,7 +217,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_neutron_port_id = str(uuid.uuid4())
         fake_port = base.TestKuryrBase._get_fake_port(
             docker_endpoint_id, neutron_network_id,
-            fake_neutron_port_id, const.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             subnet_v4_id,
             neutron_subnet_v4_address="10.0.0.5")
         port_request = {
@@ -318,7 +319,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_neutron_port_id = str(uuid.uuid4())
         fake_port = base.TestKuryrBase._get_fake_port(
             docker_endpoint_id, neutron_network_id,
-            fake_neutron_port_id, const.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             subnet_v4_id,
             neutron_subnet_v4_address=requested_address)
 
@@ -587,7 +588,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_neutron_port_id = str(uuid.uuid4())
         fake_port = base.TestKuryrBase._get_fake_port(
             docker_endpoint_id, neutron_network_id,
-            fake_neutron_port_id, const.PORT_STATUS_ACTIVE,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             subnet_v4_id,
             neutron_subnet_v4_address=fake_ip4)
         port_request = {
