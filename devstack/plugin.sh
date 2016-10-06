@@ -82,6 +82,17 @@ function configure_kuryr {
 if is_service_enabled kuryr-libnetwork; then
     DISTRO_DISTUTILS_DATA_PATH=$(python -c "import distutils.dist;import distutils.command.install;inst = distutils.command.install.install(distutils.dist.Distribution());inst.finalize_options();print inst.install_data")
     if [[ "$1" == "stack" && "$2" == "install" ]]; then
+        # Install kuryr-lib from git so we make sure we're testing
+        # the latest code.
+        if use_library_from_git "kuryr"; then
+            git_clone_by_name "kuryr"
+            setup_dev_lib "kuryr"
+            # Install bind scripts
+            if [ ! -d "${DISTRO_DISTUTILS_DATA_PATH}/libexec/kuryr" ]; then
+                sudo mkdir -p ${DISTRO_DISTUTILS_DATA_PATH}/libexec/kuryr
+            fi
+            sudo cp -rf ${DEST}/kuryr/usr/libexec/kuryr/* ${DISTRO_DISTUTILS_DATA_PATH}/libexec/kuryr
+        fi
         install_etcd_data_store
         setup_develop $KURYR_HOME
 
