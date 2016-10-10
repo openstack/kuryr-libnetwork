@@ -16,6 +16,7 @@ sdist
 develop-eggs
 lib
 lib64
+cover
 
 # Installer logs
 pip-log.txt
