@@ -56,7 +56,7 @@ Features
     This feature is implemented by using Neutron security groups.
 
 Limitations
------------
+~~~~~~~~~~~
 
 * Docker 1.12 with SwarmKit (the new Swarm) does not support remote
   drivers. Therefore, it cannot be used with Kuryr. This limitation is
@@ -72,7 +72,7 @@ The necessary components for an operating environment to run Kuryr are:
 
 * Keystone (preferably configured with Keystone v3),
 * Neutron (preferably mitaka or newer),
-* DB management system suh as MySQL or Mariadb (for Neutron and Keystone),
+* DB management system such as MySQL or Mariadb (for Neutron and Keystone),
 * Neutron agents for the vendor you choose,
 * Rabbitmq if the Neutron agents for your vendor require it,
 * Docker 1.9+
@@ -118,21 +118,23 @@ Then we start the container::
       kuryr/libnetwork
 
 Where:
+
 * SERVICE_USER, SERVICE_PROJECT_NAME, SERVICE_PASSWORD, SERVICE_DOMAIN_NAME,
-USER_DOMAIN_NAME are OpenStack credentials
+  USER_DOMAIN_NAME are OpenStack credentials
 * IDENTITY_URL is the url to the OpenStack Keystone v3 endpoint
 * A volume is created so that the logs are available on the host
 * NET_ADMIN capabilities are given in order to perform network operations on
-the host namespace like ovs-vsctl
+  the host namespace like ovs-vsctl
 
 Other options you can set as '-e' parameters in Docker run:
+
 * CAPABILITY_SCOPE can be "local" or "global", the latter being for when there
-is a cluster store plugged into the docker engine.
+  is a cluster store plugged into the docker engine.
 * LOG_LEVEL for defining, for example, "DEBUG" logging messages.
 * PROCESSES for defining how many kuryr processes to use to handle the
-libnetwork requests.
+  libnetwork requests.
 * THREADS for defining how many threads per process to use to handle the
-libnetwork requests.
+  libnetwork requests.
 
 Note that you will probably have to change the 127.0.0.1 IDENTITY_URL address
 for the address where your Keystone is running. In this case it is 127.0.0.1
