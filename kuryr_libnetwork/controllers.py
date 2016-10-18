@@ -569,6 +569,9 @@ def network_driver_create_network():
             neutron_name = generic_options.get(const.NEUTRON_NAME_OPTION)
             pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
 
+    if not pool_name:
+        pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
+
     if pool_name:
         pools = _get_subnetpools_by_attrs(name=pool_name)
         if pools:

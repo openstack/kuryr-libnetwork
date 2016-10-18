@@ -15,6 +15,7 @@ from ddt import ddt
 import mock
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import constants as const
@@ -28,9 +29,19 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
     This test covers error responses listed in the spec:
       http://developer.openstack.org/api-ref-networking-v2-ext.html#createProviderNetwork  # noqa
     """
-    def _invoke_create_request(self, network_name):
+    def _invoke_create_request(self, network_request):
+        response = self.app.post('/NetworkDriver.CreateNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(network_request))
+        return response
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_create_network_unauthorized(self, mock_list_subnetpools,
+                                         mock_create_network):
+        docker_network_id = lib_utils.get_hash()
         network_request = {
-            'NetworkID': network_name,
+            'NetworkID': docker_network_id,
             'IPv4Data': [{
                 'AddressSpace': 'foo',
                 'Pool': '192.168.42.0/24',
@@ -45,14 +56,15 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             }],
             'Options': {}
         }
-        response = self.app.post('/NetworkDriver.CreateNetwork',
-                                 content_type='application/json',
-                                 data=jsonutils.dumps(network_request))
-        return response
 
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
-    def test_create_network_unauthorized(self, mock_create_network):
-        docker_network_id = lib_utils.get_hash()
+        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv4Data'][0]['Pool'])
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = {
+            'subnetpools': kuryr_subnetpools['subnetpools']}
+
         fake_request = {
             "network": {
                 "name": utils.make_net_name(docker_network_id),
@@ -60,19 +72,35 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             }
         }
         mock_create_network.side_effect = exceptions.Unauthorized
-        response = self._invoke_create_request(docker_network_id)
+        response = self._invoke_create_request(network_request)
         self.assertEqual(401, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        mock_create_network.assert_called_with(
-            fake_request)
+        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
+        mock_create_network.assert_called_with(fake_request)
         self.assertIn('Err', decoded_json)
         self.assertEqual(
             {'Err': exceptions.Unauthorized.message}, decoded_json)
 
     def test_create_network_bad_request(self):
         invalid_docker_network_id = 'id-should-be-hexdigits'
-        response = self._invoke_create_request(invalid_docker_network_id)
+        network_request = {
+            'NetworkID': invalid_docker_network_id,
+            'IPv4Data': [{
+                'AddressSpace': 'foo',
+                'Pool': '192.168.42.0/24',
+                'Gateway': '192.168.42.1/24',
+                'AuxAddresses': {}
+            }],
+            'IPv6Data': [{
+                'AddressSpace': 'bar',
+                'Pool': 'fe80::/64',
+                'Gateway': 'fe80::f816:3eff:fe20:57c3/64',
+                'AuxAddresses': {}
+            }],
+            'Options': {}
+        }
 
+        response = self._invoke_create_request(network_request)
         self.assertEqual(400, response.status_code)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)

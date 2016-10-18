@@ -49,46 +49,19 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_network')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data(
         (True), (False))
     def test_create_network_pre_existing(self, use_tags,
-            mock_tag, mock_list_networks, mock_add_tag,
-            mock_update_network, mock_list_subnets,
-            mock_create_subnet):
+            mock_tag, mock_list_subnetpools, mock_list_networks,
+            mock_add_tag, mock_update_network,
+            mock_list_subnets, mock_create_subnet):
         if not use_tags:
             mock_tag.tag = use_tags
 
         docker_network_id, fake_neutron_net_id, fake_response = self._ids()
-
-        mock_list_networks.return_value = fake_response
-
-        fake_existing_subnets_response = {
-            "subnets": []
-        }
-        fake_cidr_v4 = '192.168.42.0/24'
-        mock_list_subnets.return_value = fake_existing_subnets_response
-
-        fake_subnet_request = {
-            "subnets": [{
-                'name': fake_cidr_v4,
-                'network_id': fake_neutron_net_id,
-                'ip_version': 4,
-                'cidr': fake_cidr_v4,
-                'enable_dhcp': mock_tag.enable_dhcp,
-                'gateway_ip': '192.168.42.1',
-            }]
-        }
-        subnet_v4_id = uuidutils.generate_uuid()
-        fake_v4_subnet = self._get_fake_v4_subnet(
-            fake_neutron_net_id, subnet_v4_id,
-            name=fake_cidr_v4, cidr=fake_cidr_v4)
-        fake_subnet_response = {
-            'subnets': [
-                fake_v4_subnet['subnet']
-            ]
-        }
-        mock_create_subnet.return_value = fake_subnet_response
+        fake_kuryr_subnetpool_id = self._ids()
 
         network_request = {
             'NetworkID': docker_network_id,
@@ -108,11 +81,51 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 }
             }
         }
+
+        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv4Data'][0]['Pool'])
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = {
+            'subnetpools': kuryr_subnetpools['subnetpools']}
+
+        mock_list_networks.return_value = fake_response
+
+        fake_existing_subnets_response = {
+            "subnets": []
+        }
+        fake_cidr_v4 = '192.168.42.0/24'
+        mock_list_subnets.return_value = fake_existing_subnets_response
+
+        fake_subnet_request = {
+            "subnets": [{
+                'name': fake_cidr_v4,
+                'network_id': fake_neutron_net_id,
+                'ip_version': 4,
+                'cidr': fake_cidr_v4,
+                'enable_dhcp': mock_tag.enable_dhcp,
+                'gateway_ip': '192.168.42.1',
+                'subnetpool_id': fake_kuryr_subnetpool_id
+            }]
+        }
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id,
+            fake_kuryr_subnetpool_id,
+            name=fake_cidr_v4, cidr=fake_cidr_v4)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_create_subnet.return_value = fake_subnet_response
+
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
 
         self.assertEqual(200, response.status_code)
+        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
         mock_list_networks.assert_called_with(id=fake_neutron_net_id)
         mock_list_subnets.assert_called_with(
             network_id=fake_neutron_net_id,
