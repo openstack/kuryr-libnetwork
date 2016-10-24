@@ -64,3 +64,4 @@ For example, to use OVN as the Neutron plugin with Kuryr, you can create a
     enable_service ovn-controller
     disable_service q-agt
     disable_service q-l3
+    disable_service q-dhcp
