@@ -22,6 +22,9 @@ from rally.task import validation
 class Kuryr(utils.KuryrScenario):
     """Benchmark scenarios for Kuryr."""
 
+    def __init__(self, context=None, admin_clients=None, clients=None):
+        super(Kuryr, self).__init__(context, admin_clients, clients)
+
     @validation.required_openstack(users=True)
     @scenario.configure(context={"cleanup": ["kuryr"]})
     def list_networks(self, network_list_args=None):
