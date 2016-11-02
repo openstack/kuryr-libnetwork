@@ -21,4 +21,8 @@ KURYR_DOCKER_ENGINE_PORT=${KURYR_DOCKER_ENGINE_PORT:-2375}
 KURYR_DOCKER_ENGINE_SOCKET_FILE=${KURYR_DOCKER_ENGINE_SOCKET_FILE:-/var/run/docker.sock}
 KURYR_ETCD_PORT=${KURYR_ETCD_PORT:-4001}
 
+GITREPO["kuryr"]=${KURYR_REPO:-${GIT_BASE}/openstack/kuryr.git}
+GITBRANCH["kuryr"]=${KURYR_BRANCH:-master}
+GITDIR["kuryr"]=$DEST/kuryr
+
 enable_service kuryr-libnetwork etcd-server docker-engine
