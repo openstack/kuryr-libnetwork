@@ -1,10 +1,10 @@
 {
-  "Kuryr.create_and_delete_networks": [
+  "Kuryr.create_and_delete_networks_without_kuryr": [
     {
       "runner": {
         "type": "constant",
         "concurrency": 2,
-        "times": 4
+        "times": 20
       },
       "args": {
         "network_create_args": {}

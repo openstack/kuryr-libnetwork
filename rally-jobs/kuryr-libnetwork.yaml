@@ -3,8 +3,8 @@
     -
       runner:
         type: "constant"
-        times: 40
-        concurrency: 20
+        times: 20
+        concurrency: 1
       context:
         users:
           tenants: 2
@@ -16,12 +16,29 @@
         failure_rate:
           max: 0
 
-  Kuryr.create_and_delete_networks:
+  Kuryr.create_and_delete_networks_with_kuryr:
     -
       runner:
         type: "constant"
-        times: 10
-        concurrency: 4
+        times: 20
+        concurrency: 1
+      context:
+        users:
+          tenants: 2
+          users_per_tenant: 2
+        quotas:
+          neutron:
+             network: -1
+      sla:
+        failure_rate:
+          max: 0
+
+  Kuryr.create_and_delete_networks_without_kuryr:
+    -
+      runner:
+        type: "constant"
+        times: 20
+        concurrency: 1
       context:
         users:
           tenants: 2
