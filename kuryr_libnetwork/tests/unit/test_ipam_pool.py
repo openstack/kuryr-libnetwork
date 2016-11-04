@@ -11,11 +11,11 @@
 # under the License.
 
 import ddt
+import mock
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
 
 from kuryr.lib import utils as lib_utils
-from kuryr_libnetwork import app
 from kuryr_libnetwork.tests.unit import base
 
 
@@ -24,8 +24,7 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
     """Unit tests for testing request pool failures.
 
     This test covers error responses listed in the spec:
-        http://developer.openstack.org/api-ref-networking-v2-ext.html#createSubnetPool
-        http://developer.openstack.org/api-ref-networking-v2-ext.html#listSubnetPools
+    http://developer.openstack.org/api-ref/networking/v2/index.html#subnet-pools-extension-subnetpools # noqa
     """
     def _invoke_create_request(self, pool):
         fake_request = {
@@ -40,9 +39,13 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
                                  data=jsonutils.dumps(fake_request))
         return response
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnetpool')
     @ddt.data(exceptions.Unauthorized, exceptions.Forbidden,
               exceptions.NotFound)
-    def test_request_pool_create_failures(self, GivenException):
+    def test_request_pool_create_failures(self, GivenException,
+            mock_create_subnetpool, mock_list_subnetpools, mock_list_subnets):
         pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
         new_subnetpool = {
             'name': pool_name,
@@ -50,25 +53,20 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
             'prefixes': ['10.0.0.0/16']}
 
         fake_subnet = {"subnets": []}
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        app.neutron.list_subnets(cidr="10.0.0.0/16").AndReturn(
-            fake_subnet)
+        mock_list_subnets.return_value = fake_subnet
 
-        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
-        fake_name = pool_name
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': []})
+        fake_subnet_pools = {'subnetpools': []}
+        mock_list_subnetpools.return_value = fake_subnet_pools
 
-        self.mox.StubOutWithMock(app.neutron, 'create_subnetpool')
-        app.neutron.create_subnetpool(
-            {'subnetpool': new_subnetpool}).AndRaise(GivenException)
-
-        self.mox.ReplayAll()
-
+        mock_create_subnetpool.side_effect = GivenException
         pool = '10.0.0.0/16'
         response = self._invoke_create_request(pool)
 
         self.assertEqual(GivenException.status_code, response.status_code)
+        mock_list_subnets.assert_called_with(cidr='10.0.0.0/16')
+        mock_list_subnetpools.assert_called_with(name=pool_name)
+        mock_create_subnetpool.assert_called_with(
+            {'subnetpool': new_subnetpool})
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         self.assertEqual(
@@ -84,21 +82,19 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
         self.assertIn(pool, decoded_json['Err'])
         self.assertIn('Pool', decoded_json['Err'])
 
-    def test_request_pool_list_subnetpool_failure(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_request_pool_list_subnetpool_failure(self,
+                        mock_list_subnetpools, mock_list_subnets):
         fake_subnet = {"subnets": []}
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        app.neutron.list_subnets(cidr='10.0.0.0/16').AndReturn(
-            fake_subnet)
+        fake_pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
+        mock_list_subnets.return_value = fake_subnet
 
-        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
-        pool_name = lib_utils.get_neutron_subnetpool_name("10.0.0.0/16")
-        fake_name = pool_name
         ex = exceptions.Unauthorized
-        app.neutron.list_subnetpools(name=fake_name).AndRaise(ex)
-
-        self.mox.ReplayAll()
+        mock_list_subnetpools.side_effect = ex
 
         pool = '10.0.0.0/16'
         response = self._invoke_create_request(pool)
-
+        mock_list_subnets.assert_called_with(cidr='10.0.0.0/16')
+        mock_list_subnetpools.assert_called_with(name=fake_pool_name)
         self.assertEqual(ex.status_code, response.status_code)
