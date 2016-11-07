@@ -41,17 +41,32 @@ class KuryrScenario(scenario.OpenStackScenario):
         return self.docker_client.networks(names, ids)
 
     @atomic.action_timer("kuryr.create_network")
-    def _create_network(self, network_create_args):
-        """Create Kuryr network.
+    def _create_network(self, is_kuryr=True, network_create_args=None):
+        """Create network with kuryr or without kuryr.
 
         :param network_create_args: dict: name, driver and others
         :returns: dict of the created network reference object
         """
         name = self.generate_random_name()
-        return self.docker_client.create_network(name=name,
-                                                 driver='kuryr',
-                                                 options=network_create_args
-                                                 )
+        if is_kuryr:
+            ipam = {
+                "Driver": "kuryr",
+                "Options": {},
+                "Config": [
+                    {
+                        "Subnet": "20.0.0.0/24",
+                        "IPRange": "20.0.0.0/24",
+                        "Gateway": "20.0.0.1"
+                    }
+                ]
+            }
+            return self.docker_client.create_network(name=name,
+                                      driver='kuryr',
+                                      ipam=ipam,
+                                      options=network_create_args)
+        else:
+            return self.docker_client.create_network(name=name,
+                                      options=network_create_args)
 
     @atomic.action_timer("kuryr.delete_network")
     def _delete_network(self, network):

@@ -1,5 +1,5 @@
 {
-  "Kuryr.list_networks": [
+  "Kuryr.create_and_delete_networks_with_kuryr": [
     {
       "runner": {
         "type": "constant",
@@ -7,7 +7,7 @@
         "times": 20
       },
       "args": {
-        "network_list_args": {}
+        "network_create_args": {}
       },
       "context": {
         "users": {
