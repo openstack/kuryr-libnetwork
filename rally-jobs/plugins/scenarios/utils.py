@@ -75,3 +75,26 @@ class KuryrScenario(scenario.OpenStackScenario):
         :param network: Network object
         """
         self.docker_client.remove_network(network['Id'])
+
+    @atomic.action_timer("kuryr.start_container")
+    def _start_container(self, container_create_args=None):
+        """Start Container on docker network."""
+        container = self.docker_client.create_container(
+            image='busybox:1',
+            command='/bin/sleep 600')
+        container_id = container.get('Id')
+        self.docker_client.start(container=container_id)
+        net_id = self.context.get("netid")
+        self.docker_client.connect_container_to_network(container_id,
+                                                        net_id)
+        return container_id
+
+    @atomic.action_timer("kuryr.stop_container")
+    def _stop_container(self, container_id):
+        """Stop Container."""
+        self.docker_client.stop(container=container_id)
+
+    @atomic.action_timer("kuryr.remove_container")
+    def _remove_container(self, container_id):
+        self.docker_client.remove_container(container=container_id,
+                                            force=True)

@@ -16,7 +16,6 @@
 import utils
 
 from rally.plugins.openstack import scenario
-from rally.task import validation
 
 
 class Kuryr(utils.KuryrScenario):
@@ -25,7 +24,6 @@ class Kuryr(utils.KuryrScenario):
     def __init__(self, context=None, admin_clients=None, clients=None):
         super(Kuryr, self).__init__(context, admin_clients, clients)
 
-    @validation.required_openstack(users=True)
     @scenario.configure(context={"cleanup": ["kuryr"]})
     def list_networks(self, network_list_args=None):
         """List the networks.
@@ -68,3 +66,14 @@ class Kuryr(utils.KuryrScenario):
         network = self._create_network(is_kuryr=False,
                        network_create_args=network_create_args or {})
         self._delete_network(network)
+
+    @scenario.configure(context={"cleanup": ["kuryr"]})
+    def start_and_stop_containers(self, container_create_args=None):
+        """Start and stop container on docker network.
+
+        Measure the "docker run" , "docker stop" , "docker rm"
+        command performance.
+        """
+        container_id = self._start_container(container_create_args or {})
+        self._stop_container(container_id)
+        self._remove_container(container_id)
