@@ -31,6 +31,7 @@ from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr.lib._i18n import _LE, _LI, _LW
+from kuryr.lib.binding.drivers import utils as driver_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import constants as const
@@ -228,9 +229,9 @@ def _get_fixed_ips_by_interface_cidr(subnets, interface_cidrv4,
 
 def _create_or_update_port(neutron_network_id, endpoint_id,
         interface_cidrv4, interface_cidrv6, interface_mac):
-    response_interface = {}
     subnets = []
     fixed_ips = []
+    response_port = []
 
     subnetsv4 = subnetsv6 = []
     if interface_cidrv4:
@@ -266,21 +267,7 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
             "Multiple ports exist for the cidrs {0} and {1}"
             .format(interface_cidrv4, interface_cidrv6))
 
-    created_fixed_ips = response_port['fixed_ips']
-    subnets_dict_by_id = {subnet['id']: subnet
-                          for subnet in subnets}
-    if not interface_mac:
-        response_interface['MacAddress'] = response_port['mac_address']
-
-    if not (interface_cidrv4 or interface_cidrv6):
-        if 'ip_address' in response_port:
-            _process_interface_address(
-                response_port, subnets_dict_by_id, response_interface)
-        for fixed_ip in created_fixed_ips:
-            _process_interface_address(
-                fixed_ip, subnets_dict_by_id, response_interface)
-
-    return response_interface
+    return response_port, subnets
 
 
 def _neutron_net_add_tag(netid, tag):
@@ -798,9 +785,9 @@ def network_driver_create_endpoint():
                      "/NetworkDriver.CreateEndpoint", json_data)
     jsonschema.validate(json_data, schemata.ENDPOINT_CREATE_SCHEMA)
 
+    endpoint_id = json_data['EndpointID']
     neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
                                                       tags=app.tag)
-    endpoint_id = json_data['EndpointID']
     filtered_networks = _get_networks_by_identifier(neutron_network_identifier)
 
     if not filtered_networks:
@@ -818,9 +805,48 @@ def network_driver_create_endpoint():
             return flask.jsonify({
                 'Err': "Interface address v4 or v6 not provided."
             })
-        response_interface = _create_or_update_port(
+        neutron_port, subnets = _create_or_update_port(
             neutron_network_id, endpoint_id, interface_cidrv4,
             interface_cidrv6, interface_mac)
+        try:
+            ifname, peer_name, (stdout, stderr) = binding.port_bind(
+                endpoint_id, neutron_port, subnets, filtered_networks[0])
+            app.logger.debug(stdout)
+            if stderr:
+                app.logger.error(stderr)
+        except exceptions.VethCreationFailure as ex:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE('Preparing the veth '
+                                     'pair was failed: %s.'), ex)
+        except processutils.ProcessExecutionError:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE(
+                    'Could not bind the Neutron port to the veth endpoint.'))
+
+        if app.vif_plug_is_fatal:
+            port_active = _port_active(neutron_port['id'],
+                                       app.vif_plug_timeout)
+            if not port_active:
+                neutron_port_name = neutron_port['name']
+                raise exceptions.InactiveResourceException(
+                    "Neutron port {0} did not become active on time."
+                    .format(neutron_port_name))
+
+        response_interface = {}
+
+        created_fixed_ips = neutron_port['fixed_ips']
+        subnets_dict_by_id = {subnet['id']: subnet
+                              for subnet in subnets}
+        if not interface_mac:
+            response_interface['MacAddress'] = neutron_port['mac_address']
+
+        if not (interface_cidrv4 or interface_cidrv6):
+            if 'ip_address' in neutron_port:
+                _process_interface_address(
+                    neutron_port, subnets_dict_by_id, response_interface)
+            for fixed_ip in created_fixed_ips:
+                _process_interface_address(
+                    fixed_ip, subnets_dict_by_id, response_interface)
 
         return flask.jsonify({'Interface': response_interface})
 
@@ -873,6 +899,39 @@ def network_driver_delete_endpoint():
     app.logger.debug("Received JSON data %s for"
                      " /NetworkDriver.DeleteEndpoint", json_data)
     jsonschema.validate(json_data, schemata.ENDPOINT_DELETE_SCHEMA)
+
+    neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
+                                                      tags=app.tag)
+    endpoint_id = json_data['EndpointID']
+    filtered_networks = _get_networks_by_identifier(neutron_network_identifier)
+
+    if not filtered_networks:
+        return flask.jsonify({
+            'Err': "Neutron net associated with identifier {0} doesn't exit."
+            .format(neutron_network_identifier)
+        })
+    else:
+        neutron_port_name = utils.get_neutron_port_name(endpoint_id)
+        filtered_ports = _get_ports_by_attrs(name=neutron_port_name)
+        if not filtered_ports:
+            raise exceptions.NoResourceException(
+                "The port doesn't exist for the name {0}"
+                .format(neutron_port_name))
+        neutron_port = filtered_ports[0]
+
+        try:
+            stdout, stderr = binding.port_unbind(endpoint_id, neutron_port)
+            app.logger.debug(stdout)
+            if stderr:
+                app.logger.error(stderr)
+        except processutils.ProcessExecutionError:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE(
+                    'Could not unbind the Neutron port from the veth '
+                    'endpoint.'))
+        except exceptions.VethDeletionFailure:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE('Cleaning the veth pair up was failed.'))
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
@@ -945,28 +1004,7 @@ def network_driver_join():
                 "Multiple Neutron subnets exist for the network_id={0} "
                 .format(neutron_network_id))
 
-        try:
-            ifname, peer_name, (stdout, stderr) = binding.port_bind(
-                endpoint_id, neutron_port, all_subnets, filtered_networks[0])
-            app.logger.debug(stdout)
-            if stderr:
-                app.logger.error(stderr)
-        except exceptions.VethCreationFailure as ex:
-            with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Preparing the veth '
-                                     'pair was failed: %s.'), ex)
-        except processutils.ProcessExecutionError:
-            with excutils.save_and_reraise_exception():
-                app.logger.error(_LE(
-                    'Could not bind the Neutron port to the veth endpoint.'))
-
-        if app.vif_plug_is_fatal:
-            port_active = _port_active(neutron_port['id'],
-                                       app.vif_plug_timeout)
-            if not port_active:
-                raise exceptions.InactiveResourceException(
-                    "Neutron port {0} did not become active on time."
-                    .format(neutron_port_name))
+        _, peer_name = driver_utils.get_veth_pair_names(neutron_port['id'])
 
         join_response = {
             "InterfaceName": {
@@ -1013,38 +1051,6 @@ def network_driver_leave():
     app.logger.debug("Received JSON data %s for"
                      " /NetworkDriver.Leave", json_data)
     jsonschema.validate(json_data, schemata.LEAVE_SCHEMA)
-
-    neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
-                                                      tags=app.tag)
-    endpoint_id = json_data['EndpointID']
-    filtered_networks = _get_networks_by_identifier(neutron_network_identifier)
-
-    if not filtered_networks:
-        return flask.jsonify({
-            'Err': "Neutron net associated with identifier {0} doesn't exit."
-            .format(neutron_network_identifier)
-        })
-    else:
-        neutron_port_name = utils.get_neutron_port_name(endpoint_id)
-        filtered_ports = _get_ports_by_attrs(name=neutron_port_name)
-        if not filtered_ports:
-            raise exceptions.NoResourceException(
-                "The port doesn't exist for the name {0}"
-                .format(neutron_port_name))
-        neutron_port = filtered_ports[0]
-        try:
-            stdout, stderr = binding.port_unbind(endpoint_id, neutron_port)
-            app.logger.debug(stdout)
-            if stderr:
-                app.logger.error(stderr)
-        except processutils.ProcessExecutionError:
-            with excutils.save_and_reraise_exception():
-                app.logger.error(_LE(
-                    'Could not unbind the Neutron port from the veth '
-                    'endpoint.'))
-        except exceptions.VethDeletionFailure:
-            with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Cleaning the veth pair up was failed.'))
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 

@@ -10,18 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
-
 import ddt
-from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
-from oslo_utils import uuidutils
-
 from werkzeug import exceptions as w_exceptions
 
-from kuryr.lib import binding
-from kuryr.lib import constants as lib_const
-from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
@@ -43,63 +35,6 @@ class TestKuryrJoinFailures(base.TestKuryrFailures):
                                  data=jsonutils.dumps(data))
 
         return response
-
-    @mock.patch.object(binding, 'port_bind')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
-    @ddt.data(exceptions.VethCreationFailure,
-              processutils.ProcessExecutionError)
-    def test_join_veth_failures(self, GivenException,
-            mock_list_networks, mock_list_ports, mock_list_subnets,
-            mock_port_bind):
-        fake_docker_network_id = lib_utils.get_hash()
-        fake_docker_endpoint_id = lib_utils.get_hash()
-        fake_container_id = lib_utils.get_hash()
-
-        fake_neutron_network_id = uuidutils.generate_uuid()
-        fake_neutron_network = self._get_fake_list_network(
-            fake_neutron_network_id)
-        fake_neutron_port_id = uuidutils.generate_uuid()
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
-        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
-        fake_neutron_ports_response = self._get_fake_ports(
-            fake_docker_endpoint_id, fake_neutron_network_id,
-            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
-            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
-
-        t = utils.make_net_tags(fake_docker_network_id)
-        mock_list_networks.return_value = fake_neutron_network
-        mock_list_ports.return_value = fake_neutron_ports_response
-
-        fake_neutron_subnets_response = self._get_fake_subnets(
-            fake_docker_endpoint_id, fake_neutron_network_id,
-            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
-        mock_list_subnets.return_value = fake_neutron_subnets_response
-        fake_neutron_port = fake_neutron_ports_response['ports'][0]
-        fake_neutron_subnets = fake_neutron_subnets_response['subnets']
-
-        fake_message = "fake message"
-        fake_exception = GivenException(fake_message)
-        mock_port_bind.side_effect = fake_exception
-
-        response = self._invoke_join_request(
-            fake_docker_network_id, fake_docker_endpoint_id, fake_container_id)
-
-        self.assertEqual(
-            w_exceptions.InternalServerError.code, response.status_code)
-        mock_list_networks.assert_called_with(tags=t)
-        mock_list_ports.assert_called_with(name=neutron_port_name)
-        mock_list_subnets.assert_called_with(
-            network_id=fake_neutron_network_id)
-        mock_port_bind.assert_called_with(
-            fake_docker_endpoint_id, fake_neutron_port,
-            fake_neutron_subnets, fake_neutron_network['networks'][0])
-        decoded_json = jsonutils.loads(response.data)
-        self.assertIn('Err', decoded_json)
-        self.assertIn(fake_message, decoded_json['Err'])
 
     def test_join_bad_request(self):
         fake_docker_network_id = lib_utils.get_hash()

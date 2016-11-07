@@ -13,9 +13,14 @@
 import ddt
 import mock
 from neutronclient.common import exceptions
+from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+from werkzeug import exceptions as w_exceptions
 
+from kuryr.lib import binding
+from kuryr.lib import constants as lib_const
+from kuryr.lib import exceptions as kuryr_exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
@@ -100,6 +105,106 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         self.assertEqual({'Err': GivenException.message}, decoded_json)
 
+    @mock.patch.object(binding, 'port_bind')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @ddt.data(kuryr_exceptions.VethCreationFailure,
+              processutils.ProcessExecutionError)
+    def test_create_veth_failures(self, GivenException,
+            mock_list_networks, mock_list_ports, mock_list_subnets,
+            mock_update_port, mock_port_bind):
+        fake_docker_network_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+        fake_neutron_network_id = uuidutils.generate_uuid()
+
+        fake_neutron_network = self._get_fake_list_network(
+            fake_neutron_network_id)
+        t = utils.make_net_tags(fake_docker_network_id)
+        mock_list_networks.return_value = fake_neutron_network
+
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(fake_docker_network_id,
+                                                  fake_docker_endpoint_id,
+                                                  fake_neutron_v4_subnet_id)
+        fake_v6_subnet = self._get_fake_v6_subnet(fake_docker_network_id,
+                                                  fake_docker_endpoint_id,
+                                                  fake_neutron_v6_subnet_id)
+        fake_v4_subnet_response = {
+            "subnets": [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        fake_v6_subnet_response = {
+            "subnets": [
+                fake_v6_subnet['subnet']
+            ]
+        }
+
+        def fake_subnet_response(network_id, cidr):
+            if cidr == '192.168.1.0/24':
+                return fake_v4_subnet_response
+            elif cidr == 'fe80::/64':
+                return fake_v6_subnet_response
+            else:
+                return {'subnets': []}
+
+        mock_list_subnets.side_effect = fake_subnet_response
+
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_fixed_ips = ['subnet_id=%s' % fake_neutron_v4_subnet_id,
+                          'ip_address=192.168.1.2',
+                          'subnet_id=%s' % fake_neutron_v6_subnet_id,
+                          'ip_address=fe80::f816:3eff:fe20:57c4']
+        fake_port_response = self._get_fake_port(
+            fake_docker_endpoint_id, fake_neutron_network_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
+        fake_ports_response = {
+            "ports": [
+                fake_port_response['port']
+            ]
+        }
+        mock_list_ports.return_value = fake_ports_response
+        fake_updated_port = fake_port_response['port']
+        fake_updated_port['name'] = utils.get_neutron_port_name(
+            fake_docker_endpoint_id)
+        mock_update_port.return_value = fake_port_response
+
+        fake_message = "fake message"
+        fake_exception = GivenException(fake_message)
+        fake_neutron_subnets = [fake_v4_subnet['subnet'],
+                                fake_v6_subnet['subnet']]
+        mock_port_bind.side_effect = fake_exception
+
+        response = self._invoke_create_request(
+            fake_docker_network_id, fake_docker_endpoint_id)
+
+        self.assertEqual(
+            w_exceptions.InternalServerError.code, response.status_code)
+        mock_list_networks.assert_called_with(tags=t)
+        expect_calls = [mock.call(cidr='192.168.1.0/24',
+            network_id=fake_neutron_network_id),
+            mock.call(cidr='fe80::/64', network_id=fake_neutron_network_id)]
+        mock_list_subnets.assert_has_calls(expect_calls, any_order=True)
+        mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
+        mock_update_port.assert_called_with(
+            fake_updated_port['id'],
+            {'port': {
+                'name': fake_updated_port['name'],
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': fake_docker_endpoint_id
+            }})
+        mock_port_bind.assert_called_with(
+            fake_docker_endpoint_id, fake_updated_port, fake_neutron_subnets,
+            fake_neutron_network['networks'][0])
+
+        decoded_json = jsonutils.loads(response.data)
+        self.assertIn('Err', decoded_json)
+        self.assertIn(fake_message, decoded_json['Err'])
+
     def test_create_endpoint_bad_request(self):
         fake_docker_network_id = lib_utils.get_hash()
         invalid_docker_endpoint_id = 'id-should-be-hexdigits'
@@ -107,7 +212,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         response = self._invoke_create_request(
             fake_docker_network_id, invalid_docker_endpoint_id)
 
-        self.assertEqual(400, response.status_code)
+        self.assertEqual(w_exceptions.BadRequest.code, response.status_code)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         # TODO(tfukushima): Add the better error message validation.
@@ -126,6 +231,48 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
                                  data=jsonutils.dumps(data))
         return response
 
+    @mock.patch.object(binding, 'port_unbind')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @ddt.data(kuryr_exceptions.VethDeletionFailure,
+              processutils.ProcessExecutionError)
+    def test_delete_endpoint_unbinding_failure(self, GivenException,
+            mock_list_networks, mock_list_ports, mock_port_unbind):
+        fake_docker_network_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+
+        fake_neutron_network_id = uuidutils.generate_uuid()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        t = utils.make_net_tags(fake_docker_network_id)
+        mock_list_networks.return_value = self._get_fake_list_network(
+            fake_neutron_network_id)
+        neutron_port_name = utils.get_neutron_port_name(
+            fake_docker_endpoint_id)
+        fake_neutron_ports_response = self._get_fake_ports(
+            fake_docker_endpoint_id, fake_neutron_network_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
+        mock_list_ports.return_value = fake_neutron_ports_response
+        fake_neutron_port = fake_neutron_ports_response['ports'][0]
+
+        fake_message = "fake message"
+        fake_exception = GivenException(fake_message)
+        mock_port_unbind.side_effect = fake_exception
+        response = self._invoke_delete_request(
+            fake_docker_network_id, fake_docker_endpoint_id)
+
+        self.assertEqual(
+            w_exceptions.InternalServerError.code, response.status_code)
+        mock_list_networks.assert_called_with(tags=t)
+        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_port_unbind.assert_called_with(fake_docker_endpoint_id,
+            fake_neutron_port)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertIn('Err', decoded_json)
+        self.assertIn(fake_message, decoded_json['Err'])
+
     def test_delete_endpoint_bad_request(self):
         fake_docker_network_id = lib_utils.get_hash()
         invalid_docker_endpoint_id = 'id-should-be-hexdigits'
@@ -133,7 +280,7 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
         response = self._invoke_delete_request(
             fake_docker_network_id, invalid_docker_endpoint_id)
 
-        self.assertEqual(400, response.status_code)
+        self.assertEqual(w_exceptions.BadRequest.code, response.status_code)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         # TODO(tfukushima): Add the better error message validation.
