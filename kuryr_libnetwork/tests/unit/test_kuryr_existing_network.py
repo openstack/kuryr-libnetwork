@@ -10,10 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import uuid
-
 import ddt
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
@@ -92,7 +91,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 'gateway_ip': '192.168.42.1',
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)

@@ -11,10 +11,10 @@
 # under the License.
 
 import mock
-import uuid
 
 import ddt
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
@@ -109,7 +109,7 @@ class TestKuryr(base.TestKuryrBase):
                 'gateway_ip': '192.168.42.1',
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
@@ -194,7 +194,7 @@ class TestKuryr(base.TestKuryrBase):
                 'gateway_ip': '192.168.42.1',
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
@@ -282,7 +282,7 @@ class TestKuryr(base.TestKuryrBase):
                 'gateway_ip': '192.168.42.1',
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
@@ -326,7 +326,7 @@ class TestKuryr(base.TestKuryrBase):
     def test_network_driver_create_network_with_pool_name_option(self):
 
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
-        fake_kuryr_subnetpool_id = str(uuid.uuid4())
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = "fake_pool_name"
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
@@ -384,7 +384,7 @@ class TestKuryr(base.TestKuryrBase):
                 'subnetpool_id': fake_kuryr_subnetpool_id,
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
@@ -476,7 +476,7 @@ class TestKuryr(base.TestKuryrBase):
                 'enable_dhcp': app.enable_dhcp,
             }]
         }
-        subnet_v4_id = str(uuid.uuid4())
+        subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_neutron_net_id, subnet_v4_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
@@ -515,7 +515,7 @@ class TestKuryr(base.TestKuryrBase):
         docker_network_id = lib_utils.get_hash()
 
         self.mox.StubOutWithMock(app.neutron, "list_networks")
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         fake_existing_networks_response = {
             "networks": []
         }
@@ -591,7 +591,7 @@ class TestKuryr(base.TestKuryrBase):
 
     def test_network_driver_delete_network(self):
         docker_network_id = lib_utils.get_hash()
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         self._mock_out_network(fake_neutron_net_id, docker_network_id,
                                check_existing=True)
         self.mox.StubOutWithMock(app.neutron, 'list_subnets')
@@ -616,7 +616,7 @@ class TestKuryr(base.TestKuryrBase):
         docker_network_id = lib_utils.get_hash()
         docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         self._mock_out_network(fake_neutron_net_id, docker_network_id,
                                check_existing=True)
         # The following fake response is retrieved from the Neutron doc:
@@ -666,7 +666,7 @@ class TestKuryr(base.TestKuryrBase):
         docker_network_id = lib_utils.get_hash()
         docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         self._mock_out_network(fake_neutron_net_id, docker_network_id)
 
         # The following fake response is retrieved from the Neutron doc:
@@ -698,7 +698,7 @@ class TestKuryr(base.TestKuryrBase):
 
         fake_ipv4cidr = '192.168.1.2/24'
         fake_ipv6cidr = 'fe80::f816:3eff:fe20:57c4/64'
-        fake_port_id = str(uuid.uuid4())
+        fake_port_id = uuidutils.generate_uuid()
         fake_port = self._get_fake_port(
             docker_endpoint_id, fake_neutron_net_id,
             fake_port_id, lib_const.PORT_STATUS_ACTIVE,
@@ -769,8 +769,8 @@ class TestKuryr(base.TestKuryrBase):
     def test_network_driver_endpoint_operational_info(self):
         docker_network_id = lib_utils.get_hash()
         docker_endpoint_id = lib_utils.get_hash()
-        fake_neutron_net_id = str(uuid.uuid4())
-        fake_port_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_port_id = uuidutils.generate_uuid()
         fake_port = self._get_fake_port(
             docker_endpoint_id, fake_neutron_net_id,
             fake_port_id, lib_const.PORT_STATUS_ACTIVE)
@@ -826,15 +826,15 @@ class TestKuryr(base.TestKuryrBase):
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_container_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         fake_neutron_network = self._mock_out_network(
             fake_neutron_net_id, fake_docker_net_id)
-        fake_neutron_port_id = str(uuid.uuid4())
+        fake_neutron_port_id = uuidutils.generate_uuid()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = str(uuid.uuid4())
-        fake_neutron_v6_subnet_id = str(uuid.uuid4())
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_DOWN,
@@ -900,14 +900,14 @@ class TestKuryr(base.TestKuryrBase):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
         self._mock_out_network(fake_neutron_net_id, fake_docker_net_id)
-        fake_neutron_port_id = str(uuid.uuid4())
+        fake_neutron_port_id = uuidutils.generate_uuid()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = str(uuid.uuid4())
-        fake_neutron_v6_subnet_id = str(uuid.uuid4())
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,

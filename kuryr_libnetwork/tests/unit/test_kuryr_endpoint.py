@@ -10,11 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import uuid
-
 import ddt
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
@@ -30,8 +29,8 @@ class TestKuryrEndpointFailures(base.TestKuryrFailures):
     """
     def _create_subnet_with_exception(self, neutron_network_id,
                                       docker_endpoint_id, ex):
-        fake_neutron_subnet_v4_id = str(uuid.uuid4())
-        fake_neutron_subnet_v6_id = str(uuid.uuid4())
+        fake_neutron_subnet_v4_id = uuidutils.generate_uuid()
+        fake_neutron_subnet_v6_id = uuidutils.generate_uuid()
 
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
@@ -173,9 +172,9 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
     def test_create_endpoint_port_failures(self, GivenException):
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
-        fake_neutron_network_id = str(uuid.uuid4())
-        fake_neutron_subnet_v4_id = str(uuid.uuid4())
-        fake_neutron_subnet_v6_id = str(uuid.uuid4())
+        fake_neutron_network_id = uuidutils.generate_uuid()
+        fake_neutron_subnet_v4_id = uuidutils.generate_uuid()
+        fake_neutron_subnet_v6_id = uuidutils.generate_uuid()
         fake_subnets = self._get_fake_subnets(
             fake_docker_endpoint_id, fake_neutron_network_id,
             fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)

@@ -10,11 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import uuid
-
 import ddt
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
+
 from werkzeug import exceptions as w_exceptions
 
 from kuryr.lib import binding
@@ -60,14 +60,14 @@ class TestKuryrLeaveFailures(base.TestKuryrFailures):
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_network_id = str(uuid.uuid4())
+        fake_neutron_network_id = uuidutils.generate_uuid()
         self._mock_out_network(fake_neutron_network_id, fake_docker_network_id)
-        fake_neutron_port_id = str(uuid.uuid4())
+        fake_neutron_port_id = uuidutils.generate_uuid()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = str(uuid.uuid4())
-        fake_neutron_v6_subnet_id = str(uuid.uuid4())
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_network_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
