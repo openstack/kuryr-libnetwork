@@ -24,7 +24,7 @@ class Kuryr(utils.KuryrScenario):
     def __init__(self, context=None, admin_clients=None, clients=None):
         super(Kuryr, self).__init__(context, admin_clients, clients)
 
-    @scenario.configure(context={"cleanup": ["kuryr"]})
+    @scenario.configure()
     def list_networks(self, network_list_args=None):
         """List the networks.
 
@@ -40,7 +40,7 @@ class Kuryr(utils.KuryrScenario):
         """
         self._list_networks(network_list_args or {})
 
-    @scenario.configure(context={"cleanup": ["kuryr"]})
+    @scenario.configure()
     def create_and_delete_networks_with_kuryr(self, network_create_args=None):
         """Create and delete a network with kuryr.
 
@@ -53,7 +53,7 @@ class Kuryr(utils.KuryrScenario):
                        network_create_args=network_create_args or {})
         self._delete_network(network)
 
-    @scenario.configure(context={"cleanup": ["kuryr"]})
+    @scenario.configure()
     def create_and_delete_networks_without_kuryr(self,
                                                  network_create_args=None):
         """Create and delete a network without kuryr.
@@ -67,7 +67,7 @@ class Kuryr(utils.KuryrScenario):
                        network_create_args=network_create_args or {})
         self._delete_network(network)
 
-    @scenario.configure(context={"cleanup": ["kuryr"]})
+    @scenario.configure()
     def start_and_stop_containers(self, container_create_args=None):
         """Start and stop container on docker network.
 

@@ -79,14 +79,15 @@ class KuryrScenario(scenario.OpenStackScenario):
     @atomic.action_timer("kuryr.start_container")
     def _start_container(self, container_create_args=None):
         """Start Container on docker network."""
+        network_config = self.docker_client.create_networking_config(
+                         {self.context.get("netname"):
+                          self.docker_client.create_endpoint_config()})
         container = self.docker_client.create_container(
             image='kuryr/busybox',
-            command='/bin/sleep 600')
+            command='/bin/sleep 600',
+            networking_config=network_config)
         container_id = container.get('Id')
         self.docker_client.start(container=container_id)
-        net_id = self.context.get("netid")
-        self.docker_client.connect_container_to_network(container_id,
-                                                        net_id)
         return container_id
 
     @atomic.action_timer("kuryr.stop_container")
