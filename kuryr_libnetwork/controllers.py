@@ -1034,7 +1034,7 @@ def network_driver_leave():
     """
     json_data = flask.request.get_json(force=True)
     app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.DeleteEndpoint", json_data)
+                     " /NetworkDriver.Leave", json_data)
     jsonschema.validate(json_data, schemata.LEAVE_SCHEMA)
 
     neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
