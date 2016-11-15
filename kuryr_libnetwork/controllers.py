@@ -43,8 +43,8 @@ LOG = log.getLogger(__name__)
 
 MANDATORY_NEUTRON_EXTENSION = "subnet_allocation"
 TAG_NEUTRON_EXTENSION = "tag"
-SUBNET_POOLS_V4 = [cfg.CONF.neutron.default_subnetpool_v4]
-SUBNET_POOLS_V6 = [cfg.CONF.neutron.default_subnetpool_v6]
+SUBNET_POOLS_V4 = []
+SUBNET_POOLS_V6 = []
 
 
 def get_neutron_client():
@@ -82,6 +82,14 @@ def check_for_neutron_ext_tag():
         if e.status_code == n_exceptions.NotFound.status_code:
             app.logger.warning(_LW("Neutron tags not supported. "
                                    "Continue without using them."))
+
+
+def load_default_subnet_pools():
+    """Load the default subnetpools."""
+    global SUBNET_POOLS_V4
+    global SUBNET_POOLS_V6
+    SUBNET_POOLS_V4 = [cfg.CONF.neutron.default_subnetpool_v4]
+    SUBNET_POOLS_V6 = [cfg.CONF.neutron.default_subnetpool_v6]
 
 
 def _cache_default_subnetpool_ids(app):

@@ -46,6 +46,7 @@ class TestKuryrBase(TestCase):
         super(TestKuryrBase, self).setUp()
         self.mox = mox.Mox()
         controllers.neutron_client()
+        controllers.load_default_subnet_pools()
         self.app.neutron.format = 'json'
         self.addCleanup(self.mox.VerifyAll)
         self.addCleanup(self.mox.UnsetStubs)
