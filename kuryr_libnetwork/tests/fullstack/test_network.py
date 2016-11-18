@@ -44,8 +44,13 @@ class NetworkTest(kuryr_base.KuryrBaseTest):
         res = self.docker_client.create_network(name=net_name, driver='kuryr',
                                                 ipam=fake_ipam)
         net_id = res['Id']
-        network = self.neutron_client.list_networks(
-            tags=utils.make_net_tags(net_id))
+        try:
+            network = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(net_id))
+        except Exception as e:
+            self.docker_client.remove_network(net_id)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
         self.assertEqual(1, len(network['networks']))
         self.docker_client.remove_network(net_id)
         network = self.neutron_client.list_networks(
@@ -110,12 +115,18 @@ class NetworkTest(kuryr_base.KuryrBaseTest):
         res = self.docker_client.create_network(name=net_name, driver='kuryr',
                                                 ipam=fake_ipam_2)
         net_id2 = res['Id']
-        network = self.neutron_client.list_networks(
-            tags=utils.make_net_tags(net_id1))
-        self.assertEqual(1, len(network['networks']))
-        network = self.neutron_client.list_networks(
-            tags=utils.make_net_tags(net_id2))
-        self.assertEqual(1, len(network['networks']))
+        try:
+            network = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(net_id1))
+            self.assertEqual(1, len(network['networks']))
+            network = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(net_id2))
+            self.assertEqual(1, len(network['networks']))
+        except Exception as e:
+            self.docker_client.remove_network(net_id1)
+            self.docker_client.remove_network(net_id2)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
         self.docker_client.remove_network(net_id1)
         self.docker_client.remove_network(net_id2)
         network = self.neutron_client.list_networks(

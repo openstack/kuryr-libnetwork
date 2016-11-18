@@ -41,8 +41,13 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
                                                 ipam=fake_ipam)
         self.net_id = res.get('Id')
 
-        networks = self.neutron_client.list_networks(
-            tags=utils.make_net_tags(self.net_id))
+        try:
+            networks = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(self.net_id))
+        except Exception as e:
+            self.docker_client.remove_network(self.net_id)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
         self.assertEqual(1, len(networks['networks']))
         self.neutron_net_id = networks['networks'][0]['id']
 
@@ -69,8 +74,15 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
         self.docker_client.start(container=container_id)
         self.docker_client.connect_container_to_network(container_id,
                                                         self.net_id)
-        ports = self.neutron_client.list_ports(
-            network_id=self.neutron_net_id)
+        try:
+            ports = self.neutron_client.list_ports(
+                network_id=self.neutron_net_id)
+        except Exception as e:
+            self.docker_client.disconnect_container_from_network(
+                container_id,
+                self.net_id)
+            message = ("Failed to list neutron ports: %s")
+            self.fail(message % e.args[0])
         # A dhcp port gets created as well; dhcp is enabled by default
         self.assertEqual(2, len(ports['ports']))
         self.docker_client.disconnect_container_from_network(container_id,
