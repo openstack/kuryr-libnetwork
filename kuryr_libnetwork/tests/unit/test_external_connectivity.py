@@ -14,10 +14,10 @@ from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 import six
-import uuid
 
 import ddt
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
@@ -50,19 +50,19 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
-        fake_neutron_port_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_port_id = uuidutils.generate_uuid()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = str(uuid.uuid4())
-        fake_neutron_v6_subnet_id = str(uuid.uuid4())
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
         if existing_sg:
-            fake_neutron_existing_sec_group_id = str(uuid.uuid4())
+            fake_neutron_existing_sec_group_id = uuidutils.generate_uuid()
             fake_neutron_ports_response['ports'][0]['security_groups'] = [
                 fake_neutron_existing_sec_group_id]
 
@@ -146,20 +146,20 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
-        fake_neutron_net_id = str(uuid.uuid4())
-        fake_neutron_port_id = str(uuid.uuid4())
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_port_id = uuidutils.generate_uuid()
         fake_neutron_sec_group_id = lib_utils.get_hash()
         self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        fake_neutron_v4_subnet_id = str(uuid.uuid4())
-        fake_neutron_v6_subnet_id = str(uuid.uuid4())
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
         if existing_sg:
-            fake_neutron_existing_sec_group_id = str(uuid.uuid4())
+            fake_neutron_existing_sec_group_id = uuidutils.generate_uuid()
             fake_neutron_ports_response['ports'][0]['security_groups'] = [
                 fake_neutron_sec_group_id, fake_neutron_existing_sec_group_id]
         else:
