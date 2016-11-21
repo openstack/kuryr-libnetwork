@@ -23,7 +23,6 @@ import pbr.version
 from kuryr.lib._i18n import _
 from kuryr.lib import config as lib_config
 
-
 core_opts = [
     cfg.StrOpt('pybasedir',
                default=os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -37,13 +36,15 @@ core_opts = [
                default=os.environ.get('CAPABILITY_SCOPE', 'local'),
                choices=['local', 'global'],
                help=_('Kuryr plugin scope reported to libnetwork.')),
-
     cfg.StrOpt('local_default_address_space',
                default='no_address_space',
                help=_('There is no address-space by default in neutron')),
     cfg.StrOpt('global_default_address_space',
                default='no_address_space',
                help=_('There is no address-space by default in neutron')),
+    cfg.StrOpt('port_driver',
+               default='kuryr_libnetwork.port_driver.drivers.veth',
+               help=_('Driver for the desired deployment model')),
 ]
 
 CONF = cfg.CONF

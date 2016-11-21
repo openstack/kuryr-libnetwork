@@ -15,8 +15,6 @@ import ddt
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
-from kuryr.lib import binding
-from kuryr.lib.binding.drivers import utils as driver_utils
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
@@ -58,16 +56,9 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(expected, decoded_json)
 
-    def test_network_driver_create_network(self):
+    @ddt.data((True), (False))
+    def test_network_driver_create_network(self, driver_default_net):
         docker_network_id = lib_utils.get_hash()
-        self.mox.StubOutWithMock(app.neutron, "create_network")
-        fake_request = {
-            "network": {
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True
-            }
-        }
-
         network_request = {
             'NetworkID': docker_network_id,
             'IPv4Data': [{
@@ -92,28 +83,54 @@ class TestKuryr(base.TestKuryrBase):
         app.neutron.list_subnetpools(name=fake_name).AndReturn(
             {'subnetpools': kuryr_subnetpools['subnetpools']})
 
-        # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
-        fake_response = {
-            "network": {
-                "status": "ACTIVE",
-                "subnets": [],
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True,
-                "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
-                "router:external": False,
-                "segments": [],
-                "shared": False,
-                "id": fake_neutron_net_id
-            }
+        driver_value = fake_neutron_net_id if driver_default_net else None
+        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
+        app.driver.get_default_network_id().AndReturn(driver_value)
+
+        fake_network = {
+            "status": "ACTIVE",
+            "subnets": [],
+            "admin_state_up": True,
+            "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+            "router:external": False,
+            "segments": [],
+            "shared": False,
+            "id": fake_neutron_net_id,
         }
-        app.neutron.create_network(fake_request).AndReturn(fake_response)
+
+        if driver_value:
+            fake_existing_networks_response = {
+                "networks": [fake_network]
+            }
+            self.mox.StubOutWithMock(app.neutron, "list_networks")
+            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
+                    fake_existing_networks_response)
+        else:
+            fake_create_network_request = {
+                "network": {
+                    "name": utils.make_net_name(docker_network_id),
+                    "admin_state_up": True
+                }
+            }
+            fake_network['name'] = utils.make_net_name(docker_network_id)
+            # The following fake response is retrieved from the Neutron doc:
+            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            fake_create_network_response = {
+                "network": fake_network
+            }
+            self.mox.StubOutWithMock(app.neutron, "create_network")
+            app.neutron.create_network(fake_create_network_request).AndReturn(
+                fake_create_network_response)
 
         self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
         for tag in tags:
             app.neutron.add_tag('networks', fake_neutron_net_id, tag)
+
+        if driver_value:
+            app.neutron.add_tag('networks', fake_neutron_net_id,
+                                'kuryr.net.existing')
 
         self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
@@ -361,7 +378,10 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_create_network_with_pool_name_option(self):
+    @ddt.data((True), (False))
+    def test_network_driver_create_network_with_pool_name_option(self,
+            driver_default_net):
+        docker_network_id = lib_utils.get_hash()
 
         self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
@@ -370,36 +390,55 @@ class TestKuryr(base.TestKuryrBase):
             fake_kuryr_subnetpool_id, name=fake_name)
         app.neutron.list_subnetpools(name=fake_name).AndReturn(
             {'subnetpools': kuryr_subnetpools['subnetpools']})
-        docker_network_id = lib_utils.get_hash()
-        self.mox.StubOutWithMock(app.neutron, "create_network")
-        fake_request = {
-            "network": {
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True
-            }
-        }
-        # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
-        fake_response = {
-            "network": {
-                "status": "ACTIVE",
-                "subnets": [],
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True,
-                "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
-                "router:external": False,
-                "segments": [],
-                "shared": False,
-                "id": fake_neutron_net_id
-            }
+        driver_value = fake_neutron_net_id if driver_default_net else None
+        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
+        app.driver.get_default_network_id().AndReturn(driver_value)
+
+        fake_network = {
+            "status": "ACTIVE",
+            "subnets": [],
+            "admin_state_up": True,
+            "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+            "router:external": False,
+            "segments": [],
+            "shared": False,
+            "id": fake_neutron_net_id,
         }
-        app.neutron.create_network(fake_request).AndReturn(fake_response)
+
+        if driver_value:
+            fake_existing_networks_response = {
+                "networks": [fake_network]
+            }
+            self.mox.StubOutWithMock(app.neutron, "list_networks")
+            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
+                    fake_existing_networks_response)
+        else:
+            fake_create_network_request = {
+                "network": {
+                    "name": utils.make_net_name(docker_network_id),
+                    "admin_state_up": True
+                }
+            }
+            fake_network['name'] = utils.make_net_name(docker_network_id)
+            # The following fake response is retrieved from the Neutron doc:
+            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            fake_create_network_response = {
+                "network": fake_network
+            }
+            self.mox.StubOutWithMock(app.neutron, "create_network")
+            app.neutron.create_network(fake_create_network_request).AndReturn(
+                fake_create_network_response)
 
         self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
         for tag in tags:
             app.neutron.add_tag('networks', fake_neutron_net_id, tag)
+
+        if driver_value:
+            app.neutron.add_tag('networks', fake_neutron_net_id,
+                                'kuryr.net.existing')
 
         self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
@@ -463,7 +502,8 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_create_network_wo_gw(self):
+    @ddt.data((True), (False))
+    def test_network_driver_create_network_wo_gw(self, driver_default_net):
         docker_network_id = lib_utils.get_hash()
         network_request = {
             'NetworkID': docker_network_id,
@@ -488,35 +528,54 @@ class TestKuryr(base.TestKuryrBase):
         app.neutron.list_subnetpools(name=fake_name).AndReturn(
             {'subnetpools': kuryr_subnetpools['subnetpools']})
 
-        self.mox.StubOutWithMock(app.neutron, "create_network")
-        fake_request = {
-            "network": {
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True
-            }
-        }
-        # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
-        fake_response = {
-            "network": {
-                "status": "ACTIVE",
-                "subnets": [],
-                "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True,
-                "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
-                "router:external": False,
-                "segments": [],
-                "shared": False,
-                "id": fake_neutron_net_id
-            }
+        driver_value = fake_neutron_net_id if driver_default_net else None
+        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
+        app.driver.get_default_network_id().AndReturn(driver_value)
+
+        fake_network = {
+            "status": "ACTIVE",
+            "subnets": [],
+            "admin_state_up": True,
+            "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+            "router:external": False,
+            "segments": [],
+            "shared": False,
+            "id": fake_neutron_net_id,
         }
-        app.neutron.create_network(fake_request).AndReturn(fake_response)
+
+        if driver_value:
+            fake_existing_networks_response = {
+                "networks": [fake_network]
+            }
+            self.mox.StubOutWithMock(app.neutron, "list_networks")
+            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
+                    fake_existing_networks_response)
+        else:
+            fake_create_network_request = {
+                "network": {
+                    "name": utils.make_net_name(docker_network_id),
+                    "admin_state_up": True
+                }
+            }
+            # The following fake response is retrieved from the Neutron doc:
+            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            fake_network['name'] = utils.make_net_name(docker_network_id)
+            fake_create_network_response = {
+                "network": fake_network
+            }
+            self.mox.StubOutWithMock(app.neutron, "create_network")
+            app.neutron.create_network(fake_create_network_request).AndReturn(
+                fake_create_network_response)
 
         self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
         for tag in tags:
             app.neutron.add_tag('networks', fake_neutron_net_id, tag)
+
+        if driver_value:
+            app.neutron.add_tag('networks', fake_neutron_net_id,
+                                'kuryr.net.existing')
 
         self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
@@ -795,9 +854,14 @@ class TestKuryr(base.TestKuryrBase):
 
         fake_neutron_subnets = [fake_v4_subnet['subnet'],
                                 fake_v6_subnet['subnet']]
-        _, fake_peer_name, _ = self._mock_out_binding(
-            fake_docker_endpoint_id, fake_updated_port,
-            fake_neutron_subnets, fake_neutron_network['networks'][0])
+
+        self.mox.StubOutWithMock(app.driver, 'create_host_iface')
+        fake_create_iface_response = ('fake stdout', '')
+        app.driver.create_host_iface(fake_docker_endpoint_id,
+            fake_updated_port, fake_neutron_subnets,
+            fake_neutron_network['networks'][0]).AndReturn(
+                fake_create_iface_response)
+        self.mox.ReplayAll()
 
         if vif_plug_is_fatal:
             self.mox.StubOutWithMock(app, "vif_plug_is_fatal")
@@ -888,11 +952,11 @@ class TestKuryr(base.TestKuryrBase):
             self.assertEqual(fake_port_response['ports'][0]['status'],
                              decoded_json['Value']['status'])
 
-    @mock.patch.object(binding, 'port_unbind')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.delete_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     def test_network_driver_delete_endpoint(self, mock_list_networks,
-            mock_list_ports, mock_port_unbind):
+            mock_list_ports, mock_delete_host_iface):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
@@ -901,7 +965,7 @@ class TestKuryr(base.TestKuryrBase):
         fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
 
-        fake_unbinding_response = ('fake stdout', '')
+        fake_iface_deletion_response = ('fake stdout', '')
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
@@ -914,7 +978,7 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_networks.return_value = self._get_fake_list_network(
             fake_neutron_net_id)
         mock_list_ports.return_value = fake_neutron_ports_response
-        mock_port_unbind.return_value = fake_unbinding_response
+        mock_delete_host_iface.return_value = fake_iface_deletion_response
 
         data = {
             'NetworkID': fake_docker_net_id,
@@ -927,7 +991,7 @@ class TestKuryr(base.TestKuryrBase):
         self.assertEqual(200, response.status_code)
         mock_list_networks.assert_called_with(tags=t)
         mock_list_ports.assert_called_with(name=neutron_port_name)
-        mock_port_unbind.assert_called_with(fake_docker_endpoint_id,
+        mock_delete_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_neutron_port)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
@@ -959,9 +1023,10 @@ class TestKuryr(base.TestKuryrBase):
         app.neutron.list_subnets(network_id=fake_neutron_net_id).AndReturn(
             fake_neutron_subnets_response)
         fake_neutron_subnets = fake_neutron_subnets_response['subnets']
-        self.mox.StubOutWithMock(driver_utils, 'get_veth_pair_names')
-        _, fake_peer_name = driver_utils.get_veth_pair_names(
-                fake_neutron_port_id).AndReturn(('fake-veth', "fake-veth_c"))
+
+        self.mox.StubOutWithMock(app.driver, 'get_container_iface_name')
+        fake_iface_name = app.driver.get_container_iface_name(
+                fake_neutron_port_id).AndReturn('fake-name')
         self.mox.ReplayAll()
 
         fake_subnets_dict_by_id = {subnet['id']: subnet
@@ -989,7 +1054,7 @@ class TestKuryr(base.TestKuryrBase):
             'GatewayIPv6': fake_neutron_v6_subnet['gateway_ip'],
             'InterfaceName': {
                 'DstPrefix': config.CONF.binding.veth_dst_prefix,
-                'SrcName': fake_peer_name,
+                'SrcName': fake_iface_name,
             },
             'StaticRoutes': []
         }

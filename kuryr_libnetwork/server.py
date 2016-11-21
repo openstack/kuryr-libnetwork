@@ -27,6 +27,7 @@ def configure_app():
     controllers.check_for_neutron_ext_support()
     controllers.check_for_neutron_ext_tag()
     controllers.load_default_subnet_pools()
+    controllers.load_port_driver()
 
 
 def start():

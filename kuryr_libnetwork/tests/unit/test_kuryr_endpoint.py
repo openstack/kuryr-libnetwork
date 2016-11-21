@@ -12,15 +12,14 @@
 
 import ddt
 import mock
-from neutronclient.common import exceptions
+from neutronclient.common import exceptions as n_exceptions
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from werkzeug import exceptions as w_exceptions
 
-from kuryr.lib import binding
 from kuryr.lib import constants as lib_const
-from kuryr.lib import exceptions as kuryr_exceptions
+from kuryr.lib import exceptions as k_exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
@@ -54,8 +53,8 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
-    @ddt.data(exceptions.Unauthorized, exceptions.Forbidden,
-              exceptions.NotFound, exceptions.ServiceUnavailable)
+    @ddt.data(n_exceptions.Unauthorized, n_exceptions.Forbidden,
+              n_exceptions.NotFound, n_exceptions.ServiceUnavailable)
     def test_create_endpoint_port_failures(self, GivenException,
             mock_list_ports, mock_list_subnets, mock_list_networks,
             mock_create_port):
@@ -105,16 +104,18 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         self.assertEqual({'Err': GivenException.message}, decoded_json)
 
-    @mock.patch.object(binding, 'port_bind')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
-    @ddt.data(kuryr_exceptions.VethCreationFailure,
-              processutils.ProcessExecutionError)
-    def test_create_veth_failures(self, GivenException,
+    @ddt.data(k_exceptions.VethCreationFailure,
+              processutils.ProcessExecutionError,
+              k_exceptions.KuryrException,
+              n_exceptions.NeutronClientException)
+    def test_create_host_iface_failures(self, GivenException,
             mock_list_networks, mock_list_ports, mock_list_subnets,
-            mock_update_port, mock_port_bind):
+            mock_update_port, mock_create_host_iface):
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_network_id = uuidutils.generate_uuid()
@@ -173,11 +174,15 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
             fake_docker_endpoint_id)
         mock_update_port.return_value = fake_port_response
 
-        fake_message = "fake message"
-        fake_exception = GivenException(fake_message)
         fake_neutron_subnets = [fake_v4_subnet['subnet'],
                                 fake_v6_subnet['subnet']]
-        mock_port_bind.side_effect = fake_exception
+
+        fake_message = "fake message"
+        if GivenException == n_exceptions.NeutronClientException:
+            fake_exception = GivenException(fake_message, status_code=500)
+        else:
+            fake_exception = GivenException(fake_message)
+        mock_create_host_iface.side_effect = fake_exception
 
         response = self._invoke_create_request(
             fake_docker_network_id, fake_docker_endpoint_id)
@@ -197,7 +202,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
                 'device_owner': lib_const.DEVICE_OWNER,
                 'device_id': fake_docker_endpoint_id
             }})
-        mock_port_bind.assert_called_with(
+        mock_create_host_iface.assert_called_with(
             fake_docker_endpoint_id, fake_updated_port, fake_neutron_subnets,
             fake_neutron_network['networks'][0])
 
@@ -231,13 +236,15 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
                                  data=jsonutils.dumps(data))
         return response
 
-    @mock.patch.object(binding, 'port_unbind')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.delete_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
-    @ddt.data(kuryr_exceptions.VethDeletionFailure,
+    @ddt.data(k_exceptions.VethDeletionFailure,
+              k_exceptions.KuryrException,
+              n_exceptions.NeutronClientException,
               processutils.ProcessExecutionError)
-    def test_delete_endpoint_unbinding_failure(self, GivenException,
-            mock_list_networks, mock_list_ports, mock_port_unbind):
+    def test_delete_endpoint_delete_host_iface_failure(self, GivenException,
+            mock_list_networks, mock_list_ports, mock_delete_host_iface):
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
@@ -258,8 +265,11 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
         fake_neutron_port = fake_neutron_ports_response['ports'][0]
 
         fake_message = "fake message"
-        fake_exception = GivenException(fake_message)
-        mock_port_unbind.side_effect = fake_exception
+        if GivenException == n_exceptions.NeutronClientException:
+            fake_exception = GivenException(fake_message, status_code=500)
+        else:
+            fake_exception = GivenException(fake_message)
+        mock_delete_host_iface.side_effect = fake_exception
         response = self._invoke_delete_request(
             fake_docker_network_id, fake_docker_endpoint_id)
 
@@ -267,7 +277,7 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
             w_exceptions.InternalServerError.code, response.status_code)
         mock_list_networks.assert_called_with(tags=t)
         mock_list_ports.assert_called_with(name=neutron_port_name)
-        mock_port_unbind.assert_called_with(fake_docker_endpoint_id,
+        mock_delete_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_neutron_port)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)

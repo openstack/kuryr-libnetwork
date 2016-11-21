@@ -10,16 +10,17 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import mock
 from mox3 import mox
 from neutronclient.v2_0 import client
 from oslotest import base
 
-from kuryr.lib import binding
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
+from kuryr_libnetwork.port_driver import driver
 from kuryr_libnetwork import utils
 
 
@@ -36,6 +37,7 @@ class TestCase(base.BaseTestCase):
         app.config['TESTING'] = True
         self.app = app.test_client()
         self.app.neutron = client.Client(token=TOKEN, endpoint_url=ENDURL)
+        app.driver = mock.Mock(spec=driver.Driver)
         app.tag = True
 
 
@@ -52,26 +54,6 @@ class TestKuryrBase(TestCase):
         self.addCleanup(self.mox.UnsetStubs)
         if hasattr(app, 'DEFAULT_POOL_IDS'):
             del app.DEFAULT_POOL_IDS
-
-    def _mock_out_binding(self, endpoint_id, neutron_port,
-                          neutron_subnets, neutron_network=None):
-        self.mox.StubOutWithMock(binding, 'port_bind')
-        fake_binding_response = (
-            'fake-veth', 'fake-veth_c', ('fake stdout', ''))
-        binding.port_bind(endpoint_id, neutron_port,
-                          neutron_subnets,
-                          neutron_network).AndReturn(
-                          fake_binding_response)
-        self.mox.ReplayAll()
-        return fake_binding_response
-
-    def _mock_out_unbinding(self, endpoint_id, neutron_port):
-        self.mox.StubOutWithMock(binding, 'port_unbind')
-        fake_unbinding_response = ('fake stdout', '')
-        binding.port_unbind(endpoint_id, neutron_port).AndReturn(
-            fake_unbinding_response)
-        self.mox.ReplayAll()
-        return fake_unbinding_response
 
     def _mock_out_network(self, neutron_network_id, docker_network_id,
                           check_existing=False):
