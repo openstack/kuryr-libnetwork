@@ -100,6 +100,26 @@ class TestKuryrBase(TestCase):
         return fake_list_response
 
     @staticmethod
+    def _get_fake_list_network(neutron_network_id, check_existing=False):
+        if check_existing:
+            no_networks_response = {
+                "networks": []}
+            return no_networks_response
+        fake_list_response = {
+            "networks": [{
+                "status": "ACTIVE",
+                "subnets": [],
+                "admin_state_up": True,
+                "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+                "router:external": False,
+                "segments": [],
+                "shared": False,
+                "id": neutron_network_id
+            }]
+        }
+        return fake_list_response
+
+    @staticmethod
     def _get_fake_v4_subnetpools(subnetpool_id, prefixes=["192.168.1.0/24"],
                                  name="kuryr"):
         # The following fake response is retrieved from the Neutron doc:
