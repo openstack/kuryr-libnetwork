@@ -14,7 +14,6 @@ from collections import defaultdict
 from itertools import groupby
 import mock
 from operator import itemgetter
-import six
 
 import ddt
 from oslo_serialization import jsonutils
@@ -92,7 +91,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             proto_port_dict[constants.PROTOCOLS[PROTOCOL_UDP]].append(PORT + i)
         proto_port_dict[constants.PROTOCOLS[PROTOCOL_UDP]].append(SINGLE_PORT)
 
-        for proto, port_list in six.iteritems(proto_port_dict):
+        for proto, port_list in proto_port_dict.items():
             for key, group in groupby(enumerate(sorted(port_list)),
                                       lambda ix: ix[0] - ix[1]):
                 port_range_list = list(map(itemgetter(1), group))

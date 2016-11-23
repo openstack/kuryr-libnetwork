@@ -367,7 +367,7 @@ def _program_expose_ports(options, port_id):
                 ("Bad protocol number for exposed port. Deleting "
                  "the security group {0}.").format(sg_id))
 
-    for proto, port_list in six.iteritems(proto_port_dict):
+    for proto, port_list in proto_port_dict.items():
         # Sort the port range list
         for key, group in groupby(enumerate(sorted(port_list)),
                                   lambda ix: ix[0] - ix[1]):
