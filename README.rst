@@ -260,6 +260,12 @@ the *fullstack* test case::
 
     $ tox -e fullstack
 
+Also you can run *fullstack* test using credentials from openrc config file,
+this requires you source openrc file in your DevStack or production environment.
+In DevStack, you can using command "source openrc admin" in your devstack directory.
+For production environment, please refer "Create OpenStack client environment scripts"
+in OpenStack install guide.
+
 Generating Documentation
 ------------------------
 
