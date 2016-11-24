@@ -1,3 +1,12 @@
+========================
+Team and repository tags
+========================
+
+.. image:: http://governance.openstack.org/badges/kuryr-libnetwork.svg
+    :target: http://governance.openstack.org/reference/tags/index.html
+
+.. Change things from this point on
+
 ===============================
 kuryr-libnetwork
 ===============================
