@@ -1462,17 +1462,15 @@ def ipam_release_address():
     if not len(subnets):
         app.logger.info(_LI("Subnet already deleted."))
         return flask.jsonify(const.SCHEMA['SUCCESS'])
-    if len(subnets) > 1:
-        subnet = {}
-        for tmp_subnet in subnets:
-            if tmp_subnet['subnetpool_id'] == pool_id:
-                subnet = tmp_subnet
-        if not subnet:
-            raise exceptions.KuryrException(
-                  ("Subnet with cidr({0}) and pool {1}, does not "
-                   "exist.").format(subnet_cidr, pool_id))
-    else:
-        subnet = subnets[0]
+
+    subnet = {}
+    for tmp_subnet in subnets:
+        if tmp_subnet['subnetpool_id'] == pool_id:
+            subnet = tmp_subnet
+            break
+    if not subnet:
+        app.logger.info(_LI("Subnet already deleted."))
+        return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     iface = ipaddress.ip_interface(six.text_type(rel_address))
     rcvd_fixed_ips = []

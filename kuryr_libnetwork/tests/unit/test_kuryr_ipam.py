@@ -627,3 +627,50 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertTrue(mock_list_ports.called)
         mock_delete_port.assert_called_with(
             fake_port['port']['id'])
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_ipam_driver_release_address_with_one_subnet_deleted(
+            self, mock_list_subnetpools, mock_list_subnets):
+        """Another unittest for release address.
+
+        For those two subnets have same cidrs, one of them had already deleted.
+        """
+
+        # Faking list_subnetpools
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_name = str('-'.join(['kuryrPool', FAKE_IP4_CIDR]))
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR], name=fake_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
+
+        # Faking list_subnets
+        docker_network_id = uuidutils.generate_uuid()
+        docker_endpoint_id = uuidutils.generate_uuid()
+        docker_network_id = uuidutils.generate_uuid()
+        subnet_v4_id = uuidutils.generate_uuid()
+        # Make two subnets have different subnetpool id
+        another_fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            docker_network_id, docker_endpoint_id, subnet_v4_id,
+            subnetpool_id=another_fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+
+        fake_ip4 = '10.0.0.5'
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': fake_ip4
+        }
+        response = self.app.post('/IpamDriver.ReleaseAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_subnetpools.assert_called_with(id=fake_kuryr_subnetpool_id)
+        mock_list_subnets.assert_called_with(cidr=FAKE_IP4_CIDR)
