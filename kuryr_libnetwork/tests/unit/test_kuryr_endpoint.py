@@ -105,7 +105,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         self.assertEqual({'Err': GivenException.message}, decoded_json)
 
     @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
@@ -172,7 +172,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         fake_updated_port = fake_port_response['port']
         fake_updated_port['name'] = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        mock_update_port.return_value = fake_port_response
+        mock_update_port.return_value = fake_port_response['port']
 
         fake_neutron_subnets = [fake_v4_subnet['subnet'],
                                 fake_v6_subnet['subnet']]
@@ -195,13 +195,8 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
             mock.call(cidr='fe80::/64', network_id=fake_neutron_network_id)]
         mock_list_subnets.assert_has_calls(expect_calls, any_order=True)
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
-        mock_update_port.assert_called_with(
-            fake_updated_port['id'],
-            {'port': {
-                'name': fake_updated_port['name'],
-                'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': fake_docker_endpoint_id
-            }})
+        mock_update_port.assert_called_with(fake_port_response['port'],
+                                            fake_docker_endpoint_id)
         mock_create_host_iface.assert_called_with(
             fake_docker_endpoint_id, fake_updated_port, fake_neutron_subnets,
             fake_neutron_network['networks'][0])

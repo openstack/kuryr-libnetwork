@@ -248,6 +248,48 @@ The bash script creates the following file if it is missing:
 Note the root privilege is required for creating and deleting the veth pairs
 with `pyroute2 <http://docs.pyroute2.org/>`_ to run.
 
+
+How to try out nested-containers locally
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Installing OpenStack running devstack with the desired local.conf file but
+   including the next to make use of OVS-firewall and enabling Trunk Ports::
+
+    [[post-config|/$Q_PLUGIN_CONF_FILE]]
+
+    [DEFAULT]
+    service_plugins=trunk
+
+    [securitygroup]
+    firewall_driver=openvswitch
+
+2. Launch a VM with `Neutron trunk port.
+   <https://wiki.openstack.org/wiki/Neutron/TrunkPort>`
+
+3. Inside the VM install kuryr and kuryr-libnetwork following the normal
+   installation steps (see above steps at `Installing Kuryr's libnetwork
+   driver`).
+
+4. Reconfigure kuryr inside the VM to point to the neutron server and to use the
+   vlan driver::
+    - Configure `/etc/kuryr/kuryr.conf`::
+
+      [binding]
+      driver = kuryr.lib.binding.drivers.vlan
+      link_iface = eth0 # VM vNIC
+
+      [neutron]
+      auth_url = http://KEYSTONE_SERVER_IP:35357/v3/
+      username = admin
+      user_domain_name = Default
+      password = ADMIN_PASSWORD
+      project_name = service
+      project_domain_name = Default
+      auth_type = password
+
+    - Restart kuryr service inside the VM
+
+
 Testing Kuryr
 -------------
 

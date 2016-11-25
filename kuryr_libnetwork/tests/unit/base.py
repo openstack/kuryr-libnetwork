@@ -158,7 +158,8 @@ class TestKuryrBase(TestCase):
                        neutron_subnet_v6_id=None,
                        neutron_subnet_v4_address="192.168.1.2",
                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4",
-                       device_owner=None):
+                       device_owner=None,
+                       neutron_trunk_id=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createPort  # noqa
         fake_port = {
@@ -188,6 +189,9 @@ class TestKuryrBase(TestCase):
                 "subnet_id": neutron_subnet_v6_id,
                 "ip_address": neutron_subnet_v6_address
             })
+        if neutron_trunk_id:
+            fake_port['port']['trunk_details'] = {'trunk_id': neutron_trunk_id}
+
         return fake_port
 
     @classmethod

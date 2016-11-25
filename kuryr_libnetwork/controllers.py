@@ -208,22 +208,6 @@ def _create_port(endpoint_id, neutron_network_id, interface_mac, fixed_ips):
     return rcvd_port['port']
 
 
-def _update_port(port, endpoint_id):
-    port['name'] = utils.get_neutron_port_name(endpoint_id)
-    try:
-        response_port = app.neutron.update_port(
-                port['id'],
-                {'port': {
-                    'name': port['name'],
-                    'device_owner': lib_const.DEVICE_OWNER,
-                    'device_id': endpoint_id}})
-    except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during updating a "
-                             "Neutron port: %s"), ex)
-        raise
-    return response_port['port']
-
-
 def _get_fixed_ips_by_interface_cidr(subnets, interface_cidrv4,
                                      interface_cidrv6, fixed_ips):
     for subnet in subnets:
@@ -273,7 +257,7 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
             interface_mac, fixed_ips)
     elif num_port == 1:
         port = filtered_ports['ports'][0]
-        response_port = _update_port(port, endpoint_id)
+        response_port = app.driver.update_port(port, endpoint_id)
     else:
         raise n_exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"

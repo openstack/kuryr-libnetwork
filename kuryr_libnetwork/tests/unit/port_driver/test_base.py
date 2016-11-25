@@ -35,6 +35,9 @@ class TestBaseDriver(d_base.BaseNestedDriver):
     def get_supported_bindings(self):
         pass
 
+    def update_port(self, neutron_port_id, endpoint_id):
+        pass
+
 
 @ddt.ddt
 class TestBaseNestedDriver(base.TestKuryrBase):

@@ -49,3 +49,12 @@ class BaseNestedDriver(driver.Driver):
 
         raise exceptions.KuryrException("Cannot find a Neutron port "
             "associated to interface name {0}".format(ifname))
+
+    def get_container_iface_name(self, neutron_port_id):
+        """Returns interface name of a container in the default namespace.
+
+        :param neutron_port_id: The ID of a neutron port as string
+        :returns: interface name as string.
+        """
+        _, container_iface_name = utils.get_veth_pair_names(neutron_port_id)
+        return container_iface_name

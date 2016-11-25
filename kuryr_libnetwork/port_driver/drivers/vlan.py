@@ -16,6 +16,7 @@ from oslo_log import log
 from kuryr.lib._i18n import _LE
 from kuryr.lib import binding
 from kuryr.lib import exceptions
+from kuryr.lib import segmentation_type_drivers as seg_driver
 
 from kuryr_libnetwork import app
 from kuryr_libnetwork.port_driver import base
@@ -23,13 +24,22 @@ from kuryr_libnetwork.port_driver import base
 LOG = log.getLogger(__name__)
 
 
-class NestedDriver(base.BaseNestedDriver):
-    """Driver for container-in-VM deployments with MACVLAN and IPVLAN."""
+class VlanDriver(base.BaseNestedDriver):
+    """Driver for container-in-VM deployments with Trunk Ports."""
 
-    BINDING_DRIVERS = ('macvlan', 'ipvlan')
+    BINDING_DRIVERS = ('vlan',)
 
     def __init__(self):
-        super(NestedDriver, self).__init__()
+        super(VlanDriver, self).__init__()
+
+        self.port_vlan_dic = {}
+        self.trunk_port = self._get_port_from_host_iface(self.link_iface)
+        self._check_for_vlan_ids()
+
+    def _check_for_vlan_ids(self):
+        """Gathers information about vlans already in use."""
+        for subport in self.trunk_port['trunk_details']['sub_ports']:
+            self.port_vlan_dic[subport['port_id']] = subport['segmentation_id']
 
     def get_supported_bindings(self):
         """Returns a tuple of supported binding driver names for the driver.
@@ -41,16 +51,17 @@ class NestedDriver(base.BaseNestedDriver):
     def get_default_network_id(self):
         """Returns a Neutron network ID as per driver logic, if any.
 
-        Nested Endpoints need to join the same network as their Master
-        interface, this function will return its Neutron network UUID for the
-        Endpoint to join or throw in case of failure.
-
         :returns: the Neutron network UUID as a string
         :raises: exceptions.KuryrException
         """
-        vm_port = self._get_port_from_host_iface(self.link_iface)
+        return None
 
-        return vm_port['network_id']
+    def update_port(self, port, endpoint_id):
+        segmentation_id = self._get_segmentation_id(port['id'])
+        self._attach_subport(self.trunk_port['trunk_details']['trunk_id'],
+                             port['id'],
+                             segmentation_id)
+        return super(VlanDriver, self).update_port(port, endpoint_id)
 
     def create_host_iface(self, endpoint_id, neutron_port, subnets,
                           network=None):
@@ -58,9 +69,8 @@ class NestedDriver(base.BaseNestedDriver):
 
         A host linked interface will be created for the specific Neutron port
         by delegating to the pre-selected kuryr-lib driver.
-        This driver will also add the IP and MAC address pairs of the Endpoint
-        to the allowed_address_pairs list of the Neutron port associated to the
-        underlying host interface.
+        This driver will attach the port to the trunk port as a subport by
+        using a segmentation id available.
 
         :param endpoint_id:  the ID of the endpoint as string
         :param neutron_port: the container Neutron port dictionary as returned
@@ -77,20 +87,20 @@ class NestedDriver(base.BaseNestedDriver):
                  n_exceptions.NeutronClientException,
                  processutils.ProcessExecutionError
         """
-        container_mac = neutron_port['mac_address']
         container_ips = neutron_port['fixed_ips']
 
-        if not container_ips:  # The MAC address should be mandatory, no check
+        if not container_ips:
             raise exceptions.KuryrException(
                 "Neutron port {0} does not have fixed_ips."
                 .format(neutron_port['id']))
 
         vm_port = self._get_port_from_host_iface(self.link_iface)
 
+        segmentation_id = self._get_segmentation_id(neutron_port['id'])
+
         _, _, (stdout, stderr) = binding.port_bind(
-            endpoint_id, neutron_port, subnets, network, vm_port)
-        self._add_to_allowed_address_pairs(vm_port, container_ips,
-                                           container_mac)
+            endpoint_id, neutron_port, subnets, network, vm_port,
+            segmentation_id)
 
         return (stdout, stderr)
 
@@ -99,9 +109,8 @@ class NestedDriver(base.BaseNestedDriver):
 
         The host Slave interface associated to the Neutron port will be deleted
         by delegating to the selected kuryr-lib driver.
-        This driver will also remove the IP and MAC address pairs of the
-        Endpoint to the allowed_address_pairs list of the Neutron port
-        associated to the underlying host interface.
+        This driver will also remove the subport attached to the trunk port
+        and will release its segmentation id
 
         :param endpoint_id:  the ID of the Docker container as string
         :param neutron_port: a port dictionary returned from
@@ -115,43 +124,49 @@ class NestedDriver(base.BaseNestedDriver):
                  processutils.ProcessExecutionError,
         """
         vm_port = self._get_port_from_host_iface(self.link_iface)
-        container_ips = neutron_port['fixed_ips']
 
-        self._remove_from_allowed_address_pairs(vm_port, container_ips)
-        return binding.port_unbind(endpoint_id, neutron_port)
+        stdout, stderr = binding.port_unbind(endpoint_id, neutron_port)
 
-    def _add_to_allowed_address_pairs(self, port, ip_addresses,
-                                      mac_address=None):
-        address_pairs = port['allowed_address_pairs']
-        for ip_entry in ip_addresses:
-            pair = {'ip_address': ip_entry['ip_address']}
-            if mac_address:
-                pair['mac_address'] = mac_address
-            address_pairs.append(pair)
-
-        self._update_port_address_pairs(port['id'], address_pairs)
-
-    def _remove_from_allowed_address_pairs(self, port, ip_addresses):
-        address_pairs = port['allowed_address_pairs']
-        filter = frozenset(ip_entry['ip_address'] for ip_entry in ip_addresses)
-        updated_address_pairs = []
-
-        # filter allowed IPs by copying
-        for address_pair in address_pairs:
-            if address_pair['ip_address'] in filter:
-                continue
-            updated_address_pairs.append(address_pair)
-
-        self._update_port_address_pairs(port['id'], updated_address_pairs)
-
-    def _update_port_address_pairs(self, port_id, address_pairs):
+        subports = [{'port_id': neutron_port['id']}]
         try:
-            app.neutron.update_port(
-                    port_id,
-                    {'port': {
-                             'allowed_address_pairs': address_pairs
-                    }})
+            app.neutron.trunk_remove_subports(
+                vm_port['trunk_details']['trunk_id'],
+                {'sub_ports': subports})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during updating Neutron "
-                "port %(port_id)s: %(ex)s"), port_id, ex)
+            app.logger.error(_LE("Error happened during subport deletion "
+                                 "%(port_id)s: %(ex)s"),
+                             {'port_id': neutron_port['id'], 'ex': ex})
             raise
+        self._release_segmentation_id(neutron_port['id'])
+        return stdout, stderr
+
+    def _attach_subport(self, trunk_id, port_id, segmentation_id):
+        subport = [
+            {
+                'segmentation_id': segmentation_id,
+                'port_id': port_id,
+                'segmentation_type': 'vlan'
+            }
+        ]
+        try:
+            app.neutron.trunk_add_subports(trunk_id, {'sub_ports': subport})
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Error happened adding subport %(port_id)s "
+                                 "to trunk port %(trunk_id)s: %(ex)s"),
+                             port_id, trunk_id, ex)
+            raise
+
+    def _get_segmentation_id(self, id):
+        if id in self.port_vlan_dic.keys():
+            return self.port_vlan_dic[id]
+        seg_id = seg_driver.allocate_segmentation_id(
+            self.port_vlan_dic.values())
+        self.port_vlan_dic[id] = seg_id
+        return seg_id
+
+    def _release_segmentation_id(self, id):
+        seg_driver.release_segmentation_id(id)
+        del self.port_vlan_dic[id]
+
+    def _get_port_vlan(self, port_id):
+        return self.port_vlan_dic[port_id]
