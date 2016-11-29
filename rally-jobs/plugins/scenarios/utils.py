@@ -80,7 +80,7 @@ class KuryrScenario(scenario.OpenStackScenario):
     def _start_container(self, container_create_args=None):
         """Start Container on docker network."""
         container = self.docker_client.create_container(
-            image='busybox:1',
+            image='kuryr/busybox',
             command='/bin/sleep 600')
         container_id = container.get('Id')
         self.docker_client.start(container=container_id)

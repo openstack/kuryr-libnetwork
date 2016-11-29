@@ -22,7 +22,6 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
     """
     def setUp(self):
         super(ContainerTest, self).setUp()
-        self.docker_client.pull(repository='busybox', tag='1')
 
         fake_ipam = {
             "Driver": "kuryr",
@@ -62,7 +61,7 @@ class ContainerTest(kuryr_base.KuryrBaseTest):
         # Test if support connect/disconnect operations
         container_name = lib_utils.get_random_string(8)
         container = self.docker_client.create_container(
-            image='busybox:1',
+            image='kuryr/busybox',
             command='/bin/sleep 600',
             hostname='kuryr_test_container',
             name=container_name)

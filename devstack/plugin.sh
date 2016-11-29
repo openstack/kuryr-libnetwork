@@ -155,6 +155,11 @@ if is_service_enabled kuryr-libnetwork; then
         done
         echo ""
         sudo chown "$STACK_USER":docker "$KURYR_DOCKER_ENGINE_SOCKET_FILE"
+
+        echo "Build busybox docker image for fullstack and rally test"
+        cd $DEST/kuryr-libnetwork/contrib/busybox
+        sudo usermod -aG docker $STACK_USER
+        sh build_image.sh
     fi
 
     if [[ "$1" == "stack" && "$2" == "extra" ]]; then

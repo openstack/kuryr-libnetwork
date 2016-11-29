@@ -53,8 +53,6 @@ class DockerNetworkContext(context.Context):
         """Create kuryr or non-kuryr docker network, and prepare image cache"""
         try:
             docker_client = docker.Client(base_url="tcp://0.0.0.0:2375")
-            # Cache busybox image
-            docker_client.pull(repository="busybox", tag="1")
 
             if self.config["is_kuryr"]:
                 ipam = {
