@@ -11,140 +11,18 @@
 # under the License.
 
 import ddt
+import mock
 from neutronclient.common import exceptions
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
-from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
-from kuryr_libnetwork import app
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
 
 
-class TestKuryrEndpointFailures(base.TestKuryrFailures):
-    """Base class that has the methods commonly shared among endpoint tests.
-
-    This class mainly has the methods for mocking API calls against Neutron.
-    """
-    def _create_subnet_with_exception(self, neutron_network_id,
-                                      docker_endpoint_id, ex):
-        fake_neutron_subnet_v4_id = uuidutils.generate_uuid()
-        fake_neutron_subnet_v6_id = uuidutils.generate_uuid()
-
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
-        fake_subnet_request = {
-            'subnets': [{
-                'name': '-'.join([docker_endpoint_id, '192.168.1.0']),
-                'network_id': neutron_network_id,
-                'ip_version': 4,
-                "cidr": '192.168.1.0/24',
-                'enable_dhcp': 'False',
-                'subnetpool_id': ''
-            }, {
-                'name': '-'.join([docker_endpoint_id, 'fe80::']),
-                'network_id': neutron_network_id,
-                'ip_version': 6,
-                "cidr": 'fe80::/64',
-                'enable_dhcp': 'False',
-                'subnetpool_id': ''
-            }]
-        }
-        fake_subnets = self._get_fake_subnets(
-            docker_endpoint_id, neutron_network_id,
-            fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)
-
-        if ex:
-            app.neutron.create_subnet(fake_subnet_request).AndRaise(ex)
-        else:
-            app.neutron.create_subnet(
-                fake_subnet_request).AndReturn(fake_subnets)
-        self.mox.ReplayAll()
-
-        return (fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)
-
-    def _delete_subnet_with_exception(self, neutron_subnet_id, ex):
-        self.mox.StubOutWithMock(app.neutron, 'delete_subnet')
-        if ex:
-            app.neutron.delete_subnet(neutron_subnet_id).AndRaise(ex)
-        else:
-            app.neutron.delete_subnet(neutron_subnet_id).AndReturn(None)
-        self.mox.ReplayAll()
-
-    def _delete_subnets_with_exception(self, neutron_subnet_ids, ex):
-        self.mox.StubOutWithMock(app.neutron, 'delete_subnet')
-        for neutron_subnet_id in neutron_subnet_ids:
-            if ex:
-                app.neutron.delete_subnet(neutron_subnet_id).AndRaise(ex)
-            else:
-                app.neutron.delete_subnet(neutron_subnet_id).AndReturn(None)
-        self.mox.ReplayAll()
-
-    def _create_port_with_exception(self, neutron_network_id,
-                                    docker_endpoint_id, neutron_subnetv4_id,
-                                    neutron_subnetv6_id, ex):
-        self.mox.StubOutWithMock(app.neutron, 'create_port')
-        fake_port_request = {
-            'port': {
-                'name': utils.get_neutron_port_name(docker_endpoint_id),
-                'admin_state_up': True,
-                "binding:host_id": lib_utils.get_hostname(),
-                'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': docker_endpoint_id,
-                'fixed_ips': [{
-                    'subnet_id': neutron_subnetv4_id,
-                    'ip_address': '192.168.1.2'
-                }, {
-                    'subnet_id': neutron_subnetv6_id,
-                    'ip_address': 'fe80::f816:3eff:fe20:57c4'
-                }],
-                'mac_address': "fa:16:3e:20:57:c3",
-                'network_id': neutron_network_id
-            }
-        }
-        # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createPort  # noqa
-        fake_port = {
-            "port": {
-                "status": "DOWN",
-                "name": utils.get_neutron_port_name(docker_endpoint_id),
-                "allowed_address_pairs": [],
-                "admin_state_up": True,
-                "binding:host_id": lib_utils.get_hostname(),
-                "network_id": neutron_network_id,
-                "tenant_id": "d6700c0c9ffa4f1cb322cd4a1f3906fa",
-                "device_owner": lib_const.DEVICE_OWNER,
-                'device_id': docker_endpoint_id,
-                "mac_address": "fa:16:3e:20:57:c3",
-                'fixed_ips': [{
-                    'subnet_id': neutron_subnetv4_id,
-                    'ip_address': '192.168.1.2'
-                }, {
-                    'subnet_id': neutron_subnetv6_id,
-                    'ip_address': 'fe80::f816:3eff:fe20:57c4'
-                }],
-                "id": "65c0ee9f-d634-4522-8954-51021b570b0d",
-                "security_groups": [],
-                "device_id": ""
-            }
-        }
-        if ex:
-            app.neutron.create_port(fake_port_request).AndRaise(ex)
-        else:
-            app.neutron.create_port(fake_port_request).AndReturn(fake_port)
-        self.mox.ReplayAll()
-
-    def _delete_port_with_exception(self, neutron_port_id, ex):
-        self.mox.StubOutWithMock(app.neutron, "delete_port")
-        if ex:
-            app.neutron.delete_port(neutron_port_id).AndRaise(ex)
-        else:
-            app.neutron.delete_port(neutron_port_id).AndReturn(None)
-        self.mox.ReplayAll()
-
-
 @ddt.ddt
-class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
+class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
     """Unit tests for the failures for creating endpoints.
 
     This test covers error responses listed in the spec:
@@ -167,9 +45,15 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
                                  data=jsonutils.dumps(data))
         return response
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @ddt.data(exceptions.Unauthorized, exceptions.Forbidden,
               exceptions.NotFound, exceptions.ServiceUnavailable)
-    def test_create_endpoint_port_failures(self, GivenException):
+    def test_create_endpoint_port_failures(self, GivenException,
+            mock_list_ports, mock_list_subnets, mock_list_networks,
+            mock_create_port):
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_network_id = uuidutils.generate_uuid()
@@ -184,29 +68,34 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
                           'subnet_id=%s' % fake_neutron_subnet_v6_id,
                           'ip_address=fe80::f816:3eff:fe20:57c4']
         fake_port_response = {"ports": []}
+        t = utils.make_net_tags(fake_docker_network_id)
+        fake_neutron_network = self._get_fake_list_network(
+            fake_neutron_network_id)
+        mock_list_ports.return_value = fake_port_response
 
-        self.mox.StubOutWithMock(app.neutron, 'list_ports')
-        app.neutron.list_ports(fixed_ips=fake_fixed_ips).AndReturn(
-            fake_port_response)
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        app.neutron.list_subnets(
-            network_id=fake_neutron_network_id,
-            cidr='192.168.1.0/24').AndReturn(fake_subnets)
-        app.neutron.list_subnets(
-            network_id=fake_neutron_network_id,
-            cidr='fe80::/64').AndReturn({'subnets': []})
-
-        self._create_port_with_exception(fake_neutron_network_id,
-                                         fake_docker_endpoint_id,
-                                         fake_neutron_subnet_v4_id,
-                                         fake_neutron_subnet_v6_id,
-                                         GivenException())
-        self._mock_out_network(fake_neutron_network_id, fake_docker_network_id)
+        def mock_fake_subnet(*args, **kwargs):
+            if kwargs['cidr'] == '192.168.1.0/24':
+                return fake_subnets
+            return {'subnets': []}
+        mock_list_subnets.side_effect = mock_fake_subnet
+        mock_list_networks.return_value = fake_neutron_network
+        mock_create_port.side_effect = GivenException
+        fake_port_request = self._get_fake_port_request(
+            fake_neutron_network_id, fake_docker_endpoint_id,
+            fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)
 
         response = self._invoke_create_request(
             fake_docker_network_id, fake_docker_endpoint_id)
 
         self.assertEqual(GivenException.status_code, response.status_code)
+        mock_list_networks.assert_called_with(tags=t)
+        mock_create_port.assert_called_with(fake_port_request)
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_network_id, cidr='192.168.1.0/24')
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_network_id, cidr='fe80::/64')
+        mock_list_ports.assert_called_with(
+            fixed_ips=fake_fixed_ips)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         self.assertEqual({'Err': GivenException.message}, decoded_json)
@@ -227,7 +116,7 @@ class TestKuryrEndpointCreateFailures(TestKuryrEndpointFailures):
 
 
 @ddt.ddt
-class TestKuryrEndpointDeleteFailures(TestKuryrEndpointFailures):
+class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
     """Unit tests for the failures for deleting endpoints."""
     def _invoke_delete_request(self, docker_network_id, docker_endpoint_id):
         data = {'NetworkID': docker_network_id,

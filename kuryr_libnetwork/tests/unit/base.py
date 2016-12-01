@@ -16,6 +16,7 @@ from oslotest import base
 
 from kuryr.lib import binding
 from kuryr.lib import constants as lib_const
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
@@ -308,6 +309,82 @@ class TestKuryrBase(TestCase):
             fake_v6_subnet['subnet'].update(subnetpool_id=subnetpool_id)
 
         return fake_v6_subnet
+
+    @staticmethod
+    def _get_fake_port_request(
+            neutron_network_id, docker_endpoint_id,
+            neutron_subnetv4_id, neutron_subnetv6_id):
+        fake_port_request = {
+            'port': {
+                'name': utils.get_neutron_port_name(docker_endpoint_id),
+                'admin_state_up': True,
+                "binding:host_id": lib_utils.get_hostname(),
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': docker_endpoint_id,
+                'fixed_ips': [{
+                    'subnet_id': neutron_subnetv4_id,
+                    'ip_address': '192.168.1.2'
+                }, {
+                    'subnet_id': neutron_subnetv6_id,
+                    'ip_address': 'fe80::f816:3eff:fe20:57c4'
+                }],
+                'mac_address': "fa:16:3e:20:57:c3",
+                'network_id': neutron_network_id
+            }
+        }
+        return fake_port_request
+
+    @staticmethod
+    def _get_fake_port_map(
+            neutron_network_id, docker_endpoint_id,
+            neutron_subnetv4_id, neutron_subnetv6_id):
+        fake_port = {
+            "port": {
+                "status": "DOWN",
+                "name": utils.get_neutron_port_name(docker_endpoint_id),
+                "allowed_address_pairs": [],
+                "admin_state_up": True,
+                "binding:host_id": lib_utils.get_hostname(),
+                "network_id": neutron_network_id,
+                "tenant_id": "d6700c0c9ffa4f1cb322cd4a1f3906fa",
+                "device_owner": lib_const.DEVICE_OWNER,
+                'device_id': docker_endpoint_id,
+                "mac_address": "fa:16:3e:20:57:c3",
+                'fixed_ips': [{
+                    'subnet_id': neutron_subnetv4_id,
+                    'ip_address': '192.168.1.2'
+                }, {
+                    'subnet_id': neutron_subnetv6_id,
+                    'ip_address': 'fe80::f816:3eff:fe20:57c4'
+                }],
+                "id": "65c0ee9f-d634-4522-8954-51021b570b0d",
+                "security_groups": [],
+                "device_id": ""
+            }
+        }
+        return fake_port
+
+    @staticmethod
+    def _get_fake_subnet(self, neutron_network_id,
+        docker_endpoint_id):
+        fake_subnet_request = {
+            'subnets': [{
+                'name': '-'.join([docker_endpoint_id, '192.168.1.0']),
+                'network_id': neutron_network_id,
+                'ip_version': 4,
+                "cidr": '192.168.1.0/24',
+                'enable_dhcp': 'False',
+                'subnetpool_id': ''
+            }, {
+                'name': '-'.join([docker_endpoint_id, 'fe80::']),
+                'network_id': neutron_network_id,
+                'ip_version': 6,
+                "cidr": 'fe80::/64',
+                'enable_dhcp': 'False',
+                'subnetpool_id': ''
+            }]
+        }
+        return fake_subnet_request
 
 
 class TestKuryrFailures(TestKuryrBase):
