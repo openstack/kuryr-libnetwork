@@ -12,6 +12,7 @@
 
 from collections import defaultdict
 from itertools import groupby
+import mock
 from operator import itemgetter
 import six
 
@@ -21,7 +22,6 @@ from oslo_utils import uuidutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
-from kuryr_libnetwork import app
 from kuryr_libnetwork import constants
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
@@ -43,16 +43,24 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
     security groups. Tests also cover adding more than one port to the
     list of exposed ports.
     """
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.create_security_group_rule')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.create_security_group')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @ddt.data((False, 1), (True, 1), (False, 2), (True, 2))
     @ddt.unpack
     def test_network_driver_program_external_connectivity(self, existing_sg,
-                                                          num_ports):
+            num_ports, mock_list_ports, mock_create_security_group,
+            mock_create_security_group_rule, mock_show_port,
+            mock_update_port):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
         fake_neutron_net_id = uuidutils.generate_uuid()
         fake_neutron_port_id = uuidutils.generate_uuid()
-        self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
@@ -66,22 +74,17 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             fake_neutron_ports_response['ports'][0]['security_groups'] = [
                 fake_neutron_existing_sec_group_id]
 
-        app.neutron.list_ports(name=neutron_port_name).AndReturn(
-            fake_neutron_ports_response)
+        mock_list_ports.return_value = fake_neutron_ports_response
 
         sec_group = {
             'name': utils.get_sg_expose_name(fake_neutron_port_id),
             'description': 'Docker exposed ports created by Kuryr.'
         }
-        self.mox.StubOutWithMock(app.neutron, 'create_security_group')
         fake_neutron_sec_group_id = lib_utils.get_hash()
         fake_neutron_sec_group_response = {'security_group':
                                            {'id': fake_neutron_sec_group_id}}
-        app.neutron.create_security_group({'security_group':
-                                           sec_group}).AndReturn(
-                                           fake_neutron_sec_group_response)
-
-        self.mox.StubOutWithMock(app.neutron, 'create_security_group_rule')
+        mock_create_security_group.return_value = (
+            fake_neutron_sec_group_response)
 
         proto_port_dict = defaultdict(list)
         for i in range(num_ports):
@@ -103,21 +106,12 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
                     'port_range_max': port_range_max,
                     'protocol': proto
                 }
-                app.neutron.create_security_group_rule({'security_group_rule':
-                                                        sec_group_rule})
 
         sgs = [fake_neutron_sec_group_id]
         if existing_sg:
             sgs.append(fake_neutron_existing_sec_group_id)
-        self.mox.StubOutWithMock(app.neutron, 'show_port')
-        app.neutron.show_port(fake_neutron_port_id).AndReturn(
-            {'port': fake_neutron_ports_response['ports'][0]})
-
-        self.mox.StubOutWithMock(app.neutron, 'update_port')
-        app.neutron.update_port(fake_neutron_port_id,
-                                {'port': {'security_groups': sgs}})
-
-        self.mox.ReplayAll()
+        mock_show_port.return_value = {'port':
+            fake_neutron_ports_response['ports'][0]}
 
         port_opt = []
         for i in range(num_ports):
@@ -138,18 +132,35 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
                                  data=jsonutils.dumps(data))
 
         self.assertEqual(200, response.status_code)
+        mock_update_port.assert_called_with(fake_neutron_port_id,
+                                {'port': {'security_groups': sgs}})
+        mock_show_port.assert_called_with(fake_neutron_port_id)
+        mock_create_security_group_rule.assert_called_with(
+            {'security_group_rule': sec_group_rule})
+        mock_create_security_group.assert_called_with(
+            {'security_group': sec_group})
+        mock_list_ports.assert_called_with(name=neutron_port_name)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.delete_security_group')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.list_security_groups')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @ddt.data((False), (True))
-    def test_network_driver_revoke_external_connectivity(self, existing_sg):
+    def test_network_driver_revoke_external_connectivity(self, existing_sg,
+            mock_list_ports, mock_list_security_groups,
+            mock_delete_security_groups, mock_show_port,
+            mock_update_port):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
         fake_neutron_net_id = uuidutils.generate_uuid()
         fake_neutron_port_id = uuidutils.generate_uuid()
         fake_neutron_sec_group_id = lib_utils.get_hash()
-        self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
@@ -165,33 +176,19 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         else:
             fake_neutron_ports_response['ports'][0]['security_groups'] = [
                 fake_neutron_sec_group_id]
+        fake_neutron_sec_group_response = {
+            'security_groups': [{'id': fake_neutron_sec_group_id}]}
 
-        app.neutron.list_ports(name=neutron_port_name).AndReturn(
-            fake_neutron_ports_response)
-
-        self.mox.StubOutWithMock(app.neutron, 'list_security_groups')
-        fake_neutron_sec_group_response = {'security_groups':
-                                           [{'id': fake_neutron_sec_group_id}]}
-        app.neutron.list_security_groups(
-            name=utils.get_sg_expose_name(fake_neutron_port_id)).AndReturn(
+        mock_list_ports.return_value = fake_neutron_ports_response
+        mock_list_security_groups.return_value = (
             fake_neutron_sec_group_response)
+        mock_show_port.return_value = {'port':
+            fake_neutron_ports_response['ports'][0]}
 
         if existing_sg:
             sgs = [fake_neutron_existing_sec_group_id]
         else:
             sgs = []
-        self.mox.StubOutWithMock(app.neutron, 'show_port')
-        app.neutron.show_port(fake_neutron_port_id).AndReturn(
-            {'port': fake_neutron_ports_response['ports'][0]})
-
-        self.mox.StubOutWithMock(app.neutron, 'update_port')
-        app.neutron.update_port(fake_neutron_port_id,
-                                {'port': {'security_groups': sgs}})
-
-        self.mox.StubOutWithMock(app.neutron, 'delete_security_group')
-        app.neutron.delete_security_group(fake_neutron_sec_group_id)
-        self.mox.ReplayAll()
-
         data = {
             'NetworkID': fake_docker_net_id,
             'EndpointID': fake_docker_endpoint_id,
@@ -201,5 +198,13 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
                                  data=jsonutils.dumps(data))
 
         self.assertEqual(200, response.status_code)
+        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_security_groups.assert_called_with(
+            name=utils.get_sg_expose_name(fake_neutron_port_id))
+        mock_delete_security_groups.assert_called_with(
+                        fake_neutron_sec_group_id)
+        mock_show_port.assert_called_with(fake_neutron_port_id)
+        mock_update_port.assert_called_with(fake_neutron_port_id,
+                        {'port': {'security_groups': sgs}})
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
