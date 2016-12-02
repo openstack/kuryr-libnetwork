@@ -11,14 +11,13 @@
 # under the License.
 
 import mock
-from mox3 import mox
+
 from neutronclient.v2_0 import client
 from oslotest import base
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
-from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
 from kuryr_libnetwork.port_driver import driver
 from kuryr_libnetwork import utils
@@ -46,42 +45,11 @@ class TestKuryrBase(TestCase):
 
     def setUp(self):
         super(TestKuryrBase, self).setUp()
-        self.mox = mox.Mox()
         controllers.neutron_client()
         controllers.load_default_subnet_pools()
         self.app.neutron.format = 'json'
-        self.addCleanup(self.mox.VerifyAll)
-        self.addCleanup(self.mox.UnsetStubs)
         if hasattr(app, 'DEFAULT_POOL_IDS'):
             del app.DEFAULT_POOL_IDS
-
-    def _mock_out_network(self, neutron_network_id, docker_network_id,
-                          check_existing=False):
-        no_networks_response = {
-            "networks": []
-        }
-        fake_list_response = {
-            "networks": [{
-                "status": "ACTIVE",
-                "subnets": [],
-                "admin_state_up": True,
-                "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
-                "router:external": False,
-                "segments": [],
-                "shared": False,
-                "id": neutron_network_id
-            }]
-        }
-        self.mox.StubOutWithMock(app.neutron, 'list_networks')
-        t = utils.make_net_tags(docker_network_id)
-        if check_existing:
-            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
-            app.neutron.list_networks(tags=te).AndReturn(
-                no_networks_response)
-        app.neutron.list_networks(tags=t).AndReturn(fake_list_response)
-
-        self.mox.ReplayAll()
-        return fake_list_response
 
     @staticmethod
     def _get_fake_list_network(neutron_network_id, check_existing=False):
