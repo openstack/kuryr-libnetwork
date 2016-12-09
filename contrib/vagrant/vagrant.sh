@@ -1,7 +1,7 @@
 #!/bin/sh
 
 export OS_USER=vagrant
-export OS_HOST_IP=172.68.5.10
+export HOST_IP=127.0.0.1
 
 # run script
 bash /vagrant/devstack.sh "$1"
