@@ -1,0 +1,10 @@
+{
+  "Name": "kuryr",
+  "Addr": "https://127.0.0.1:23750",
+  "TLSConfig": {
+    "InsecureSkipVerify": false,
+    "CAFile": "/var/lib/kuryr/certs/ca.pem",
+    "CertFile": "/var/lib/kuryr/certs/cert.pem",
+    "KeyFile": "/var/lib/kuryr/certs/key.pem"
+  }
+}

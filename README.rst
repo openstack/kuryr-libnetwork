@@ -232,8 +232,52 @@ vif binding executables. For example, if you installed it on Debian or Ubuntu::
 Running Kuryr
 ~~~~~~~~~~~~~
 
-Currently, Kuryr utilizes a bash script to start the service. Make sure that
-you have installed `tox` before the execution of the command below::
+Currently, Kuryr utilizes a bash script to start the service.
+Make sure that you have installed `tox` before the execution of
+the following commands:
+
+If SSL needs to be enabled follow this step or skip to next step::
+
+    $tox -egenconfig
+
+    Add these 3 parameters in generated file[etc/kuryr.conf.sample]:
+        ssl_cert_file <Absolute Path for Cert file>
+        ssl_key_file <Absolute Path for private key>
+        enable_ssl <True or False>
+
+    $export SSL_ENABLED=True
+
+    Add the path names in [contrib/tls/kuryr.json]:
+        InsecureSkipVerify <false/true>
+        CAFile: <Absolute Path for CA file>
+        CertFile: <Absolute Path for Cert file>
+        KeyFile: <Absolute Path for private key>
+
+    Placement of cert files:
+    By default Kuryr places it certs in /var/lib/kuryr/certs directory,
+    Please make sure that certs are on proper location as mentioned in kuryr.conf
+
+    Verification of kuryr.json:
+    Please make sure that your kuryr.json look similar to below sample
+    with appropiate paths of certs updated, and remove older .spec files
+    if any exists.
+    and https configuration url::
+        {
+          "Name": "kuryr",
+          "Addr": "https://127.0.0.1:23750",
+          "TLSConfig": {
+            "InsecureSkipVerify": false,
+            "CAFile": "/var/lib/kuryr/certs/ca.pem",
+            "CertFile": "/var/lib/kuryr/certs/cert.pem",
+            "KeyFile": "/var/lib/kuryr/certs/key.pem"
+          }
+        }
+
+    Optional:
+    For locally generating and testing, please refer to below link:
+        http://tech.paulcz.net/2016/01/secure-docker-with-tls/
+
+Run Kuryr Server from command below::
 
     $ sudo ./scripts/run_kuryr.sh
 

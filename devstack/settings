@@ -1,6 +1,6 @@
 
 KURYR_HOME=${KURYR_HOME:-$DEST/kuryr-libnetwork}
-KURYR_ACTIVATOR_FILENAME=kuryr.spec
+KURYR_ACTIVATOR_FILENAME=${KURYR_ACTIVATOR_FILENAME:-kuryr.spec}
 KURYR_DEFAULT_ACTIVATOR=${KURYR_HOME}/etc/${KURYR_ACTIVATOR_FILENAME}
 
 # See libnetwork's plugin discovery mechanism:
