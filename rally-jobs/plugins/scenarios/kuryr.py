@@ -71,9 +71,12 @@ class Kuryr(utils.KuryrScenario):
     def start_and_stop_containers(self, container_create_args=None):
         """Start and stop container on docker network.
 
-        Measure the "docker run" , "docker stop" , "docker rm"
+        Measure the "docker run" , "docker stop", "docker rm"
         command performance.
         """
         container_id = self._start_container(container_create_args or {})
         self._stop_container(container_id)
-        self._remove_container(container_id)
+        # TODO(yedongcan) We will hit the Docker bug:
+        # "Unable to remove filesystem - device or resource busy"
+        # Temporary workaround is disable remove_container here.
+        # self._remove_container(container_id)
