@@ -99,7 +99,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,
@@ -148,19 +148,41 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_subnet')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data(
         (True), (False))
-    def test_delete_network_pre_existing(self, use_tags,
+    def test_delete_network_pre_existing_neutron_kuryr_subnets_pre_created(
+            self, use_tags,
             mock_tag, mock_list_networks, mock_remove_tag,
-            mock_delete_network, mock_list_subnets):
+            mock_delete_subnet, mock_delete_network, mock_list_subnets):
         if not use_tags:
             mock_tag.tag = use_tags
 
-        docker_network_id, fake_neutron_net_id, fake_response = self._ids()
-        mock_list_networks.return_value = fake_response
+        docker_network_id, fake_neutron_net_id, _ = self._ids()
+        # fake pre-existed kuryr subnet
+        kuryr_subnet_v4_id = uuidutils.generate_uuid()
+        kuryr_fake_cidr_v4 = '192.168.4.0/24'
+        kuryr_fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id=kuryr_subnet_v4_id,
+            subnetpool_id=uuidutils.generate_uuid(),
+            cidr=kuryr_fake_cidr_v4,
+            name=utils.make_subnet_name(kuryr_fake_cidr_v4))
+
+        # fake pre-existed neutron subnet
+        neutron_subnet_v4_id = uuidutils.generate_uuid()
+        neutron_fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id=neutron_subnet_v4_id,
+            name='fake_name')
+
+        fake_existing_subnets_response = {
+            "subnets": [
+                kuryr_fake_v4_subnet['subnet'],
+                neutron_fake_v4_subnet['subnet']
+            ]
+        }
 
         if mock_tag.tag:
             t = utils.make_net_tags(docker_network_id)
@@ -170,8 +192,27 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
             fake_existing_subnets_response = {
                 "subnets": []
             }
-            mock_list_subnets.return_value = fake_existing_subnets_response
             mock_delete_network.return_value = None
+
+        fake_neutron_existing_network_response = {
+            'networks':
+            [
+                {
+                    "status": "ACTIVE",
+                    "subnets": fake_existing_subnets_response["subnets"],
+                    "admin_state_up": True,
+                    "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+                    "router:external": False,
+                    "segments": [],
+                    "shared": False,
+                    "id": fake_neutron_net_id
+                }
+            ]
+        }
+
+        mock_list_networks.return_value = (
+            fake_neutron_existing_network_response)
+        mock_list_subnets.return_value = fake_existing_subnets_response
 
         data = {'NetworkID': docker_network_id}
         response = self.app.post('/NetworkDriver.DeleteNetwork',
@@ -186,6 +227,178 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                     fake_neutron_net_id, tag)
             mock_remove_tag.assert_any_call('networks',
                 fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+            mock_list_subnets.assert_called_with(
+                network_id=fake_neutron_net_id)
+            mock_delete_subnet.assert_called_once_with(kuryr_subnet_v4_id)
+            self.assertEqual(1, mock_delete_subnet.call_count)
+        else:
+            mock_list_networks.assert_any_call(name=docker_network_id)
+            mock_list_subnets.assert_called_with(
+                network_id=fake_neutron_net_id)
+            mock_delete_network.assert_called_with(fake_neutron_net_id)
+
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(const.SCHEMA['SUCCESS'], decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data(
+        (True), (False))
+    def test_delete_network_pre_existing_neutron_subnets_pre_created(
+            self, use_tags,
+            mock_tag, mock_list_networks, mock_remove_tag,
+            mock_delete_network, mock_list_subnets):
+        if not use_tags:
+            mock_tag.tag = use_tags
+
+        docker_network_id, fake_neutron_net_id, _ = self._ids()
+
+        # fake pre-existed neutron subnet
+        neutron_subnet_v4_id = uuidutils.generate_uuid()
+        neutron_fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id=neutron_subnet_v4_id,
+            name='fake_name')
+
+        fake_existing_subnets_response = {
+            "subnets": [
+                neutron_fake_v4_subnet['subnet']
+            ]
+        }
+
+        if mock_tag.tag:
+            t = utils.make_net_tags(docker_network_id)
+            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+            tags = utils.create_net_tags(docker_network_id)
+        else:
+            fake_existing_subnets_response = {
+                "subnets": []
+            }
+            mock_delete_network.return_value = None
+
+        fake_neutron_existing_network_response = {
+            'networks':
+            [
+                {
+                    "status": "ACTIVE",
+                    "subnets": fake_existing_subnets_response["subnets"],
+                    "admin_state_up": True,
+                    "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+                    "router:external": False,
+                    "segments": [],
+                    "shared": False,
+                    "id": fake_neutron_net_id
+                }
+            ]
+        }
+
+        mock_list_networks.return_value = (
+            fake_neutron_existing_network_response)
+        mock_list_subnets.return_value = fake_existing_subnets_response
+
+        data = {'NetworkID': docker_network_id}
+        response = self.app.post('/NetworkDriver.DeleteNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(data))
+
+        self.assertEqual(200, response.status_code)
+        if mock_tag.tag:
+            mock_list_networks.assert_any_call(tags=te)
+            for tag in tags:
+                mock_remove_tag.assert_any_call('networks',
+                    fake_neutron_net_id, tag)
+            mock_remove_tag.assert_any_call('networks',
+                fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+            mock_list_subnets.assert_called_with(
+                network_id=fake_neutron_net_id)
+        else:
+            mock_list_networks.assert_any_call(name=docker_network_id)
+            mock_list_subnets.assert_called_with(
+                network_id=fake_neutron_net_id)
+            mock_delete_network.assert_called_with(fake_neutron_net_id)
+
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(const.SCHEMA['SUCCESS'], decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data(
+        (True), (False))
+    def test_delete_network_pre_existing_kuryr_subnets_pre_created(
+            self, use_tags,
+            mock_tag, mock_list_networks, mock_remove_tag,
+            mock_delete_subnet, mock_delete_network, mock_list_subnets):
+        if not use_tags:
+            mock_tag.tag = use_tags
+
+        docker_network_id, fake_neutron_net_id, _ = self._ids()
+        # fake pre-existed kuryr subnet
+        kuryr_subnet_v4_id = uuidutils.generate_uuid()
+        kuryr_fake_cidr_v4 = '192.168.4.0/24'
+        kuryr_fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id=kuryr_subnet_v4_id,
+            subnetpool_id=uuidutils.generate_uuid(),
+            cidr=kuryr_fake_cidr_v4,
+            name=utils.make_subnet_name(kuryr_fake_cidr_v4))
+
+        fake_existing_subnets_response = {
+            "subnets": [
+                kuryr_fake_v4_subnet['subnet']
+            ]
+        }
+
+        if mock_tag.tag:
+            t = utils.make_net_tags(docker_network_id)
+            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+            tags = utils.create_net_tags(docker_network_id)
+        else:
+            fake_existing_subnets_response = {
+                "subnets": []
+            }
+            mock_delete_network.return_value = None
+
+        fake_neutron_existing_network_response = {
+            'networks':
+            [
+                {
+                    "status": "ACTIVE",
+                    "subnets": fake_existing_subnets_response["subnets"],
+                    "admin_state_up": True,
+                    "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+                    "router:external": False,
+                    "segments": [],
+                    "shared": False,
+                    "id": fake_neutron_net_id
+                }
+            ]
+        }
+
+        mock_list_networks.return_value = (
+            fake_neutron_existing_network_response)
+        mock_list_subnets.return_value = fake_existing_subnets_response
+
+        data = {'NetworkID': docker_network_id}
+        response = self.app.post('/NetworkDriver.DeleteNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(data))
+
+        self.assertEqual(200, response.status_code)
+        if mock_tag.tag:
+            mock_list_networks.assert_any_call(tags=te)
+            for tag in tags:
+                mock_remove_tag.assert_any_call('networks',
+                    fake_neutron_net_id, tag)
+            mock_remove_tag.assert_any_call('networks',
+                fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+            mock_list_subnets.assert_called_with(
+                network_id=fake_neutron_net_id)
+            mock_delete_subnet.assert_called_once_with(kuryr_subnet_v4_id)
         else:
             mock_list_networks.assert_any_call(name=docker_network_id)
             mock_list_subnets.assert_called_with(

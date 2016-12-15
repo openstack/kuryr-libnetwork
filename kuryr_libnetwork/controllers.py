@@ -640,7 +640,7 @@ def network_driver_create_network():
 
     if not subnets:
         new_subnets = [{
-            'name': pool_cidr,
+            'name': utils.make_subnet_name(pool_cidr),
             'network_id': network_id,
             'ip_version': cidr.version,
             'cidr': six.text_type(cidr),
@@ -699,6 +699,20 @@ def network_driver_delete_network():
             _neutron_net_remove_tags(neutron_net_id, container_net_id)
             _neutron_net_remove_tag(neutron_net_id,
                                     const.KURYR_EXISTING_NEUTRON_NET)
+            # Delete subnets created by kuryr
+            filtered_subnets = _get_subnets_by_attrs(
+                network_id=neutron_net_id)
+            for subnet in filtered_subnets:
+                try:
+                    subnet_name = subnet.get('name')
+                    if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
+                        app.neutron.delete_subnet(subnet['id'])
+                except n_exceptions.Conflict as ex:
+                    app.logger.error(_LE("Subnet %s is in use, "
+                                         "can't be deleted."), subnet['id'])
+                except n_exceptions.NeutronClientException as ex:
+                    app.logger.error(_LE("Error happened during deleting a "
+                                         "subnet created by kuryr: %s"), ex)
             return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     try:
