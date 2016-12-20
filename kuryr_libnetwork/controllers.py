@@ -641,7 +641,7 @@ def network_driver_create_network():
                 {'neutron_network_name': neutron_network_name,
                  'network': network})
         app.logger.info(_LI("Using existing network %s "
-                            "successfully"), neutron_uuid)
+                            "successfully"), specified_network)
 
     cidr = ipaddress.ip_network(six.text_type(pool_cidr))
     subnets = _get_subnets_by_attrs(network_id=network_id,
