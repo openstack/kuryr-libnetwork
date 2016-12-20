@@ -42,6 +42,9 @@ class ConfigurationTest(base.TestKuryrBase):
         self.assertEqual('kuryr6',
                          config.CONF.neutron.default_subnetpool_v6)
 
+        self.assertEqual('kuryr_libnetwork.port_driver.drivers.veth',
+                         config.CONF.port_driver)
+
     @mock.patch.object(sys, 'argv', return_value='[]')
     @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_tag')
     @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_support')

@@ -26,15 +26,14 @@ from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import excutils
 
-from kuryr.lib import binding
 from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr.lib._i18n import _LE, _LI, _LW
-from kuryr.lib.binding.drivers import utils as driver_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import constants as const
+from kuryr_libnetwork.port_driver import driver
 from kuryr_libnetwork import schemata
 from kuryr_libnetwork import utils
 
@@ -90,6 +89,11 @@ def load_default_subnet_pools():
     global SUBNET_POOLS_V6
     SUBNET_POOLS_V4 = [cfg.CONF.neutron.default_subnetpool_v4]
     SUBNET_POOLS_V6 = [cfg.CONF.neutron.default_subnetpool_v6]
+
+
+def load_port_driver():
+    app.driver = driver.get_driver_instance()
+    app.logger.debug("Using port driver '%s'", str(app.driver))
 
 
 def _cache_default_subnetpool_ids(app):
@@ -589,6 +593,15 @@ def network_driver_create_network():
                   ("Specified pool name({0}) does not "
                    "exist.").format(pool_name))
 
+    # let the user override the driver default
+    if not neutron_uuid and not neutron_name:
+        try:
+            neutron_uuid = app.driver.get_default_network_id()
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Failed to retrieve the default driver "
+                                 "network due to Neutron error: %s"), ex)
+            raise
+
     if not neutron_uuid and not neutron_name:
         network = app.neutron.create_network(
             {'network': {'name': neutron_network_name,
@@ -820,12 +833,13 @@ def network_driver_create_endpoint():
             neutron_network_id, endpoint_id, interface_cidrv4,
             interface_cidrv6, interface_mac)
         try:
-            ifname, peer_name, (stdout, stderr) = binding.port_bind(
+            (stdout, stderr) = app.driver.create_host_iface(
                 endpoint_id, neutron_port, subnets, filtered_networks[0])
             app.logger.debug(stdout)
             if stderr:
                 app.logger.error(stderr)
-        except exceptions.VethCreationFailure as ex:
+        except (exceptions.VethCreationFailure,
+                exceptions.BindingNotSupportedFailure) as ex:
             with excutils.save_and_reraise_exception():
                 app.logger.error(_LE('Preparing the veth '
                                      'pair was failed: %s.'), ex)
@@ -833,6 +847,10 @@ def network_driver_create_endpoint():
             with excutils.save_and_reraise_exception():
                 app.logger.error(_LE(
                     'Could not bind the Neutron port to the veth endpoint.'))
+        except (exceptions.KuryrException,
+                n_exceptions.NeutronClientException) as ex:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE('Failed to set up the interface: %s'), ex)
 
         if app.vif_plug_is_fatal:
             port_active = _port_active(neutron_port['id'],
@@ -844,10 +862,10 @@ def network_driver_create_endpoint():
                     .format(neutron_port_name))
 
         response_interface = {}
-
         created_fixed_ips = neutron_port['fixed_ips']
         subnets_dict_by_id = {subnet['id']: subnet
                               for subnet in subnets}
+
         if not interface_mac:
             response_interface['MacAddress'] = neutron_port['mac_address']
 
@@ -931,18 +949,23 @@ def network_driver_delete_endpoint():
         neutron_port = filtered_ports[0]
 
         try:
-            stdout, stderr = binding.port_unbind(endpoint_id, neutron_port)
+            stdout, stderr = app.driver.delete_host_iface(
+                endpoint_id, neutron_port)
             app.logger.debug(stdout)
             if stderr:
                 app.logger.error(stderr)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE(
-                    'Could not unbind the Neutron port from the veth '
-                    'endpoint.'))
+                app.logger.error(_LE('Could not unbind the Neutron port from'
+                                     'the veth endpoint.'))
         except exceptions.VethDeletionFailure:
             with excutils.save_and_reraise_exception():
                 app.logger.error(_LE('Cleaning the veth pair up was failed.'))
+        except (exceptions.KuryrException,
+                n_exceptions.NeutronClientException) as ex:
+            with excutils.save_and_reraise_exception():
+                app.logger.error(_LE('Error while removing the interface: %s'),
+                                 ex)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
@@ -1015,11 +1038,11 @@ def network_driver_join():
                 "Multiple Neutron subnets exist for the network_id={0} "
                 .format(neutron_network_id))
 
-        _, peer_name = driver_utils.get_veth_pair_names(neutron_port['id'])
+        iface_name = app.driver.get_container_iface_name(neutron_port['id'])
 
         join_response = {
             "InterfaceName": {
-                "SrcName": peer_name,
+                "SrcName": iface_name,
                 "DstPrefix": config.CONF.binding.veth_dst_prefix
             },
             "StaticRoutes": []

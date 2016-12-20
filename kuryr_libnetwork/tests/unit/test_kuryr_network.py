@@ -36,9 +36,12 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         return response
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id',
+        return_value=None)
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
     def test_create_network_unauthorized(self, mock_list_subnetpools,
-                                         mock_create_network):
+            mock_get_default_network, mock_create_network):
         docker_network_id = lib_utils.get_hash()
         network_request = {
             'NetworkID': docker_network_id,
@@ -77,6 +80,47 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         decoded_json = jsonutils.loads(response.data)
         mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
         mock_create_network.assert_called_with(fake_request)
+        self.assertIn('Err', decoded_json)
+        self.assertEqual(
+            {'Err': exceptions.Unauthorized.message}, decoded_json)
+
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_create_network_get_default_network_id_unauthorized(self,
+            mock_list_subnetpools, mock_get_default_network_id):
+        docker_network_id = lib_utils.get_hash()
+        network_request = {
+            'NetworkID': docker_network_id,
+            'IPv4Data': [{
+                'AddressSpace': 'foo',
+                'Pool': '192.168.42.0/24',
+                'Gateway': '192.168.42.1/24',
+                'AuxAddresses': {}
+            }],
+            'IPv6Data': [{
+                'AddressSpace': 'bar',
+                'Pool': 'fe80::/64',
+                'Gateway': 'fe80::f816:3eff:fe20:57c3/64',
+                'AuxAddresses': {}
+            }],
+            'Options': {}
+        }
+
+        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv4Data'][0]['Pool'])
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = {
+            'subnetpools': kuryr_subnetpools['subnetpools']}
+
+        mock_get_default_network_id.side_effect = exceptions.Unauthorized
+        response = self._invoke_create_request(network_request)
+        self.assertEqual(401, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
+        mock_get_default_network_id.assert_called()
         self.assertIn('Err', decoded_json)
         self.assertEqual(
             {'Err': exceptions.Unauthorized.message}, decoded_json)
