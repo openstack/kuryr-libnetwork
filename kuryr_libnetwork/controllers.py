@@ -1500,29 +1500,15 @@ def ipam_release_address():
         app.logger.info(_LI("Subnet already deleted."))
         return flask.jsonify(const.SCHEMA['SUCCESS'])
 
-    subnet = {}
-    for tmp_subnet in subnets:
-        if tmp_subnet['subnetpool_id'] == pool_id:
-            subnet = tmp_subnet
-            break
-    if not subnet:
-        app.logger.info(_LI("Subnet already deleted."))
-        return flask.jsonify(const.SCHEMA['SUCCESS'])
-
     iface = ipaddress.ip_interface(six.text_type(rel_address))
-    rcvd_fixed_ips = []
-    fixed_ip = {'subnet_id': subnet['id']}
-    fixed_ip['ip_address'] = six.text_type(iface.ip)
-    rcvd_fixed_ips.append(fixed_ip)
-
+    rel_ip_address = six.text_type(iface.ip)
     try:
-        filtered_ports = []
-        all_ports = app.neutron.list_ports()
+        all_ports = app.neutron.list_ports(device_owner=lib_const.DEVICE_OWNER)
         for port in all_ports['ports']:
-            if port['fixed_ips'] == rcvd_fixed_ips:
-                filtered_ports.append(port)
-        for port in filtered_ports:
-            app.neutron.delete_port(port['id'])
+            for tmp_subnet in subnets:
+                if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id'] and
+                    port['fixed_ips'][0]['ip_address'] == rel_ip_address):
+                    app.neutron.delete_port(port['id'])
     except n_exceptions.NeutronClientException as ex:
         app.logger.error(_LE("Error happened while fetching "
                              "and deleting port, %s"), ex)
