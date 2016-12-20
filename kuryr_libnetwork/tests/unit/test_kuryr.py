@@ -144,7 +144,7 @@ class TestKuryr(base.TestKuryrBase):
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,
@@ -246,7 +246,7 @@ class TestKuryr(base.TestKuryrBase):
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,
@@ -346,7 +346,7 @@ class TestKuryr(base.TestKuryrBase):
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,
@@ -452,7 +452,7 @@ class TestKuryr(base.TestKuryrBase):
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,
@@ -589,7 +589,7 @@ class TestKuryr(base.TestKuryrBase):
         self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
-                'name': fake_cidr_v4,
+                'name': utils.make_subnet_name(fake_cidr_v4),
                 'network_id': fake_neutron_net_id,
                 'ip_version': 4,
                 'cidr': fake_cidr_v4,

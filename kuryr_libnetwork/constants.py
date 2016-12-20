@@ -30,6 +30,7 @@ PROTOCOLS = {
 }
 
 NET_NAME_PREFIX = 'kuryr-net-'
+SUBNET_NAME_PREFIX = 'kuryr-subnet-'
 NEUTRON_ID_LH_OPTION = 'kuryr.net.uuid.lh'
 NEUTRON_ID_UH_OPTION = 'kuryr.net.uuid.uh'
 

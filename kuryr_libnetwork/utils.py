@@ -117,3 +117,7 @@ def make_net_name(netid, tags=True):
     if tags:
         return const.NET_NAME_PREFIX + netid[:8]
     return netid
+
+
+def make_subnet_name(pool_cidr):
+    return const.SUBNET_NAME_PREFIX + pool_cidr
