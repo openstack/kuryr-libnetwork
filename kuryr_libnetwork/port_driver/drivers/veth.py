@@ -41,7 +41,7 @@ class VethDriver(driver.Driver):
                           network=None):
         """Instantiates a host interface and bind it to the host.
 
-        The interface type will be veth and and bound to a virutal bridge.
+        The interface type will be veth and bound to a virtual bridge.
 
         :param endpoint_id:  the ID of the endpoint as string
         :param neutron_port: the container Neutron port dictionary as returned
