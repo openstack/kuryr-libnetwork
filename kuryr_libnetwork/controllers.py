@@ -584,14 +584,13 @@ def network_driver_create_network():
     if not pool_name:
         pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
 
-    if pool_name:
-        pools = _get_subnetpools_by_attrs(name=pool_name)
-        if pools:
-            pool_id = pools[0]['id']
-        else:
-            raise exceptions.KuryrException(
-                  ("Specified pool name({0}) does not "
-                   "exist.").format(pool_name))
+    pools = _get_subnetpools_by_attrs(name=pool_name)
+    if pools:
+        pool_id = pools[0]['id']
+    else:
+        raise exceptions.KuryrException(
+              ("Specified pool name({0}) does not "
+               "exist.").format(pool_name))
 
     # let the user override the driver default
     if not neutron_uuid and not neutron_name:
@@ -659,8 +658,7 @@ def network_driver_create_network():
             'cidr': six.text_type(cidr),
             'enable_dhcp': app.enable_dhcp,
         }]
-        if pool_id:
-            new_subnets[0]['subnetpool_id'] = pool_id
+        new_subnets[0]['subnetpool_id'] = pool_id
         if gateway_ip:
             new_subnets[0]['gateway_ip'] = gateway_ip
 
