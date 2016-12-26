@@ -15,6 +15,7 @@ import ddt
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
+from kuryr.lib.binding.drivers import utils as driver_utils
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
@@ -56,9 +57,22 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(expected, decoded_json)
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
     @ddt.data((True), (False))
-    def test_network_driver_create_network(self, driver_default_net):
+    def test_network_driver_create_network(self,
+            driver_default_net, mock_get_default_network_id,
+            mock_list_networks, mock_create_network, mock_add_tag,
+            mock_create_subnet, mock_list_subnetpools, mock_list_subnets):
         docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
+
         network_request = {
             'NetworkID': docker_network_id,
             'IPv4Data': [{
@@ -74,20 +88,15 @@ class TestKuryr(base.TestKuryrBase):
             'Options': {}
         }
 
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         driver_value = fake_neutron_net_id if driver_default_net else None
-        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
-        app.driver.get_default_network_id().AndReturn(driver_value)
-
+        mock_get_default_network_id.return_value = driver_value
         fake_network = {
             "status": "ACTIVE",
             "subnets": [],
@@ -103,9 +112,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_existing_networks_response = {
                 "networks": [fake_network]
             }
-            self.mox.StubOutWithMock(app.neutron, "list_networks")
-            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
-                    fake_existing_networks_response)
+            mock_list_networks.return_value = fake_existing_networks_response
         else:
             fake_create_network_request = {
                 "network": {
@@ -119,29 +126,15 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_response = {
                 "network": fake_network
             }
-            self.mox.StubOutWithMock(app.neutron, "create_network")
-            app.neutron.create_network(fake_create_network_request).AndReturn(
-                fake_create_network_response)
+            mock_create_network.return_value = fake_create_network_response
 
-        self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
-        for tag in tags:
-            app.neutron.add_tag('networks', fake_neutron_net_id, tag)
 
-        if driver_value:
-            app.neutron.add_tag('networks', fake_neutron_net_id,
-                                'kuryr.net.existing')
-
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
             "subnets": []
         }
         fake_cidr_v4 = '192.168.42.0/24'
-        app.neutron.list_subnets(
-            network_id=fake_neutron_net_id,
-            cidr=fake_cidr_v4).AndReturn(fake_existing_subnets_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
                 'name': utils.make_subnet_name(fake_cidr_v4),
@@ -155,7 +148,7 @@ class TestKuryr(base.TestKuryrBase):
         }
         subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
-            fake_neutron_net_id, subnet_v4_id,
+            fake_neutron_net_id, docker_endpoint_id, subnet_v4_id,
             fake_kuryr_subnetpool_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
         fake_subnet_response = {
@@ -163,21 +156,47 @@ class TestKuryr(base.TestKuryrBase):
                 fake_v4_subnet['subnet']
             ]
         }
-        app.neutron.create_subnet(
-            fake_subnet_request).AndReturn(fake_subnet_response)
-
-        self.mox.ReplayAll()
+        mock_create_subnet.return_value = fake_subnet_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
 
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
 
         self.assertEqual(200, response.status_code)
+
+        mock_get_default_network_id.assert_any_call()
+
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks',
+                fake_neutron_net_id, tag)
+        if driver_value:
+            mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
+                                        'kuryr.net.existing')
+        else:
+            mock_create_network.assert_called_with(fake_create_network_request)
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
+
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_create_network_with_net_name_option(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    def test_network_driver_create_network_with_net_name_option(self,
+            mock_list_networks, mock_list_subnetpools,
+            mock_list_subnets, mock_create_subnet,
+            mock_add_tag):
         docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
         network_request = {
             'NetworkID': docker_network_id,
             'IPv4Data': [{
@@ -198,17 +217,13 @@ class TestKuryr(base.TestKuryrBase):
             }
         }
 
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
-        self.mox.StubOutWithMock(app.neutron, "list_networks")
         fake_neutron_net_name = 'my_network_name'
         fake_existing_networks_response = {
             "networks": [{
@@ -223,27 +238,11 @@ class TestKuryr(base.TestKuryrBase):
                 "name": "my_network_name"
             }]
         }
-        app.neutron.list_networks(
-            name=fake_neutron_net_name).AndReturn(
-                fake_existing_networks_response)
-
-        self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
-        for tag in tags:
-            app.neutron.add_tag('networks', fake_neutron_net_id, tag)
-
-        app.neutron.add_tag(
-            'networks', fake_neutron_net_id, 'kuryr.net.existing')
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
             "subnets": []
         }
         fake_cidr_v4 = '192.168.42.0/24'
-        app.neutron.list_subnets(
-            network_id=fake_neutron_net_id,
-            cidr=fake_cidr_v4).AndReturn(fake_existing_subnets_response)
-
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
                 'name': utils.make_subnet_name(fake_cidr_v4),
@@ -257,7 +256,7 @@ class TestKuryr(base.TestKuryrBase):
         }
         subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
-            fake_neutron_net_id, subnet_v4_id,
+            fake_neutron_net_id, docker_endpoint_id, subnet_v4_id,
             fake_kuryr_subnetpool_id,
             name=fake_cidr_v4, cidr=fake_cidr_v4)
         fake_subnet_response = {
@@ -265,20 +264,38 @@ class TestKuryr(base.TestKuryrBase):
                 fake_v4_subnet['subnet']
             ]
         }
-        app.neutron.create_subnet(
-            fake_subnet_request).AndReturn(fake_subnet_response)
-
-        self.mox.ReplayAll()
+        mock_list_networks.return_value = fake_existing_networks_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
+        mock_create_subnet.return_value = fake_subnet_response
 
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
 
         self.assertEqual(200, response.status_code)
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks',
+                fake_neutron_net_id, tag)
+        mock_add_tag.assert_called_with('networks', fake_neutron_net_id,
+            'kuryr.net.existing')
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_networks.assert_called_with(name=fake_neutron_net_name)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_create_network_with_netid_option(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    def test_network_driver_create_network_with_netid_option(self,
+            mock_list_subnets, mock_list_subnetpools,
+            mock_list_networks, mock_add_tag, mock_create_subnet):
         docker_network_id = lib_utils.get_hash()
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         network_request = {
@@ -301,16 +318,12 @@ class TestKuryr(base.TestKuryrBase):
             }
         }
 
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
-        self.mox.StubOutWithMock(app.neutron, "list_networks")
         fake_existing_networks_response = {
             "networks": [{
                 "status": "ACTIVE",
@@ -327,23 +340,12 @@ class TestKuryr(base.TestKuryrBase):
             id=fake_neutron_net_id).AndReturn(
                 fake_existing_networks_response)
 
-        self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
-        for tag in tags:
-            app.neutron.add_tag('networks', fake_neutron_net_id, tag)
-
-        app.neutron.add_tag(
-            'networks', fake_neutron_net_id, 'kuryr.net.existing')
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
             "subnets": []
         }
         fake_cidr_v4 = '192.168.42.0/24'
-        app.neutron.list_subnets(
-            network_id=fake_neutron_net_id,
-            cidr=fake_cidr_v4).AndReturn(fake_existing_subnets_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
                 'name': utils.make_subnet_name(fake_cidr_v4),
@@ -365,36 +367,54 @@ class TestKuryr(base.TestKuryrBase):
                 fake_v4_subnet['subnet']
             ]
         }
-        app.neutron.create_subnet(
-            fake_subnet_request).AndReturn(fake_subnet_response)
-
-        self.mox.ReplayAll()
+        mock_create_subnet.return_value = fake_subnet_response
+        mock_list_networks.return_value = fake_existing_networks_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
 
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
 
         self.assertEqual(200, response.status_code)
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id, tag)
+        mock_add_tag.assert_any_call(
+            'networks', fake_neutron_net_id, 'kuryr.net.existing')
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
     @ddt.data((True), (False))
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
     def test_network_driver_create_network_with_pool_name_option(self,
-            driver_default_net):
-        docker_network_id = lib_utils.get_hash()
-
-        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
+            driver_default_net, mock_get_default_network_id,
+            mock_list_networks, mock_create_network, mock_add_tag,
+            mock_create_subnet, mock_list_subnetpools,
+            mock_list_subnets):
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = "fake_pool_name"
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
+        docker_network_id = lib_utils.get_hash()
 
+        # The following fake response is retrieved from the Neutron doc:
+        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         driver_value = fake_neutron_net_id if driver_default_net else None
-        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
-        app.driver.get_default_network_id().AndReturn(driver_value)
+        mock_get_default_network_id.return_value = driver_value
 
         fake_network = {
             "status": "ACTIVE",
@@ -411,9 +431,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_existing_networks_response = {
                 "networks": [fake_network]
             }
-            self.mox.StubOutWithMock(app.neutron, "list_networks")
-            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
-                    fake_existing_networks_response)
+            mock_list_networks.return_value = fake_existing_networks_response
         else:
             fake_create_network_request = {
                 "network": {
@@ -427,29 +445,15 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_response = {
                 "network": fake_network
             }
-            self.mox.StubOutWithMock(app.neutron, "create_network")
-            app.neutron.create_network(fake_create_network_request).AndReturn(
-                fake_create_network_response)
+            mock_create_network.return_value = fake_create_network_response
 
-        self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
-        for tag in tags:
-            app.neutron.add_tag('networks', fake_neutron_net_id, tag)
 
-        if driver_value:
-            app.neutron.add_tag('networks', fake_neutron_net_id,
-                                'kuryr.net.existing')
-
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
             "subnets": []
         }
         fake_cidr_v4 = '192.168.42.0/24'
-        app.neutron.list_subnets(
-            network_id=fake_neutron_net_id,
-            cidr=fake_cidr_v4).AndReturn(fake_existing_subnets_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
                 'name': utils.make_subnet_name(fake_cidr_v4),
@@ -470,11 +474,6 @@ class TestKuryr(base.TestKuryrBase):
                 fake_v4_subnet['subnet']
             ]
         }
-        app.neutron.create_subnet(
-            fake_subnet_request).AndReturn(fake_subnet_response)
-
-        self.mox.ReplayAll()
-
         network_request = {
             'NetworkID': docker_network_id,
             'IPv4Data': [{
@@ -494,16 +493,49 @@ class TestKuryr(base.TestKuryrBase):
                 }
             }
         }
+        mock_create_subnet.return_value = fake_subnet_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
 
         self.assertEqual(200, response.status_code)
+
+        mock_get_default_network_id.assert_any_call()
+
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks',
+                fake_neutron_net_id, tag)
+        if driver_value:
+            mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
+                                        'kuryr.net.existing')
+        else:
+            mock_create_network.assert_called_with(fake_create_network_request)
+
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
     @ddt.data((True), (False))
-    def test_network_driver_create_network_wo_gw(self, driver_default_net):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
+    def test_network_driver_create_network_wo_gw(self,
+            driver_default_net, mock_get_default_network_id,
+            mock_list_subnets, mock_list_subnetpools,
+            mock_add_tag, mock_list_networks, mock_create_network,
+            mock_create_subnet):
         docker_network_id = lib_utils.get_hash()
         network_request = {
             'NetworkID': docker_network_id,
@@ -519,19 +551,17 @@ class TestKuryr(base.TestKuryrBase):
             'Options': {}
         }
 
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
+        # The following fake response is retrieved from the Neutron doc:
+        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         driver_value = fake_neutron_net_id if driver_default_net else None
-        self.mox.StubOutWithMock(app.driver, "get_default_network_id")
-        app.driver.get_default_network_id().AndReturn(driver_value)
+        mock_get_default_network_id.return_value = driver_value
 
         fake_network = {
             "status": "ACTIVE",
@@ -548,9 +578,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_existing_networks_response = {
                 "networks": [fake_network]
             }
-            self.mox.StubOutWithMock(app.neutron, "list_networks")
-            app.neutron.list_networks(id=fake_neutron_net_id).AndReturn(
-                    fake_existing_networks_response)
+            mock_list_networks.return_value = fake_existing_networks_response
         else:
             fake_create_network_request = {
                 "network": {
@@ -564,29 +592,15 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_response = {
                 "network": fake_network
             }
-            self.mox.StubOutWithMock(app.neutron, "create_network")
-            app.neutron.create_network(fake_create_network_request).AndReturn(
-                fake_create_network_response)
+            mock_create_network.return_value = fake_create_network_response
 
-        self.mox.StubOutWithMock(app.neutron, "add_tag")
         tags = utils.create_net_tags(docker_network_id)
-        for tag in tags:
-            app.neutron.add_tag('networks', fake_neutron_net_id, tag)
 
-        if driver_value:
-            app.neutron.add_tag('networks', fake_neutron_net_id,
-                                'kuryr.net.existing')
-
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_existing_subnets_response = {
             "subnets": []
         }
         fake_cidr_v4 = '192.168.42.0/24'
-        app.neutron.list_subnets(
-            network_id=fake_neutron_net_id,
-            cidr=fake_cidr_v4).AndReturn(fake_existing_subnets_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'create_subnet')
         fake_subnet_request = {
             "subnets": [{
                 'name': utils.make_subnet_name(fake_cidr_v4),
@@ -607,10 +621,10 @@ class TestKuryr(base.TestKuryrBase):
                 fake_v4_subnet['subnet']
             ]
         }
-        app.neutron.create_subnet(
-            fake_subnet_request).AndReturn(fake_subnet_response)
-
-        self.mox.ReplayAll()
+        mock_create_subnet.return_value = fake_subnet_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
 
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
@@ -618,9 +632,29 @@ class TestKuryr(base.TestKuryrBase):
 
         self.assertEqual(200, response.status_code)
         decoded_json = jsonutils.loads(response.data)
+
+        mock_get_default_network_id.assert_any_call()
+
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks',
+                fake_neutron_net_id, tag)
+        if driver_value:
+            mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
+                                        'kuryr.net.existing')
+        else:
+            mock_create_network.assert_called_with(fake_create_network_request)
+
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_create_network_with_network_id_not_exist(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_network_driver_create_network_with_network_id_not_exist(self,
+            mock_list_subnetpools, mock_list_networks):
         docker_network_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
         network_request = {
@@ -641,34 +675,34 @@ class TestKuryr(base.TestKuryrBase):
             }
         }
 
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
-        self.mox.StubOutWithMock(app.neutron, "list_networks")
         fake_existing_networks_response = {
             "networks": []
         }
-        app.neutron.list_networks(
-            id=fake_neutron_net_id).AndReturn(
-                fake_existing_networks_response)
-        self.mox.ReplayAll()
+        mock_list_networks.return_value = fake_existing_networks_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
         self.assertEqual(500, response.status_code)
+        mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         err_message = ("Specified network id/name({0}) does not "
                       "exist.").format(fake_neutron_net_id)
         self.assertEqual({'Err': err_message}, decoded_json)
 
-    def test_network_driver_create_network_with_network_name_not_exist(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_network_driver_create_network_with_network_name_not_exist(self,
+        mock_list_subnetpools, mock_list_networks):
         docker_network_id = lib_utils.get_hash()
         fake_neutron_network_name = "fake_network"
         network_request = {
@@ -688,63 +722,91 @@ class TestKuryr(base.TestKuryrBase):
                  }
             }
         }
-        self.mox.StubOutWithMock(app.neutron, "list_subnetpools")
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, name=fake_name)
-        app.neutron.list_subnetpools(name=fake_name).AndReturn(
-            {'subnetpools': kuryr_subnetpools['subnetpools']})
 
-        self.mox.StubOutWithMock(app.neutron, "list_networks")
         fake_existing_networks_response = {
             "networks": []
         }
-        app.neutron.list_networks(
-            name=fake_neutron_network_name).AndReturn(
-                fake_existing_networks_response)
-        self.mox.ReplayAll()
+        mock_list_networks.return_value = fake_existing_networks_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
         response = self.app.post('/NetworkDriver.CreateNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(network_request))
         self.assertEqual(500, response.status_code)
+        mock_list_networks.assert_called_with(name=fake_neutron_network_name)
+        mock_list_subnetpools.assert_called_with(name=fake_name)
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         err_message = ("Specified network id/name({0}) does not "
                       "exist.").format(fake_neutron_network_name)
         self.assertEqual({'Err': err_message}, decoded_json)
 
-    def test_network_driver_delete_network(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_network')
+    def test_network_driver_delete_network(self, mock_delete_network,
+            mock_list_subnets, mock_list_networks):
+        mock_delete_network.return_value = None
         docker_network_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
-        self._mock_out_network(fake_neutron_net_id, docker_network_id,
-                               check_existing=True)
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        fake_neutron_subnets_response = {"subnets": []}
-        app.neutron.list_subnets(network_id=fake_neutron_net_id).AndReturn(
-            fake_neutron_subnets_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'delete_network')
-        app.neutron.delete_network(fake_neutron_net_id).AndReturn(None)
-        self.mox.ReplayAll()
+        fake_neutron_subnets_response = {"subnets": []}
+        mock_list_subnets.return_value = fake_neutron_subnets_response
 
         data = {'NetworkID': docker_network_id}
+        t = utils.make_net_tags(docker_network_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+        mock_list_networks.side_effect = mock_network
         response = self.app.post('/NetworkDriver.DeleteNetwork',
                                  content_type='application/json',
                                  data=jsonutils.dumps(data))
 
         self.assertEqual(200, response.status_code)
+        mock_list_networks.assert_any_call(tags=t)
+        mock_list_networks.assert_any_call(tags=te)
+        mock_delete_network.assert_called_with(fake_neutron_net_id)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_delete_network_with_subnets(self):
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    def test_network_driver_delete_network_with_subnets(self,
+            mock_list_subnets, mock_list_subnetpools,
+            mock_delete_subnet, mock_delete_network, mock_list_networks):
         docker_network_id = lib_utils.get_hash()
         docker_endpoint_id = lib_utils.get_hash()
 
         fake_neutron_net_id = uuidutils.generate_uuid()
-        self._mock_out_network(fake_neutron_net_id, docker_network_id,
-                               check_existing=True)
+        t = utils.make_net_tags(docker_network_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+        mock_list_networks.side_effect = mock_network
         # The following fake response is retrieved from the Neutron doc:
         # http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
         subnet_v4_id = "9436e561-47bf-436a-b1f1-fe23a926e031"
@@ -760,24 +822,12 @@ class TestKuryr(base.TestKuryrBase):
             ]
         }
 
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        app.neutron.list_subnets(network_id=fake_neutron_net_id).AndReturn(
-            fake_subnets_response)
-
-        self.mox.StubOutWithMock(app.neutron, 'list_subnetpools')
         fake_subnetpools_response = {"subnetpools": []}
-        app.neutron.list_subnetpools(name='kuryr').AndReturn(
-            fake_subnetpools_response)
-        app.neutron.list_subnetpools(name='kuryr6').AndReturn(
-            fake_subnetpools_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'delete_subnet')
-        app.neutron.delete_subnet(subnet_v4_id).AndReturn(None)
-        app.neutron.delete_subnet(subnet_v6_id).AndReturn(None)
-
-        self.mox.StubOutWithMock(app.neutron, 'delete_network')
-        app.neutron.delete_network(fake_neutron_net_id).AndReturn(None)
-        self.mox.ReplayAll()
+        mock_delete_network.return_value = None
+        mock_delete_subnet.return_value = None
+        mock_list_subnetpools.return_value = fake_subnetpools_response
+        mock_list_subnets.return_value = fake_subnets_response
 
         data = {'NetworkID': docker_network_id}
         response = self.app.post('/NetworkDriver.DeleteNetwork',
@@ -785,18 +835,48 @@ class TestKuryr(base.TestKuryrBase):
                                  data=jsonutils.dumps(data))
 
         self.assertEqual(200, response.status_code)
+        mock_delete_network.assert_called_with(fake_neutron_net_id)
+        mock_delete_subnet.assert_any_call(subnet_v6_id)
+        mock_delete_subnet.assert_any_call(subnet_v4_id)
+        mock_list_subnetpools.assert_any_call(name='kuryr')
+        mock_list_subnetpools.assert_any_call(name='kuryr6')
+        mock_list_networks.assert_any_call(tags=te)
+        mock_list_networks.assert_any_call(tags=t)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data(
         (False), (True))
-    def test_network_driver_create_endpoint(self, vif_plug_is_fatal):
-        # TODO(alraddarla): move from mox to mock
+    def test_network_driver_create_endpoint(self, vif_plug_is_fatal,
+            mock_vif, mock_list_subnets, mock_list_ports,
+            mock_update_port, mock_show_port, mock_list_networks,
+            mock_create_host_iface):
+        mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
-        fake_neutron_network = self._mock_out_network(fake_neutron_net_id,
-                                                      fake_docker_network_id)
+        t = utils.make_net_tags(fake_docker_network_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+        mock_list_networks.side_effect = mock_network
+        fake_neutron_network = self._get_fake_list_network(
+            fake_neutron_net_id)
 
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
@@ -817,11 +897,12 @@ class TestKuryr(base.TestKuryrBase):
             ]
         }
 
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
-        app.neutron.list_subnets(network_id=fake_neutron_net_id,
-            cidr='192.168.1.0/24').AndReturn(fake_v4_subnet_response)
-        app.neutron.list_subnets(network_id=fake_neutron_net_id,
-            cidr='fe80::/64').AndReturn(fake_v6_subnet_response)
+        def mock_fake_subnet(*args, **kwargs):
+            if kwargs['cidr'] == '192.168.1.0/24':
+                return fake_v4_subnet_response
+            elif kwargs['cidr'] == 'fe80::/64':
+                return fake_v6_subnet_response
+        mock_list_subnets.side_effect = mock_fake_subnet
 
         fake_port_id = uuidutils.generate_uuid()
         fake_fixed_ips = ['subnet_id=%s' % subnet_v4_id,
@@ -837,44 +918,25 @@ class TestKuryr(base.TestKuryrBase):
                 fake_port_response['port']
             ]
         }
-        self.mox.StubOutWithMock(app.neutron, 'list_ports')
-        app.neutron.list_ports(fixed_ips=fake_fixed_ips).AndReturn(
-            fake_ports_response)
+        mock_list_ports.return_value = fake_ports_response
         fake_updated_port = fake_port_response['port']
         fake_updated_port['name'] = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        self.mox.StubOutWithMock(app.neutron, 'update_port')
-        app.neutron.update_port(
-            fake_updated_port['id'],
-            {'port': {
-                'name': fake_updated_port['name'],
-                'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': fake_docker_endpoint_id
-            }}).AndReturn(fake_port_response)
+        mock_update_port.return_value = fake_port_response
 
         fake_neutron_subnets = [fake_v4_subnet['subnet'],
                                 fake_v6_subnet['subnet']]
-
-        self.mox.StubOutWithMock(app.driver, 'create_host_iface')
         fake_create_iface_response = ('fake stdout', '')
-        app.driver.create_host_iface(fake_docker_endpoint_id,
-            fake_updated_port, fake_neutron_subnets,
-            fake_neutron_network['networks'][0]).AndReturn(
-                fake_create_iface_response)
-        self.mox.ReplayAll()
+
+        mock_create_host_iface.return_value = fake_create_iface_response
 
         if vif_plug_is_fatal:
-            self.mox.StubOutWithMock(app, "vif_plug_is_fatal")
-            app.vif_plug_is_fatal = True
-            self.mox.StubOutWithMock(app.neutron, 'show_port')
+            mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
             fake_neutron_ports_response_2 = self._get_fake_port(
                 fake_docker_endpoint_id, fake_neutron_net_id,
                 fake_port_id, lib_const.PORT_STATUS_ACTIVE,
                 subnet_v4_id, subnet_v6_id)
-            app.neutron.show_port(fake_port_id).AndReturn(
-                fake_neutron_ports_response_2)
-
-        self.mox.ReplayAll()
+            mock_show_port.return_value = fake_neutron_ports_response_2
 
         data = {
             'NetworkID': fake_docker_network_id,
@@ -883,7 +945,7 @@ class TestKuryr(base.TestKuryrBase):
             'Interface': {
                 'Address': '192.168.1.2/24',
                 'AddressIPv6': 'fe80::f816:3eff:fe20:57c4/64',
-                'MacAddress': "fa:16:3e:20:57:c3"
+                'MacAddress': 'fa:16:3e:20:57:c3'
             }
         }
         response = self.app.post('/NetworkDriver.CreateEndpoint',
@@ -891,6 +953,24 @@ class TestKuryr(base.TestKuryrBase):
                                  data=jsonutils.dumps(data))
 
         self.assertEqual(200, response.status_code)
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_net_id, cidr='192.168.1.0/24')
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_net_id, cidr='fe80::/64')
+        mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
+        mock_update_port.assert_called_with(
+            fake_updated_port['id'],
+            {'port': {
+                'name': fake_updated_port['name'],
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': fake_docker_endpoint_id
+            }})
+        mock_list_networks.assert_any_call(tags=t)
+        mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
+            fake_updated_port, fake_neutron_subnets,
+            fake_neutron_network['networks'][0])
+        if vif_plug_is_fatal:
+            mock_show_port.assert_called_with(fake_port_id)
         decoded_json = jsonutils.loads(response.data)
         expected = {'Interface': {}}
         self.assertEqual(expected, decoded_json)
@@ -996,15 +1076,33 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    def test_network_driver_join(self):
+    @mock.patch.object(driver_utils, 'get_veth_pair_names')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch(
+         'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+    def test_network_driver_join(self, mock_get_container_iface_name,
+            mock_list_subnets, mock_list_ports, mock_list_networks,
+            mock_get_veth_pair_names):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_container_id = lib_utils.get_hash()
 
         fake_neutron_net_id = uuidutils.generate_uuid()
-        self._mock_out_network(fake_neutron_net_id, fake_docker_net_id)
+        t = utils.make_net_tags(fake_docker_net_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+        mock_list_networks.side_effect = mock_network
         fake_neutron_port_id = uuidutils.generate_uuid()
-        self.mox.StubOutWithMock(app.neutron, 'list_ports')
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
@@ -1013,25 +1111,20 @@ class TestKuryr(base.TestKuryrBase):
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_DOWN,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
-        app.neutron.list_ports(name=neutron_port_name).AndReturn(
-            fake_neutron_ports_response)
 
-        self.mox.StubOutWithMock(app.neutron, 'list_subnets')
         fake_neutron_subnets_response = self._get_fake_subnets(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
-        app.neutron.list_subnets(network_id=fake_neutron_net_id).AndReturn(
-            fake_neutron_subnets_response)
         fake_neutron_subnets = fake_neutron_subnets_response['subnets']
+        fake_iface_name = 'fake-name'
 
-        self.mox.StubOutWithMock(app.driver, 'get_container_iface_name')
-        fake_iface_name = app.driver.get_container_iface_name(
-                fake_neutron_port_id).AndReturn('fake-name')
-        self.mox.ReplayAll()
+        mock_get_container_iface_name.return_value = fake_iface_name
 
         fake_subnets_dict_by_id = {subnet['id']: subnet
                                    for subnet in fake_neutron_subnets}
 
+        mock_list_ports.return_value = fake_neutron_ports_response
+        mock_list_subnets.return_value = fake_neutron_subnets_response
         join_request = {
             'NetworkID': fake_docker_net_id,
             'EndpointID': fake_docker_endpoint_id,
@@ -1042,9 +1135,6 @@ class TestKuryr(base.TestKuryrBase):
                                  content_type='application/json',
                                  data=jsonutils.dumps(join_request))
 
-        self.assertEqual(200, response.status_code)
-
-        decoded_json = jsonutils.loads(response.data)
         fake_neutron_v4_subnet = fake_subnets_dict_by_id[
             fake_neutron_v4_subnet_id]
         fake_neutron_v6_subnet = fake_subnets_dict_by_id[
@@ -1058,6 +1148,15 @@ class TestKuryr(base.TestKuryrBase):
             },
             'StaticRoutes': []
         }
+
+        self.assertEqual(200, response.status_code)
+
+        decoded_json = jsonutils.loads(response.data)
+        mock_list_networks.assert_any_call(tags=t)
+        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
+
         self.assertEqual(expected_response, decoded_json)
 
     def test_network_driver_leave(self):
@@ -1071,7 +1170,6 @@ class TestKuryr(base.TestKuryrBase):
                                  content_type='application/json',
                                  data=jsonutils.dumps(leave_request))
 
-        self.mox.ReplayAll()
         self.assertEqual(200, response.status_code)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
