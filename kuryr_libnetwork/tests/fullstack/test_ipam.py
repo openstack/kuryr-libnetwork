@@ -22,6 +22,152 @@ class IpamTest(kuryr_base.KuryrBaseTest):
     Test container IPAM operations(request/release pool|address)
     """
 
+    def test_container_ipam_request_release_pool(self):
+        fake_ipam = {
+            "Driver": "kuryr",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.11.0.0/16",
+                    "IPRange": "10.11.0.0/24",
+                    "Gateway": "10.11.0.1"
+                }
+            ]
+        }
+
+        container_net_name = lib_utils.get_random_string(8)
+        container_net = self.docker_client.create_network(
+            name=container_net_name,
+            driver='kuryr',
+            ipam=fake_ipam)
+        container_net_id = container_net.get('Id')
+        try:
+            networks = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(container_net_id))
+        except Exception as e:
+            self.docker_client.remove_network(container_net_id)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
+
+        # Currently we cannot get IPAM pool from docker client.
+        pool_name = "kuryrPool-" + "10.11.0.0/24"
+        subnetpools = self.neutron_client.list_subnetpools(name=pool_name)
+        self.assertEqual(1, len(subnetpools['subnetpools']))
+
+        # Boot a container, and connect to the docker network.
+        container_name = lib_utils.get_random_string(8)
+        container = self.docker_client.create_container(
+            image='kuryr/busybox',
+            command='/bin/sleep 600',
+            hostname='kuryr_test_container',
+            name=container_name)
+        warn_msg = container.get('Warning')
+        container_id = container.get('Id')
+        self.assertIsNone(warn_msg, 'Warn in creating container')
+        self.assertIsNotNone(container_id, 'Create container id must not '
+                                           'be None')
+        self.docker_client.start(container=container_id)
+        self.docker_client.connect_container_to_network(container_id,
+                                                        container_net_id)
+        try:
+            self.neutron_client.list_ports(
+                network_id=networks['networks'][0]['id'])
+        except Exception as e:
+            self.docker_client.disconnect_container_from_network(
+                container_id,
+                container_net_id)
+            message = ("Failed to list neutron ports: %s")
+            self.fail(message % e.args[0])
+
+        # Disconnect container from network, this release ip address.
+        self.docker_client.disconnect_container_from_network(container_id,
+                                                             container_net_id)
+
+        # Delete docker network, if no endpoint, will release the pool
+        # and delete the subnetpool in Neutron.
+        self.docker_client.stop(container=container_id)
+        self.docker_client.remove_network(container_net_id)
+        subnetpools = self.neutron_client.list_subnetpools(name=pool_name)
+        self.assertEqual(0, len(subnetpools['subnetpools']))
+
+    def test_container_ipam_request_address(self):
+        fake_ipam = {
+            "Driver": "kuryr",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.12.0.0/16",
+                    "IPRange": "10.12.0.0/24",
+                    "Gateway": "10.12.0.1"
+                }
+            ]
+        }
+
+        container_net_name = lib_utils.get_random_string(8)
+        container_net = self.docker_client.create_network(
+            name=container_net_name,
+            driver='kuryr',
+            ipam=fake_ipam)
+        container_net_id = container_net.get('Id')
+        try:
+            networks = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(container_net_id))
+        except Exception as e:
+            self.docker_client.remove_network(container_net_id)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
+
+        # Currently we cannot get IPAM pool from docker client.
+        pool_name = "kuryrPool-" + "10.12.0.0/24"
+        subnetpools = self.neutron_client.list_subnetpools(name=pool_name)
+        self.assertEqual(1, len(subnetpools['subnetpools']))
+
+        subnets = self.neutron_client.list_subnets(
+            network_id=networks['networks'][0]['id'],
+            cidr="10.12.0.0/24")
+        self.assertEqual(1, len(subnets['subnets']))
+
+        # Boot a container, and connect to the docker network.
+        container_name = lib_utils.get_random_string(8)
+        container = self.docker_client.create_container(
+            image='kuryr/busybox',
+            command='/bin/sleep 600',
+            hostname='kuryr_test_container',
+            name=container_name)
+        warn_msg = container.get('Warning')
+        container_id = container.get('Id')
+        self.assertIsNone(warn_msg, 'Warn in creating container')
+        self.assertIsNotNone(container_id, 'Create container id must not '
+                                           'be None')
+        self.docker_client.start(container=container_id)
+        self.docker_client.connect_container_to_network(container_id,
+                                                        container_net_id)
+        try:
+            ports = self.neutron_client.list_ports(
+                network_id=networks['networks'][0]['id'])
+        except Exception as e:
+            self.docker_client.disconnect_container_from_network(
+                container_id,
+                container_net_id)
+            message = ("Failed to list neutron ports: %s")
+            self.fail(message % e.args[0])
+
+        # DHCP port and container endpoint
+        self.assertEqual(2, len(ports['ports']))
+        # Find the kuryr port
+        kuryr_port_param = {"network_id": networks['networks'][0]['id'],
+                            "device_owner": lib_const.DEVICE_OWNER}
+        kuryr_ports = self.neutron_client.list_ports(
+            **kuryr_port_param)
+        self.assertEqual(1, len(kuryr_ports['ports']))
+
+        # Disconnect container from network, this release ip address.
+        self.docker_client.disconnect_container_from_network(container_id,
+                                                             container_net_id)
+        # Cleanup resources
+        self.docker_client.stop(container=container_id)
+        self.docker_client.remove_network(container_net_id)
+
     def test_container_ipam_release_address(self):
         # pre-created Neutron network and subnet
         neutron_net_name = lib_utils.get_random_string(8)
