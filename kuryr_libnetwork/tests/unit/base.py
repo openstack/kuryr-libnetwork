@@ -316,28 +316,6 @@ class TestKuryrBase(TestCase):
         }
         return fake_port
 
-    @staticmethod
-    def _get_fake_subnet(self, neutron_network_id,
-        docker_endpoint_id):
-        fake_subnet_request = {
-            'subnets': [{
-                'name': '-'.join([docker_endpoint_id, '192.168.1.0']),
-                'network_id': neutron_network_id,
-                'ip_version': 4,
-                "cidr": '192.168.1.0/24',
-                'enable_dhcp': 'False',
-                'subnetpool_id': ''
-            }, {
-                'name': '-'.join([docker_endpoint_id, 'fe80::']),
-                'network_id': neutron_network_id,
-                'ip_version': 6,
-                "cidr": 'fe80::/64',
-                'enable_dhcp': 'False',
-                'subnetpool_id': ''
-            }]
-        }
-        return fake_subnet_request
-
 
 class TestKuryrFailures(TestKuryrBase):
     """Unitests for checking if Kuryr handles the failures appropriately."""
