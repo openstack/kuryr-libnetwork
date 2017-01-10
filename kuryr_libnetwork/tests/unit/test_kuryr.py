@@ -849,7 +849,7 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app')
@@ -922,7 +922,7 @@ class TestKuryr(base.TestKuryrBase):
         fake_updated_port = fake_port_response['port']
         fake_updated_port['name'] = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
-        mock_update_port.return_value = fake_port_response
+        mock_update_port.return_value = fake_port_response['port']
 
         fake_neutron_subnets = [fake_v4_subnet['subnet'],
                                 fake_v6_subnet['subnet']]
@@ -931,7 +931,6 @@ class TestKuryr(base.TestKuryrBase):
         mock_create_host_iface.return_value = fake_create_iface_response
 
         if vif_plug_is_fatal:
-            mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
             fake_neutron_ports_response_2 = self._get_fake_port(
                 fake_docker_endpoint_id, fake_neutron_net_id,
                 fake_port_id, lib_const.PORT_STATUS_ACTIVE,
@@ -958,13 +957,8 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_subnets.assert_any_call(
             network_id=fake_neutron_net_id, cidr='fe80::/64')
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
-        mock_update_port.assert_called_with(
-            fake_updated_port['id'],
-            {'port': {
-                'name': fake_updated_port['name'],
-                'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': fake_docker_endpoint_id
-            }})
+        mock_update_port.assert_called_with(fake_port_response['port'],
+                                            fake_docker_endpoint_id)
         mock_list_networks.assert_any_call(tags=t)
         mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_updated_port, fake_neutron_subnets,

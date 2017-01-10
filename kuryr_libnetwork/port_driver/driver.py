@@ -15,8 +15,14 @@ import six
 
 from oslo_utils import importutils
 
+from neutronclient.common import exceptions as n_exceptions
+
+from kuryr.lib._i18n import _LE
+from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
+from kuryr_libnetwork import app
 from kuryr_libnetwork import config
+from kuryr_libnetwork import utils as libnet_utils
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -105,6 +111,32 @@ class Driver(object):
         :returns: a tuple of strings
         """
         raise NotImplementedError()
+
+    def update_port(self, port, endpoint_id):
+        """Updates port information and performs extra driver-specific actions.
+
+        It returns the updated port dictionary after the required actions
+        performed depending on the binding driver.
+
+        :param port: a neutron port dictionary returned from
+                             python-neutronclient
+        :param endpoint_id:  the ID of the endpoint as string
+        :returns: the updated Neutron port id dictionary as returned by
+                  python-neutronclient
+        """
+        port['name'] = libnet_utils.get_neutron_port_name(endpoint_id)
+        try:
+            response_port = app.neutron.update_port(port['id'],
+                {'port': {
+                    'name': port['name'],
+                    'device_owner': lib_const.DEVICE_OWNER,
+                    'device_id': endpoint_id
+                }})
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Error happened during updating a "
+                                 "Neutron port: %s"), ex)
+            raise
+        return response_port['port']
 
     def __str__(self):
         return self.__class__.__name__

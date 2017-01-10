@@ -12,6 +12,7 @@
 
 from kuryr.lib import binding
 from kuryr.lib.binding.drivers import utils
+
 from kuryr_libnetwork.port_driver import driver
 
 
