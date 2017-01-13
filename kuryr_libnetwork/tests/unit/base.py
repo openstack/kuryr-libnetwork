@@ -18,6 +18,7 @@ from oslotest import base
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
+from kuryr_libnetwork import constants as const
 from kuryr_libnetwork import controllers
 from kuryr_libnetwork.port_driver import driver
 from kuryr_libnetwork import utils
@@ -233,11 +234,14 @@ class TestKuryrBase(TestCase):
                 "cidr": '192.168.1.0/24',
                 "id": subnet_v4_id,
                 "enable_dhcp": True,
-                "subnetpool_id": ''
+                "subnetpool_id": '',
+                "tags": []
             }
         }
         if subnetpool_id:
             fake_v4_subnet['subnet'].update(subnetpool_id=subnetpool_id)
+            if not str(name).startswith(const.SUBNET_NAME_PREFIX):
+                fake_v4_subnet['subnet'].get('tags').append(subnetpool_id)
 
         return fake_v4_subnet
 

@@ -72,7 +72,7 @@ def check_for_neutron_ext_support():
 
 
 def check_for_neutron_ext_tag():
-    """Validates for mandatory extension support availability in neutron."""
+    """Validates for tags extension support availability in neutron."""
     app.tag = True
     try:
         app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
@@ -285,6 +285,10 @@ def _neutron_net_remove_tags(netid, tag):
     tags = utils.create_net_tags(tag)
     for tag in tags:
         _neutron_net_remove_tag(netid, tag)
+
+
+def _neutron_subnet_add_tag(subnetid, tag):
+    app.neutron.add_tag('subnets', subnetid, tag)
 
 
 def _make_net_identifier(network_id, tags=True):
@@ -633,6 +637,18 @@ def network_driver_create_network():
         raise exceptions.DuplicatedResourceException(
             "Multiple Neutron subnets exist for the network_id={0}"
             "and cidr={1}".format(network_id, cidr))
+
+    # This will add a subnetpool_id(created by kuryr) tag
+    # for existing Neutron subnet.
+    if app.tag and len(subnets) == 1:
+        try:
+            tag_extension = app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Failed to show Neutron tags "
+                                 "extension: %s"), ex)
+            raise
+        if 'subnet' in tag_extension['extension']['description']:
+            _neutron_subnet_add_tag(subnets[0]['id'], pool_id)
 
     if not subnets:
         new_subnets = [{
@@ -1315,8 +1331,21 @@ def ipam_request_address():
     if subnets_by_cidr:
         if len(subnets_by_cidr) > 1:
             for tmp_subnet in subnets_by_cidr:
-                if tmp_subnet.get('subnetpool_id', '') == pool_id:
-                    subnet = tmp_subnet
+                subnet_name = tmp_subnet.get('name')
+                # Subnet created by Kuryr.
+                if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
+                    if tmp_subnet.get('subnetpool_id', '') == pool_id:
+                        subnet = tmp_subnet
+                # Subnet created by Neutron.
+                else:
+                    if tmp_subnet.get('tags') is not None:
+                        if pool_id in tmp_subnet.get('tags'):
+                            subnet = tmp_subnet
+                    else:
+                        app.logger.warning(_LW("subnetpool tag for Neutron "
+                                               "subnet %s is missing, cannot "
+                                               "gets the correct subnet."),
+                                           tmp_subnet['id'])
             if not any(subnet) and not is_gateway:
                 raise exceptions.KuryrException(
                     ("Subnet with cidr({0}) and pool {1}, does not "

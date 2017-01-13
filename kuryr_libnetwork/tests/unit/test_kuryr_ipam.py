@@ -14,12 +14,14 @@ import ddt
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
+from werkzeug import exceptions as w_exceptions
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import config
 from kuryr_libnetwork import constants as const
 from kuryr_libnetwork.tests.unit import base
+from kuryr_libnetwork import utils
 
 
 FAKE_IP4_CIDR = '10.0.0.0/16'
@@ -382,10 +384,9 @@ class TestKuryrIpam(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
-    def test_ipam_driver_request_address_overlapping_cidr(self,
+    def test_ipam_driver_request_address_overlapping_cidr_in_neutron(self,
             mock_list_subnetpools, mock_list_subnets, mock_create_port):
         # faking list_subnetpools
-
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_kuryr_subnetpool_id2 = uuidutils.generate_uuid()
 
@@ -393,17 +394,16 @@ class TestKuryrIpam(base.TestKuryrBase):
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
             name=fake_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
 
         # faking list_subnets
-        mock_list_subnetpools.return_value = kuryr_subnetpools
         docker_endpoint_id = lib_utils.get_hash()
-
         neutron_network_id = uuidutils.generate_uuid()
         neutron_network_id2 = uuidutils.generate_uuid()
-
         neutron_subnet_v4_id = uuidutils.generate_uuid()
         neutron_subnet_v4_id2 = uuidutils.generate_uuid()
 
+        # Fake existing Neutron subnets
         fake_v4_subnet = self._get_fake_v4_subnet(
             neutron_network_id, docker_endpoint_id, neutron_subnet_v4_id,
             subnetpool_id=fake_kuryr_subnetpool_id,
@@ -423,7 +423,152 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_subnets.return_value = fake_subnet_response
         # faking create_port
         fake_neutron_port_id = uuidutils.generate_uuid()
-        fake_port = base.TestKuryrBase._get_fake_port(
+        fake_port = self._get_fake_port(
+            docker_endpoint_id, neutron_network_id,
+            fake_neutron_port_id,
+            neutron_subnet_v4_id=neutron_subnet_v4_id,
+            neutron_subnet_v4_address="10.0.0.5")
+        mock_create_port.return_value = fake_port
+        port_request = {
+            'name': 'kuryr-unbound-port',
+            'admin_state_up': True,
+            'network_id': neutron_network_id,
+            'binding:host_id': lib_utils.get_hostname(),
+        }
+        port_request['fixed_ips'] = []
+        fixed_ip = {'subnet_id': neutron_subnet_v4_id}
+        port_request['fixed_ips'].append(fixed_ip)
+
+        # Testing container ip allocation
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': '',  # Querying for container address
+            'Options': {}
+        }
+        response = self.app.post('/IpamDriver.RequestAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_subnetpools.assert_called_with(
+            id=fake_kuryr_subnetpool_id)
+        mock_list_subnets.assert_called_with(
+            cidr=FAKE_IP4_CIDR)
+        mock_create_port.assert_called_with(
+            {'port': port_request})
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual('10.0.0.5/16', decoded_json['Address'])
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_ipam_driver_request_address_overlapping_cidr_no_subnet_tags(self,
+            mock_list_subnetpools, mock_list_subnets, mock_create_port):
+        # faking list_subnetpools
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_kuryr_subnetpool_id2 = uuidutils.generate_uuid()
+
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
+
+        # faking list_subnets
+        docker_endpoint_id = lib_utils.get_hash()
+        neutron_network_id = uuidutils.generate_uuid()
+        neutron_network_id2 = uuidutils.generate_uuid()
+        neutron_subnet_v4_id = uuidutils.generate_uuid()
+        neutron_subnet_v4_id2 = uuidutils.generate_uuid()
+
+        # Fake existing Neutron subnets
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            neutron_network_id, docker_endpoint_id, neutron_subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        # Making existing Neutron subnet has no tag attribute
+        del fake_v4_subnet['subnet']['tags']
+
+        fake_v4_subnet2 = self._get_fake_v4_subnet(
+            neutron_network_id2, docker_endpoint_id, neutron_subnet_v4_id2,
+            subnetpool_id=fake_kuryr_subnetpool_id2,
+            cidr=FAKE_IP4_CIDR)
+        # Making existing Neutron subnet has no tag attribute
+        del fake_v4_subnet2['subnet']['tags']
+
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet2['subnet'],
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+
+        # Testing container ip allocation
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': '',  # Querying for container address
+            'Options': {}
+        }
+        response = self.app.post('/IpamDriver.RequestAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(w_exceptions.InternalServerError.code,
+                         response.status_code)
+        mock_list_subnetpools.assert_called_with(
+            id=fake_kuryr_subnetpool_id)
+        mock_list_subnets.assert_called_with(
+            cidr=FAKE_IP4_CIDR)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertIn('Err', decoded_json)
+        self.assertIn(fake_kuryr_subnetpool_id, decoded_json['Err'])
+        self.assertIn(FAKE_IP4_CIDR, decoded_json['Err'])
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    def test_ipam_driver_request_address_overlapping_cidr_in_kuryr(self,
+            mock_list_subnetpools, mock_list_subnets, mock_create_port):
+        # faking list_subnetpools
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_kuryr_subnetpool_id2 = uuidutils.generate_uuid()
+
+        fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
+
+        # faking list_subnets
+        docker_endpoint_id = lib_utils.get_hash()
+        neutron_network_id = uuidutils.generate_uuid()
+        neutron_network_id2 = uuidutils.generate_uuid()
+        neutron_subnet_v4_id = uuidutils.generate_uuid()
+        neutron_subnet_v4_id2 = uuidutils.generate_uuid()
+
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            neutron_network_id, docker_endpoint_id, neutron_subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR,
+            name=utils.make_subnet_name(FAKE_IP4_CIDR))
+
+        fake_v4_subnet2 = self._get_fake_v4_subnet(
+            neutron_network_id2, docker_endpoint_id, neutron_subnet_v4_id2,
+            subnetpool_id=fake_kuryr_subnetpool_id2,
+            cidr=FAKE_IP4_CIDR,
+            name=utils.make_subnet_name(FAKE_IP4_CIDR))
+
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet2['subnet'],
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+        # faking create_port
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_port = self._get_fake_port(
             docker_endpoint_id, neutron_network_id,
             fake_neutron_port_id,
             neutron_subnet_v4_id=neutron_subnet_v4_id,
