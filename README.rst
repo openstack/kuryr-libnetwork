@@ -296,7 +296,7 @@ Testing Kuryr
 For a quick check that Kuryr is working, create a network::
 
     $ docker network create --driver kuryr --ipam-driver kuryr \
-    --subnet 10.10.0.0/16 test_net
+    --subnet 10.10.0.0/16 --gateway=10.10.0.1 test_net
     785f8c1b5ae480c4ebcb54c1c48ab875754e4680d915b270279e4f6a1aa52283
     $ docker network ls
     NETWORK ID          NAME                DRIVER
@@ -353,7 +353,7 @@ command. Docker cli options -o and --ipam-opt should be used to pass pool
 names as shown below::
 
     $ sudo docker network create --driver=kuryr --ipam-driver=kuryr \
-      --subnet 10.0.0.0/16 --ip-range 10.0.0.0/24 \
+      --subnet 10.0.0.0/16 --gateway=10.0.0.1 --ip-range 10.0.0.0/24 \
       -o neutron.pool.name=neutron_pool1 \
       --ipam-opt=neutron.pool.name=neutron_pool1 \
       foo
@@ -363,7 +363,7 @@ Now Docker user creates another network with same cidr as the previous one,
 i.e 10.0.0.0/16, but with different pool name, neutron_pool2::
 
     $ sudo docker network create --driver=kuryr --ipam-driver=kuryr \
-      --subnet 10.0.0.0/16 --ip-range 10.0.0.0/24 \
+      --subnet 10.0.0.0/16 --gateway=10.0.0.1 --ip-range 10.0.0.0/24 \
       -o neutron.pool.name=neutron_pool2 \
       --ipam-opt=neutron.pool.name=neutron_pool2 \
       bar
