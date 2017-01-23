@@ -1514,11 +1514,13 @@ def ipam_release_address():
     iface = ipaddress.ip_interface(six.text_type(rel_address))
     rel_ip_address = six.text_type(iface.ip)
     try:
-        all_ports = app.neutron.list_ports(device_owner=lib_const.DEVICE_OWNER)
+        all_ports = app.neutron.list_ports()
         for port in all_ports['ports']:
             for tmp_subnet in subnets:
                 if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id'] and
-                    port['fixed_ips'][0]['ip_address'] == rel_ip_address):
+                    port['fixed_ips'][0]['ip_address'] == rel_ip_address and
+                    port['name'] == utils.get_neutron_port_name(
+                        port['device_id'])):
                     app.neutron.delete_port(port['id'])
     except n_exceptions.NeutronClientException as ex:
         app.logger.error(_LE("Error happened while fetching "

@@ -176,7 +176,7 @@ class TestKuryrBase(TestCase):
                 "fixed_ips": [],
                 "id": neutron_port_id,
                 "security_groups": [],
-                "device_id": ""
+                "device_id": docker_endpoint_id
             }
         }
 
