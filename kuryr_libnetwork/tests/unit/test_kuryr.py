@@ -520,6 +520,137 @@ class TestKuryr(base.TestKuryrBase):
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
     @ddt.data((True), (False))
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
+    def test_network_driver_create_network_with_pool_id_option(self,
+            driver_default_net, mock_get_default_network_id,
+            mock_list_networks, mock_create_network, mock_add_tag,
+            mock_create_subnet, mock_list_subnetpools,
+            mock_list_subnets):
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id)
+        docker_network_id = lib_utils.get_hash()
+
+        # The following fake response is retrieved from the Neutron doc:
+        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+        fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
+        driver_value = fake_neutron_net_id if driver_default_net else None
+        mock_get_default_network_id.return_value = driver_value
+
+        fake_network = {
+            "status": "ACTIVE",
+            "subnets": [],
+            "admin_state_up": True,
+            "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+            "router:external": False,
+            "segments": [],
+            "shared": False,
+            "id": fake_neutron_net_id,
+        }
+
+        if driver_value:
+            fake_existing_networks_response = {
+                "networks": [fake_network]
+            }
+            mock_list_networks.return_value = fake_existing_networks_response
+        else:
+            fake_create_network_request = {
+                "network": {
+                    "name": utils.make_net_name(docker_network_id),
+                    "admin_state_up": True
+                }
+            }
+            fake_network['name'] = utils.make_net_name(docker_network_id)
+            # The following fake response is retrieved from the Neutron doc:
+            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            fake_create_network_response = {
+                "network": fake_network
+            }
+            mock_create_network.return_value = fake_create_network_response
+
+        tags = utils.create_net_tags(docker_network_id)
+
+        fake_existing_subnets_response = {
+            "subnets": []
+        }
+        fake_cidr_v4 = '192.168.42.0/24'
+
+        fake_subnet_request = {
+            "subnets": [{
+                'name': utils.make_subnet_name(fake_cidr_v4),
+                'network_id': fake_neutron_net_id,
+                'ip_version': 4,
+                'cidr': fake_cidr_v4,
+                'enable_dhcp': app.enable_dhcp,
+                'gateway_ip': '192.168.42.1',
+                'subnetpool_id': fake_kuryr_subnetpool_id,
+            }]
+        }
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id, subnet_v4_id,
+            name=fake_cidr_v4, cidr=fake_cidr_v4)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        network_request = {
+            'NetworkID': docker_network_id,
+            'IPv4Data': [{
+                'AddressSpace': 'foo',
+                'Pool': '192.168.42.0/24',
+                'Gateway': '192.168.42.1/24',
+            }],
+            'IPv6Data': [{
+                'AddressSpace': 'bar',
+                'Pool': 'fe80::/64',
+                'Gateway': 'fe80::f816:3eff:fe20:57c3/64',
+            }],
+            'Options': {
+                'com.docker.network.enable_ipv6': False,
+                'com.docker.network.generic': {
+                    'neutron.pool.uuid': fake_kuryr_subnetpool_id,
+                }
+            }
+        }
+        mock_create_subnet.return_value = fake_subnet_response
+        mock_list_subnetpools.return_value = {'subnetpools':
+            kuryr_subnetpools['subnetpools']}
+        mock_list_subnets.return_value = fake_existing_subnets_response
+        response = self.app.post('/NetworkDriver.CreateNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(network_request))
+
+        self.assertEqual(200, response.status_code)
+
+        mock_get_default_network_id.assert_any_call()
+
+        for tag in tags:
+            mock_add_tag.assert_any_call('networks',
+                fake_neutron_net_id, tag)
+        if driver_value:
+            mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
+                                        'kuryr.net.existing')
+        else:
+            mock_create_network.assert_called_with(fake_create_network_request)
+
+        mock_create_subnet.assert_called_with(fake_subnet_request)
+        mock_list_subnetpools.assert_called_with(id=fake_kuryr_subnetpool_id)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+
+    @ddt.data((True), (False))
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnet')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_network')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')

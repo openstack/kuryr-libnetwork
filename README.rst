@@ -405,10 +405,11 @@ Limitations
 -----------
 
 To create Docker networks with subnets having same/overlapping cidr, it is
-expected to pass unique pool name for each such network creation Docker
-command. Docker cli options -o and --ipam-opt should be used to pass pool
-names as shown below::
+expected to pre-create Neutron subnetpool and pass the pool name for each
+such network creation Docker command. Docker cli options -o and --ipam-opt
+should be used to pass pool names as shown below::
 
+    $ neutron subnetpool-create --pool-prefix 10.0.0.0/24 neutron_pool1
     $ sudo docker network create --driver=kuryr --ipam-driver=kuryr \
       --subnet 10.0.0.0/16 --gateway=10.0.0.1 --ip-range 10.0.0.0/24 \
       -o neutron.pool.name=neutron_pool1 \
@@ -419,12 +420,23 @@ names as shown below::
 Now Docker user creates another network with same cidr as the previous one,
 i.e 10.0.0.0/16, but with different pool name, neutron_pool2::
 
+    $ neutron subnetpool-create --pool-prefix 10.0.0.0/24 neutron_pool2
     $ sudo docker network create --driver=kuryr --ipam-driver=kuryr \
       --subnet 10.0.0.0/16 --gateway=10.0.0.1 --ip-range 10.0.0.0/24 \
       -o neutron.pool.name=neutron_pool2 \
       --ipam-opt=neutron.pool.name=neutron_pool2 \
       bar
       397badb51ebca09339cb17aaec05e48ffe60659ced6f3fc41b020b0eb506d786
+
+Alternatively, Docker user can pass an existing pool uuid if there are multiple
+pools with the same name::
+
+    $ sudo sudo docker network create --driver=kuryr --ipam-driver=kuryr \
+      --subnet 10.0.0.0/16 --gateway=10.0.0.1 --ip-range 10.0.0.0/24 \
+      -o neutron.pool.uuid=2d5767a4-6c96-4522-ab1d-a06d7adc9e23 \
+      --ipam-opt=neutron.pool.uuid=2d5767a4-6c96-4522-ab1d-a06d7adc9e23 \
+      bar
+      0aed1efbe21f6c29dc77eccd0dd17ba729274f9275070e1469230c864f9054ff
 
 
 External Resources
