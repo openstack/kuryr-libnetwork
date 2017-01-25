@@ -338,7 +338,7 @@ def _program_expose_ports(options, port_id):
         sg_id = sg['security_group']['id']
 
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happend during creating a "
+        app.logger.error(_LE("Error happened during creating a "
                              "Neutron security group: %s"), ex)
         raise exceptions.ExportPortFailure(
             ("Could not create required security group {0} "
@@ -379,7 +379,7 @@ def _program_expose_ports(options, port_id):
                 app.neutron.create_security_group_rule({'security_group_rule':
                                                         sec_group_rule})
             except n_exceptions.NeutronClientException as ex:
-                app.logger.error(_LE("Error happend during creating a "
+                app.logger.error(_LE("Error happened during creating a "
                                      "Neutron security group "
                                      "rule: %s"), ex)
                 app.neutron.delete_security_group(sg_id)
@@ -399,7 +399,7 @@ def _program_expose_ports(options, port_id):
         app.neutron.update_port(port_id,
                                 {'port': {'security_groups': sgs}})
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happend during updating a "
+        app.logger.error(_LE("Error happened during updating a "
                              "Neutron port: %s"), ex)
         app.neutron.delete_security_group(sg_id)
         raise exceptions.ExportPortFailure(
@@ -426,14 +426,14 @@ def revoke_expose_ports(port_id):
                                     {'port':
                                      {'security_groups': existing_sgs}})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happend during updating a "
+            app.logger.error(_LE("Error happened during updating a "
                                  "Neutron port with a new list of "
                                  "security groups: {0}").format(ex))
     try:
         for sg in removing_sgs:
             app.neutron.delete_security_group(sg)
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happend during deleting a "
+        app.logger.error(_LE("Error happened during deleting a "
                              "Neutron security group: {0}").format(ex))
 
 
