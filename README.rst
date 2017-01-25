@@ -271,21 +271,22 @@ How to try out nested-containers locally
    driver`).
 
 4. Reconfigure kuryr inside the VM to point to the neutron server and to use the
-   vlan driver::
+   vlan driver:
+
     - Configure `/etc/kuryr/kuryr.conf`::
 
-      [binding]
-      driver = kuryr.lib.binding.drivers.vlan
-      link_iface = eth0 # VM vNIC
+        [binding]
+        driver = kuryr.lib.binding.drivers.vlan
+        link_iface = eth0 # VM vNIC
 
-      [neutron]
-      auth_url = http://KEYSTONE_SERVER_IP:35357/v3/
-      username = admin
-      user_domain_name = Default
-      password = ADMIN_PASSWORD
-      project_name = service
-      project_domain_name = Default
-      auth_type = password
+        [neutron]
+        auth_url = http://KEYSTONE_SERVER_IP:35357/v3/
+        username = admin
+        user_domain_name = Default
+        password = ADMIN_PASSWORD
+        project_name = service
+        project_domain_name = Default
+        auth_type = password
 
     - Restart kuryr service inside the VM
 
