@@ -290,6 +290,18 @@ How to try out nested-containers locally
     - Restart kuryr service inside the VM
 
 
+Known nested-containers limitations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Due to the `Neutron Trunk service implementation choice  <https://github.com/openstack/neutron/blob/master/doc/source/devref/openvswitch_agent.rst#tackling-the-network-trunking-use-case>`_
+   deployments with iptables hybrid security groups driver do not support
+   trunk service.
+
+2. QoS rules are not applied properly on sub-ports due to a `Neutron bug
+   <https://bugs.launchpad.net/neutron/+bug/1639186>`_, i.e. nested-container
+   port.
+
+
 Testing Kuryr
 -------------
 
