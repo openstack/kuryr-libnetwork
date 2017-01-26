@@ -162,7 +162,8 @@ class TestKuryrBase(TestCase):
                        neutron_subnet_v4_address="192.168.1.2",
                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4",
                        device_owner=None,
-                       neutron_trunk_id=None):
+                       neutron_trunk_id=None,
+                       tags=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createPort  # noqa
         fake_port = {
@@ -178,7 +179,8 @@ class TestKuryrBase(TestCase):
                 "fixed_ips": [],
                 "id": neutron_port_id,
                 "security_groups": [],
-                "device_id": docker_endpoint_id
+                "device_id": docker_endpoint_id,
+                "tags": tags
             }
         }
 
@@ -312,7 +314,7 @@ class TestKuryrBase(TestCase):
                 "binding:host_id": lib_utils.get_hostname(),
                 "network_id": neutron_network_id,
                 "tenant_id": "d6700c0c9ffa4f1cb322cd4a1f3906fa",
-                "device_owner": lib_const.DEVICE_OWNER,
+                'device_owner': lib_const.DEVICE_OWNER,
                 'device_id': docker_endpoint_id,
                 "mac_address": "fa:16:3e:20:57:c3",
                 'fixed_ips': [{

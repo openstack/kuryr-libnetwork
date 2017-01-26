@@ -225,12 +225,16 @@ class TestKuryrIpam(base.TestKuryrBase):
                                                fake_kuryr_subnetpool_id)
         mock_delete_subnetpool.assert_called_with(fake_kuryr_subnetpool_id)
 
+    @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
-    def test_ipam_driver_request_address(self,
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((False), (True))
+    def test_ipam_driver_request_address(self, use_tag_ext, mock_app,
             mock_list_subnetpools, mock_list_subnets,
-            mock_create_port):
+            mock_create_port, mock_port_add_tag):
+        mock_app.tag_ext = use_tag_ext
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = lib_utils.get_neutron_subnetpool_name(FAKE_IP4_CIDR)
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
@@ -277,6 +281,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'Address': '',  # Querying for container address
             'Options': {}
         }
+        mock_port_add_tag.return_value = None
         response = self.app.post('/IpamDriver.RequestAddress',
                                 content_type='application/json',
                                 data=jsonutils.dumps(fake_request))
@@ -289,6 +294,10 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_create_port.assert_called_with({'port': port_request})
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual('10.0.0.5/16', decoded_json['Address'])
+        if mock_app.tag_ext:
+            mock_port_add_tag.assert_called()
+        else:
+            mock_port_add_tag.assert_not_called()
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
@@ -324,15 +333,20 @@ class TestKuryrIpam(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(requested_address + '/16', decoded_json['Address'])
 
+    @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
-    @ddt.data((False), (True))
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((False, False), (False, True), (True, False), (True, True))
+    @ddt.unpack
     def test_ipam_driver_request_specific_address(self, existing_port,
-            mock_list_subnetpools, mock_list_subnets,
-            mock_list_ports, mock_update_port, mock_create_port):
+            use_tag_ext, mock_app, mock_list_subnetpools, mock_list_subnets,
+            mock_list_ports, mock_update_port, mock_create_port,
+            mock_port_add_tag):
+        mock_app.tag_ext = use_tag_ext
         requested_address = '10.0.0.5'
         # faking list_subnetpools
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
@@ -403,6 +417,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'Address': requested_address,
             'Options': {}
         }
+        mock_port_add_tag.return_value = None
         response = self.app.post('/IpamDriver.RequestAddress',
                                 content_type='application/json',
                                 data=jsonutils.dumps(fake_request))
@@ -419,14 +434,23 @@ class TestKuryrIpam(base.TestKuryrBase):
                 {'port': update_port})
         else:
             mock_create_port.assert_called_with({'port': port_request})
+        if mock_app.tag_ext:
+            mock_port_add_tag.assert_called()
+        else:
+            mock_port_add_tag.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(requested_address + '/16', decoded_json['Address'])
 
+    @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((False), (True))
     def test_ipam_driver_request_address_overlapping_cidr_in_neutron(self,
-            mock_list_subnetpools, mock_list_subnets, mock_create_port):
+            use_tag_ext, mock_app, mock_list_subnetpools, mock_list_subnets,
+            mock_create_port, mock_port_add_tag):
+        mock_app.tag_ext = use_tag_ext
         # faking list_subnetpools
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_kuryr_subnetpool_id2 = uuidutils.generate_uuid()
@@ -486,6 +510,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'Address': '',  # Querying for container address
             'Options': {}
         }
+        mock_port_add_tag.return_value = None
         response = self.app.post('/IpamDriver.RequestAddress',
                                 content_type='application/json',
                                 data=jsonutils.dumps(fake_request))
@@ -497,6 +522,10 @@ class TestKuryrIpam(base.TestKuryrBase):
             cidr=FAKE_IP4_CIDR)
         mock_create_port.assert_called_with(
             {'port': port_request})
+        if mock_app.tag_ext:
+            mock_port_add_tag.assert_called()
+        else:
+            mock_port_add_tag.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual('10.0.0.5/16', decoded_json['Address'])
 
@@ -566,11 +595,16 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertIn(fake_kuryr_subnetpool_id, decoded_json['Err'])
         self.assertIn(FAKE_IP4_CIDR, decoded_json['Err'])
 
+    @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((False), (True))
     def test_ipam_driver_request_address_overlapping_cidr_in_kuryr(self,
-            mock_list_subnetpools, mock_list_subnets, mock_create_port):
+            use_tag_ext, mock_app, mock_list_subnetpools, mock_list_subnets,
+        mock_create_port, mock_port_add_tag):
+        mock_app.tag_ext = use_tag_ext
         # faking list_subnetpools
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_kuryr_subnetpool_id2 = uuidutils.generate_uuid()
@@ -631,6 +665,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             'Address': '',  # Querying for container address
             'Options': {}
         }
+        mock_port_add_tag.return_value = None
         response = self.app.post('/IpamDriver.RequestAddress',
                                 content_type='application/json',
                                 data=jsonutils.dumps(fake_request))
@@ -642,6 +677,10 @@ class TestKuryrIpam(base.TestKuryrBase):
             cidr=FAKE_IP4_CIDR)
         mock_create_port.assert_called_with(
             {'port': port_request})
+        if mock_app.tag_ext:
+            mock_port_add_tag.assert_called()
+        else:
+            mock_port_add_tag.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual('10.0.0.5/16', decoded_json['Address'])
 
@@ -782,7 +821,8 @@ class TestKuryrIpam(base.TestKuryrBase):
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             subnet_v4_id,
             neutron_subnet_v4_address=fake_ip4,
-            device_owner=lib_const.DEVICE_OWNER)
+            device_owner=lib_const.DEVICE_OWNER,
+            tags=lib_const.DEVICE_OWNER)
 
         fake_port['port']['fixed_ips'] = [
             {'subnet_id': subnet_v4_id, 'ip_address': fake_ip4}
@@ -814,12 +854,15 @@ class TestKuryrIpam(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((False), (True))
     def test_ipam_driver_release_address_w_existing_port_w_same_ip_and_cidr(
-            self, mock_list_subnetpools, mock_list_subnets, mock_list_ports,
-            mock_delete_port):
+            self, use_tag_ext, mock_app, mock_list_subnetpools,
+            mock_list_subnets, mock_list_ports, mock_delete_port):
         # It checks only the kuryr port is removed even if the other port
         # has the same IP and belongs to a subnet with the same cidr
         # faking list_subnetpools
+        mock_app.tag_ext = use_tag_ext
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = str('-'.join(['kuryrPool', FAKE_IP4_CIDR]))
         kuryr_subnetpools = self._get_fake_v4_subnetpools(
@@ -859,10 +902,11 @@ class TestKuryrIpam(base.TestKuryrBase):
             neutron_subnet_v4_address=fake_ip4)
         fake_port_no_kuryr['port']['name'] = 'port0'
 
+        if use_tag_ext:
+            fake_port['port']['tags'] = [lib_const.DEVICE_OWNER]
         fake_port['port']['fixed_ips'] = [
             {'subnet_id': subnet_v4_id, 'ip_address': fake_ip4}
         ]
-
         fake_port_no_kuryr['port']['fixed_ips'] = [
             {'subnet_id': subnet_v4_id, 'ip_address': fake_ip4}
         ]

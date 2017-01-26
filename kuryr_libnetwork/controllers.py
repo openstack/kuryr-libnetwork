@@ -272,7 +272,7 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
 
 
 def _neutron_net_add_tag(netid, tag):
-    app.neutron.add_tag('networks', netid, tag)
+    _neutron_add_tag('networks', netid, tag)
 
 
 def _neutron_net_add_tags(netid, tag, tags=True):
@@ -283,7 +283,7 @@ def _neutron_net_add_tags(netid, tag, tags=True):
 
 
 def _neutron_net_remove_tag(netid, tag):
-    app.neutron.remove_tag('networks', netid, tag)
+    _neutron_remove_tag('networks', netid, tag)
 
 
 def _neutron_net_remove_tags(netid, tag):
@@ -293,16 +293,28 @@ def _neutron_net_remove_tags(netid, tag):
 
 
 def _neutron_subnet_add_tag(subnetid, tag):
-    try:
-        app.neutron.add_tag('subnets', subnetid, tag)
-    except n_exceptions.NotFound:
-        app.logger.warning(_LW("Neutron tags extension for subnet is not "
-                               "supported, cannot add tag for subnet."))
-        pass
+    _neutron_add_tag('subnets', subnetid, tag)
 
 
 def _neutron_subnet_remove_tag(subnetid, tag):
-    app.neutron.remove_tag('subnets', subnetid, tag)
+    _neutron_remove_tag('subnets', subnetid, tag)
+
+
+def _neutron_port_add_tag(portid, tag):
+    _neutron_add_tag('ports', portid, tag)
+
+
+def _neutron_add_tag(resource_type, resource_id, tag):
+    try:
+        app.neutron.add_tag(resource_type, resource_id, tag)
+    except n_exceptions.NotFound:
+        app.logger.warning(_LW("Neutron tags extension for given resource type"
+                               " is not supported, cannot add tag to %s."),
+                           resource_type)
+
+
+def _neutron_remove_tag(resource_type, resource_id, tag):
+    app.neutron.remove_tag(resource_type, resource_id, tag)
 
 
 def _make_net_identifier(network_id, tags=True):
@@ -1417,6 +1429,9 @@ def ipam_request_address():
                     created_port_resp = app.neutron.create_port({'port': port})
 
                 created_port = created_port_resp['port']
+                if app.tag_ext:
+                    _neutron_port_add_tag(created_port['id'],
+                                          lib_const.DEVICE_OWNER)
                 app.logger.debug("created port %s", created_port)
                 allocated_address = created_port['fixed_ips'][0]['ip_address']
                 allocated_address = '{}/{}'.format(allocated_address,
@@ -1544,14 +1559,16 @@ def ipam_release_address():
     iface = ipaddress.ip_interface(six.text_type(rel_address))
     rel_ip_address = six.text_type(iface.ip)
     try:
-        all_ports = app.neutron.list_ports()
+        fixed_ip = 'ip_address=' + str(rel_ip_address)
+        all_ports = app.neutron.list_ports(fixed_ips=fixed_ip)
         for port in all_ports['ports']:
-            for tmp_subnet in subnets:
-                if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id'] and
-                    port['fixed_ips'][0]['ip_address'] == rel_ip_address and
-                    port['name'] == utils.get_neutron_port_name(
-                        port['device_id'])):
-                    app.neutron.delete_port(port['id'])
+            tags = port.get('tags', [])
+            if ((tags and lib_const.DEVICE_OWNER in tags) or
+                (not tags and port['name'] ==
+                 utils.get_neutron_port_name(port['device_id']))):
+                for tmp_subnet in subnets:
+                    if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id']):
+                        app.neutron.delete_port(port['id'])
     except n_exceptions.NeutronClientException as ex:
         app.logger.error(_LE("Error happened while fetching "
                              "and deleting port, %s"), ex)
