@@ -112,22 +112,16 @@ class TestKuryrIpam(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(fake_kuryr_subnetpool_id, decoded_json['PoolID'])
 
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_subnetpool')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @ddt.data((FAKE_IP4_CIDR), (FAKE_IP6_CIDR))
     def test_ipam_driver_request_pool_with_pool_name_option(self,
-            pool_cidr, mock_list_subnets, mock_create_subnetpool):
+            pool_cidr, mock_list_subnets, mock_list_subnetpools):
         fake_subnet = {"subnets": []}
         mock_list_subnets.return_value = fake_subnet
 
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_name = 'fake_pool_name'
-        prefixlen = ipaddress.ip_network(six.text_type(pool_cidr)).prefixlen
-        new_subnetpool = {
-            'name': fake_name,
-            'default_prefixlen': prefixlen,
-            'prefixes': [pool_cidr]}
-
         if pool_cidr == FAKE_IP4_CIDR:
             kuryr_subnetpools = self._get_fake_v4_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr],
@@ -136,17 +130,13 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools = self._get_fake_v6_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr],
                 name=fake_name)
-        fake_subnetpool_response = {
-            'subnetpool': kuryr_subnetpools['subnetpools'][0]
-        }
-
-        mock_create_subnetpool.return_value = fake_subnetpool_response
+        mock_list_subnetpools.return_value = kuryr_subnetpools
 
         fake_request = {
             'AddressSpace': '',
             'Pool': pool_cidr,
             'SubPool': pool_cidr,
-            'Options': {'neutron.pool.name': 'fake_pool_name'},
+            'Options': {'neutron.pool.name': fake_name},
             'V6': False
         }
         response = self.app.post('/IpamDriver.RequestPool',
@@ -155,8 +145,6 @@ class TestKuryrIpam(base.TestKuryrBase):
 
         self.assertEqual(200, response.status_code)
         mock_list_subnets.assert_called_with(cidr=pool_cidr)
-        mock_create_subnetpool.assert_called_with(
-            {'subnetpool': new_subnetpool})
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(fake_kuryr_subnetpool_id, decoded_json['PoolID'])
 
@@ -242,6 +230,54 @@ class TestKuryrIpam(base.TestKuryrBase):
                                                subnet_v4_id,
                                                fake_kuryr_subnetpool_id)
         mock_delete_subnetpool.assert_called_with(fake_kuryr_subnetpool_id)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((True), (False))
+    def test_ipam_driver_release_pool_with_pool_name_option(
+            self, use_tag_ext, mock_app, mock_list_subnetpools,
+            mock_list_subnets, mock_remove_tag):
+        mock_app.tag_ext = use_tag_ext
+
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_subnetpool_name = 'fake_pool_name'
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
+
+        docker_endpoint_id = lib_utils.get_hash()
+        neutron_network_id = uuidutils.generate_uuid()
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            neutron_network_id, docker_endpoint_id, subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id
+        }
+        response = self.app.post('/IpamDriver.ReleasePool',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        if mock_app.tag_ext:
+            mock_list_subnetpools.assert_called_with(
+                id=fake_kuryr_subnetpool_id)
+            mock_list_subnets.assert_called_with(
+                cidr=FAKE_IP4_CIDR)
+            mock_remove_tag.assert_called_with('subnets',
+                                               subnet_v4_id,
+                                               fake_kuryr_subnetpool_id)
 
     @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')

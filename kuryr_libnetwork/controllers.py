@@ -1280,7 +1280,6 @@ def ipam_request_pool():
                        "Another pool with same cidr exist. ipam and network"
                        " options not used to pass pool name")
 
-        if not pools:
             new_subnetpool = {
                 'name': pool_name,
                 'default_prefixlen': cidr.prefixlen,
@@ -1289,6 +1288,15 @@ def ipam_request_pool():
                 {'subnetpool': new_subnetpool})
             pool = created_subnetpool_response['subnetpool']
             pool_id = pool['id']
+        else:
+            existing_pools = _get_subnetpools_by_attrs(name=pool_name)
+            if not existing_pools:
+                raise exceptions.KuryrException(
+                    ("Specified subnetpool name({0}) does not "
+                    "exist.").format(pool_name))
+            pool_id = existing_pools[0]['id']
+            LOG.info(_LI("Using existing Neutron subnetpool %s successfully"),
+                     pool_id)
     else:
         if v6:
             default_pool_list = SUBNET_POOLS_V6
@@ -1500,6 +1508,15 @@ def ipam_release_pool():
             if pool_id in tmp_subnet.get('tags', []):
                 _neutron_subnet_remove_tag(tmp_subnet['id'], pool_id)
                 break
+
+    pools = _get_subnetpools_by_attrs(id=pool_id)
+    if pools:
+        pool_name = pools[0]['name']
+        if not pool_name.startswith(cfg.CONF.subnetpool_name_prefix):
+            LOG.debug('Skip the cleanup since this is an existing Neutron '
+                      'subnetpool.')
+            return flask.jsonify(const.SCHEMA['SUCCESS'])
+
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict as ex:

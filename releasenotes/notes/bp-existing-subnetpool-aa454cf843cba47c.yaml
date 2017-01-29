@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Support creating a Docker network with existing subnetpool. Users can use
+    the option "neutron.pool.name" to specify the name of existing neutron
+    subnetpool.
+upgrade:
+  - |
+    The semantic of the option "neutron.pool.name" is changed. This option was
+    used to specify a custom name of the creating subnetpool, and now it is
+    used to specify the name of a pre-existing subnetpool. As a result,
+    subnetpools created with custom name in before are now treated as external
+    resources and won't be cleanup on deletion. Users need to cleanup the
+    resources manually.
