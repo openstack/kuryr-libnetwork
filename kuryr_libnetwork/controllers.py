@@ -291,6 +291,10 @@ def _neutron_subnet_add_tag(subnetid, tag):
     app.neutron.add_tag('subnets', subnetid, tag)
 
 
+def _neutron_subnet_remove_tag(subnetid, tag):
+    app.neutron.remove_tag('subnets', subnetid, tag)
+
+
 def _make_net_identifier(network_id, tags=True):
     if tags:
         return utils.make_net_tags(network_id)
@@ -1454,6 +1458,36 @@ def ipam_release_pool():
                      json_data)
     jsonschema.validate(json_data, schemata.RELEASE_POOL_SCHEMA)
     pool_id = json_data['PoolID']
+
+    # Remove subnetpool_id tag from Neutron existing subnet.
+    if app.tag:
+        try:
+            tag_extension = app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
+        except n_exceptions.NeutronClientException as ex:
+            app.logger.error(_LE("Failed to show Neutron tags "
+                                 "extension: %s"), ex)
+            raise
+        if 'subnet' in tag_extension['extension']['description']:
+            pools = _get_subnetpools_by_attrs(id=pool_id)
+            if pools:
+                pool = pools[0]
+                prefixes = pool['prefixes']
+                if len(prefixes) > 1:
+                    app.logger.warning(_LW("More than one prefixes present. "
+                                           "Picking first one."))
+                for prefix in prefixes:
+                    subnet_cidr = ipaddress.ip_network(six.text_type(prefix))
+                    break
+            else:
+                raise exceptions.NoResourceException(
+                    "No subnetpools with id {0} is found."
+                    .format(pool_id))
+            subnets_by_cidr = _get_subnets_by_attrs(
+                cidr=six.text_type(subnet_cidr))
+            for tmp_subnet in subnets_by_cidr:
+                if pool_id in tmp_subnet.get('tags', []):
+                    _neutron_subnet_remove_tag(tmp_subnet['id'], pool_id)
+                    break
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict as ex:

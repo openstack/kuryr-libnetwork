@@ -169,9 +169,50 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertEqual(fake_kuryr_subnetpool_id, decoded_json['PoolID'])
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_subnetpool')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((True), (False))
     def test_ipam_driver_release_pool(self,
-            mock_delete_subnetpool):
+                                      use_tags,
+                                      mock_tag,
+                                      mock_show_extension,
+                                      mock_list_subnetpools,
+                                      mock_list_subnets,
+                                      mock_remove_tag,
+                                      mock_delete_subnetpool):
+        mock_tag.tag = use_tags
+        fake_tag_extension = {
+            "extension":
+            {"alias": "tag", "updated": "mock_time",
+             "name": "Tag support", "links": [],
+             "description": "mock tag on resources ['subnet', 'network']."}}
+        mock_show_extension.return_value = fake_tag_extension
+
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+            FAKE_IP4_CIDR)
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, prefixes=[FAKE_IP4_CIDR],
+            name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = kuryr_subnetpools
+
+        docker_endpoint_id = lib_utils.get_hash()
+        neutron_network_id = uuidutils.generate_uuid()
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            neutron_network_id, docker_endpoint_id, subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+
         mock_delete_subnetpool.return_value = {}
 
         fake_request = {
@@ -182,6 +223,15 @@ class TestKuryrIpam(base.TestKuryrBase):
                                 data=jsonutils.dumps(fake_request))
 
         self.assertEqual(200, response.status_code)
+        if mock_tag.tag:
+            mock_show_extension.assert_called_with("tag")
+            mock_list_subnetpools.assert_called_with(
+                id=fake_kuryr_subnetpool_id)
+            mock_list_subnets.assert_called_with(
+                cidr=FAKE_IP4_CIDR)
+            mock_remove_tag.assert_called_with('subnets',
+                                               subnet_v4_id,
+                                               fake_kuryr_subnetpool_id)
         mock_delete_subnetpool.assert_called_with(fake_kuryr_subnetpool_id)
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
