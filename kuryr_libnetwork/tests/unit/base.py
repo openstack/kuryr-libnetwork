@@ -11,6 +11,7 @@
 # under the License.
 
 import mock
+import netaddr
 
 from neutronclient.v2_0 import client
 from oslotest import base
@@ -219,19 +220,22 @@ class TestKuryrBase(TestCase):
                             name=None):
         if not name:
             name = str('-'.join([docker_endpoint_id,
-                                '192.168.1.0']))
+                                str(netaddr.IPNetwork(cidr).network)]))
+        gateway_ip = netaddr.IPNetwork(cidr).network + 1
+        start_v4_ip = gateway_ip + 1
+        end_v4_ip = netaddr.IPNetwork(cidr).broadcast - 1
         fake_v4_subnet = {
             'subnet': {
                 "name": name,
                 "network_id": neutron_network_id,
                 "tenant_id": "c1210485b2424d48804aad5d39c61b8f",
                 "allocation_pools": [{
-                    "start": "192.168.1.2",
-                    "end": "192.168.1.254"
+                    "start": str(start_v4_ip),
+                    "end": str(end_v4_ip)
                 }],
-                "gateway_ip": "192.168.1.1",
+                "gateway_ip": str(gateway_ip),
                 "ip_version": 4,
-                "cidr": '192.168.1.0/24',
+                "cidr": cidr,
                 "id": subnet_v4_id,
                 "enable_dhcp": True,
                 "subnetpool_id": '',
