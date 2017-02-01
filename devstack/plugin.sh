@@ -15,6 +15,7 @@
 XTRACE=$(set +o | grep xtrace)
 set +o xtrace
 
+echo_summary "kuryr-libnetwork's plugin.sh was called..."
 ETCD_VERSION=v2.2.2
 
 function install_etcd_data_store {

@@ -45,6 +45,17 @@ core_opts = [
     cfg.StrOpt('port_driver',
                default='kuryr_libnetwork.port_driver.drivers.veth',
                help=_('Driver for the desired deployment model')),
+    cfg.StrOpt('ssl_cert_file',
+               default='/var/lib/kuryr/certs/cert.pem',
+               help=_('This option allows setting absolute path'
+                    'to the SSL certificate')),
+    cfg.StrOpt('ssl_key_file',
+               default='/var/lib/kuryr/certs/key.pem',
+               help=_('This option allows setting absolute path'
+                     'to the SSL private key')),
+    cfg.BoolOpt('enable_ssl',
+                default=False,
+                help=_('Enable SSL for Kuryr'))
 ]
 
 CONF = cfg.CONF

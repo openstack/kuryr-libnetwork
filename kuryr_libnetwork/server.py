@@ -15,6 +15,7 @@ import sys
 from oslo_log import log
 from six.moves.urllib import parse
 
+from kuryr.lib._i18n import _
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import controllers
@@ -30,10 +31,33 @@ def configure_app():
     controllers.load_port_driver()
 
 
+def _get_ssl_configs(use_ssl):
+    if use_ssl:
+        cert_file = config.CONF.ssl_cert_file
+        key_file = config.CONF.ssl_key_file
+
+        if not os.path.exists(cert_file):
+            raise RuntimeError(
+                _("Unable to find cert_file : %s") % cert_file)
+
+        if not os.path.exists(key_file):
+            raise RuntimeError(
+                _("Unable to find key_file : %s") % key_file)
+
+        return cert_file, key_file
+    else:
+        return None
+
+
 def start():
     configure_app()
     kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
-    app.run(kuryr_uri.hostname, kuryr_uri.port)
+
+    # SSL configuration
+    use_ssl = config.CONF.enable_ssl
+
+    app.run(kuryr_uri.hostname, kuryr_uri.port,
+        ssl_context=_get_ssl_configs(use_ssl))
 
 
 if __name__ == '__main__':

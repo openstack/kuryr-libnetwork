@@ -58,7 +58,8 @@ class ConfigurationTest(base.TestKuryrBase):
         mock_neutron_client.assert_called_once()
         mock_check_neutron_ext_support.assert_called_once()
         mock_check_neutron_ext_tag.assert_called_once()
-        mock_run.assert_called_once_with(kuryr_uri.hostname, 23750)
+        mock_run.assert_called_once_with(kuryr_uri.hostname, 23750,
+            ssl_context=None)
 
     def test_check_for_neutron_ext_support_with_ex(self):
         with mock.patch.object(controllers.app.neutron,
