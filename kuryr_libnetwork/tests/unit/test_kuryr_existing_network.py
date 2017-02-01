@@ -12,6 +12,7 @@
 
 import ddt
 import mock
+from neutronclient.common import exceptions as n_exceptions
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
@@ -61,7 +62,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
             mock_tag.tag = use_tags
 
         docker_network_id, fake_neutron_net_id, fake_response = self._ids()
-        fake_kuryr_subnetpool_id = self._ids()
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
 
         network_request = {
             'NetworkID': docker_network_id,
@@ -138,6 +139,111 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                     fake_neutron_net_id, tag)
             mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
                 const.KURYR_EXISTING_NEUTRON_NET)
+        else:
+            mock_update_network.assert_called_with(
+                fake_neutron_net_id, {'network':
+                {'name': docker_network_id}})
+
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(const.SCHEMA['SUCCESS'], decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_network')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.add_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data((True), (False))
+    def test_create_network_and_subnet_pre_existing_add_tag_for_subnet(
+        self, use_tags, mock_tag, mock_show_extension,
+        mock_list_subnetpools, mock_list_networks,
+        mock_add_tag, mock_update_network,
+        mock_list_subnets):
+        if use_tags:
+            mock_tag.tag = use_tags
+
+        fake_tag_extension = {
+            "extension":
+            {"alias": "tag", "updated": "mock_time",
+             "name": "Tag support", "links": [],
+             "description": "mock tag on resources ['subnet', 'network']."}}
+        mock_show_extension.return_value = fake_tag_extension
+
+        docker_network_id, fake_neutron_net_id, fake_response = self._ids()
+
+        network_request = {
+            'NetworkID': docker_network_id,
+            'IPv4Data': [{
+                'AddressSpace': 'foo',
+                'Pool': '192.168.42.0/24',
+                'Gateway': '192.168.42.1/24',
+            }],
+            'IPv6Data': [{
+                'AddressSpace': 'bar',
+                'Pool': 'fe80::/64',
+                'Gateway': 'fe80::f816:3eff:fe20:57c3/64',
+            }],
+            'Options': {
+                const.NETWORK_GENERIC_OPTIONS: {
+                    const.NEUTRON_UUID_OPTION: fake_neutron_net_id
+                }
+            }
+        }
+
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv4Data'][0]['Pool'])
+        kuryr_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
+        mock_list_subnetpools.return_value = {
+            'subnetpools': kuryr_subnetpools['subnetpools']}
+
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_cidr_v4 = '192.168.42.0/24'
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id,
+            docker_endpoint_id="fake_id",
+            subnet_v4_id=subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=fake_cidr_v4)
+
+        fake_existing_subnets_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_existing_subnets_response
+
+        fake_response['networks'][0]['subnets'].append(subnet_v4_id)
+        mock_list_networks.return_value = fake_response
+
+        def mock_exception(*args, **kwargs):
+            if 'subnet' not in kwargs['extension']['description']:
+                return n_exceptions.NotFound
+
+        mock_add_tag.side_effect = mock_exception(**fake_tag_extension)
+        response = self.app.post('/NetworkDriver.CreateNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(network_request))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
+        mock_list_networks.assert_called_with(id=fake_neutron_net_id)
+        mock_list_subnets.assert_called_with(
+            network_id=fake_neutron_net_id,
+            cidr=fake_cidr_v4)
+
+        if mock_tag.tag:
+            tags = utils.create_net_tags(docker_network_id)
+            for tag in tags:
+                mock_add_tag.assert_any_call(
+                    'networks', fake_neutron_net_id, tag)
+            mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
+                const.KURYR_EXISTING_NEUTRON_NET)
+            mock_add_tag.assert_called_with('subnets',
+                                            subnet_v4_id,
+                                            fake_kuryr_subnetpool_id)
         else:
             mock_update_network.assert_called_with(
                 fake_neutron_net_id, {'network':

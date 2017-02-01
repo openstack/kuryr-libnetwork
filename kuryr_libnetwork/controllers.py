@@ -288,7 +288,12 @@ def _neutron_net_remove_tags(netid, tag):
 
 
 def _neutron_subnet_add_tag(subnetid, tag):
-    app.neutron.add_tag('subnets', subnetid, tag)
+    try:
+        app.neutron.add_tag('subnets', subnetid, tag)
+    except n_exceptions.NotFound:
+        app.logger.warning(_LW("Neutron tags extension for subnet is not "
+                               "supported, cannot add tag for subnet."))
+        pass
 
 
 def _neutron_subnet_remove_tag(subnetid, tag):
@@ -645,14 +650,7 @@ def network_driver_create_network():
     # This will add a subnetpool_id(created by kuryr) tag
     # for existing Neutron subnet.
     if app.tag and len(subnets) == 1:
-        try:
-            tag_extension = app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
-        except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Failed to show Neutron tags "
-                                 "extension: %s"), ex)
-            raise
-        if 'subnet' in tag_extension['extension']['description']:
-            _neutron_subnet_add_tag(subnets[0]['id'], pool_id)
+        _neutron_subnet_add_tag(subnets[0]['id'], pool_id)
 
     if not subnets:
         new_subnets = [{
