@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import mock
 import os
 from six.moves.urllib import parse
@@ -24,6 +25,7 @@ from kuryr_libnetwork.server import start
 from kuryr_libnetwork.tests.unit import base
 
 
+@ddt.ddt
 class ConfigurationTest(base.TestKuryrBase):
 
     def test_defaults(self):
@@ -46,18 +48,22 @@ class ConfigurationTest(base.TestKuryrBase):
                          config.CONF.port_driver)
 
     @mock.patch.object(sys, 'argv', return_value='[]')
-    @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_tag')
+    @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_tag_support')
     @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_support')
     @mock.patch('kuryr_libnetwork.controllers.neutron_client')
     @mock.patch('kuryr_libnetwork.app.run')
     def test_start(self, mock_run, mock_neutron_client,
-                   mock_check_neutron_ext_support, mock_check_neutron_ext_tag,
+                   mock_check_neutron_ext_support,
+                   mock_check_for_neutron_tag_support,
                    mock_sys_argv):
         start()
         kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
         mock_neutron_client.assert_called_once()
         mock_check_neutron_ext_support.assert_called_once()
-        mock_check_neutron_ext_tag.assert_called_once()
+        mock_check_for_neutron_tag_support.assert_any_call(
+            controllers.TAG_NEUTRON_EXTENSION)
+        mock_check_for_neutron_tag_support.assert_any_call(
+            controllers.TAG_EXT_NEUTRON_EXTENSION)
         mock_run.assert_called_once_with(kuryr_uri.hostname, 23750,
             ssl_context=None)
 
@@ -73,3 +79,30 @@ class ConfigurationTest(base.TestKuryrBase):
             ex = exceptions.MandatoryApiMissing
             self.assertRaises(ex, controllers.check_for_neutron_ext_support)
             mock_extension.assert_called_once_with(ext_alias)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
+    @ddt.data('tag', 'tag-ext')
+    def test_check_for_neutron_tag_support_with_ex(self,
+                                                   ext_name,
+                                                   mock_extension):
+        err = n_exceptions.NotFound.status_code
+        ext_not_found_ex = n_exceptions.NeutronClientException(
+                                                    status_code=err,
+                                                    message="")
+        mock_extension.side_effect = ext_not_found_ex
+        controllers.check_for_neutron_tag_support(ext_name)
+        mock_extension.assert_called_once_with(ext_name)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
+    @ddt.data('fake_ext')
+    def test_check_for_neutron_tag_support_wrong_ext_name_with_ex(
+            self,
+            ext_name,
+            mock_extension):
+        err = n_exceptions.NotFound.status_code
+        ext_not_found_ex = n_exceptions.NeutronClientException(
+                                                    status_code=err,
+                                                    message="")
+        mock_extension.side_effect = ext_not_found_ex
+        controllers.check_for_neutron_tag_support(ext_name)
+        mock_extension.assert_called_once_with(ext_name)

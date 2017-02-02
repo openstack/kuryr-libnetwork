@@ -39,6 +39,7 @@ class TestCase(base.BaseTestCase):
         self.app.neutron = client.Client(token=TOKEN, endpoint_url=ENDURL)
         app.driver = mock.Mock(spec=driver.Driver)
         app.tag = True
+        app.tag_ext = True
 
 
 class TestKuryrBase(TestCase):

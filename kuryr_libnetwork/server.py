@@ -26,7 +26,10 @@ def configure_app():
     log.setup(config.CONF, 'kuryr')
     controllers.neutron_client()
     controllers.check_for_neutron_ext_support()
-    controllers.check_for_neutron_ext_tag()
+    controllers.check_for_neutron_tag_support(
+        controllers.TAG_NEUTRON_EXTENSION)
+    controllers.check_for_neutron_tag_support(
+        controllers.TAG_EXT_NEUTRON_EXTENSION)
     controllers.load_default_subnet_pools()
     controllers.load_port_driver()
 

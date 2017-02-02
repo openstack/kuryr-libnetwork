@@ -172,24 +172,16 @@ class TestKuryrIpam(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data((True), (False))
     def test_ipam_driver_release_pool(self,
-                                      use_tags,
-                                      mock_tag,
-                                      mock_show_extension,
+                                      use_tag_ext,
+                                      mock_app,
                                       mock_list_subnetpools,
                                       mock_list_subnets,
                                       mock_remove_tag,
                                       mock_delete_subnetpool):
-        mock_tag.tag = use_tags
-        fake_tag_extension = {
-            "extension":
-            {"alias": "tag", "updated": "mock_time",
-             "name": "Tag support", "links": [],
-             "description": "mock tag on resources ['subnet', 'network']."}}
-        mock_show_extension.return_value = fake_tag_extension
+        mock_app.tag_ext = use_tag_ext
 
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
@@ -223,8 +215,7 @@ class TestKuryrIpam(base.TestKuryrBase):
                                 data=jsonutils.dumps(fake_request))
 
         self.assertEqual(200, response.status_code)
-        if mock_tag.tag:
-            mock_show_extension.assert_called_with("tag")
+        if mock_app.tag_ext:
             mock_list_subnetpools.assert_called_with(
                 id=fake_kuryr_subnetpool_id)
             mock_list_subnets.assert_called_with(
