@@ -421,6 +421,23 @@ def _program_expose_ports(options, port_id):
              "for setting up exported port ").format(sgs))
 
 
+def _get_cidr_from_subnetpool(**kwargs):
+    pools = _get_subnetpools_by_attrs(**kwargs)
+    if pools:
+        pool = pools[0]
+        pool_id = pool['id']
+        prefixes = pool['prefixes']
+        if len(prefixes) > 1:
+            app.logger.warning(_LW("More than one prefixes present. "
+                               "Picking first one."))
+
+        return ipaddress.ip_network(six.text_type(prefixes[0])), pool_id
+    else:
+        raise exceptions.NoResourceException(
+            "No subnetpools with {0} is found."
+            .format(kwargs))
+
+
 def revoke_expose_ports(port_id):
     sgs = app.neutron.list_security_groups(
         name=utils.get_sg_expose_name(port_id))
@@ -1261,18 +1278,8 @@ def ipam_request_pool():
         else:
             default_pool_list = SUBNET_POOLS_V4
         pool_name = default_pool_list[0]
-        pools = _get_subnetpools_by_attrs(name=pool_name)
-        if pools:
-            pool = pools[0]
-            pool_id = pool['id']
-            prefixes = pool['prefixes']
-            if len(prefixes) > 1:
-                app.logger.warning(_LW("More than one prefixes present. "
-                                     "Picking first one."))
-            subnet_cidr = six.text_type(
-                ipaddress.ip_network(six.text_type(prefixes[0])))
-        else:
-            app.logger.error(_LE("Default neutron pools not found."))
+        subnet_cidr, pool_id = _get_cidr_from_subnetpool(name=pool_name)
+        subnet_cidr = six.text_type(subnet_cidr)
 
     req_pool_res = {'PoolID': pool_id,
                     'Pool': subnet_cidr}
@@ -1312,22 +1319,8 @@ def ipam_request_address():
     is_gateway = False
     allocated_address = ''
     subnet = {}
-    pools = _get_subnetpools_by_attrs(id=pool_id)
-    if pools:
-        pool = pools[0]
-        prefixes = pool['prefixes']
-        if len(prefixes) > 1:
-            app.logger.warning(_LW("More than one prefixes present. Picking "
-                               "first one."))
-
-        for prefix in prefixes:
-            subnet_cidr = ipaddress.ip_network(six.text_type(prefix))
-            break
-    else:
-        raise exceptions.NoResourceException(
-            "No subnetpools with id {0} is found."
-            .format(pool_id))
     # check if any subnet with matching cidr is present
+    subnet_cidr, _ = _get_cidr_from_subnetpool(id=pool_id)
     subnets_by_cidr = _get_subnets_by_attrs(cidr=six.text_type(subnet_cidr))
     # Check if the port is gateway
     options = json_data.get('Options')
@@ -1464,20 +1457,7 @@ def ipam_release_pool():
 
     # Remove subnetpool_id tag from Neutron existing subnet.
     if app.tag_ext:
-        pools = _get_subnetpools_by_attrs(id=pool_id)
-        if pools:
-            pool = pools[0]
-            prefixes = pool['prefixes']
-            if len(prefixes) > 1:
-                app.logger.warning(_LW("More than one prefixes present. "
-                                       "Picking first one."))
-            for prefix in prefixes:
-                subnet_cidr = ipaddress.ip_network(six.text_type(prefix))
-                break
-        else:
-            raise exceptions.NoResourceException(
-                "No subnetpools with id {0} is found."
-                .format(pool_id))
+        subnet_cidr, _ = _get_cidr_from_subnetpool(id=pool_id)
         subnets_by_cidr = _get_subnets_by_attrs(
             cidr=six.text_type(subnet_cidr))
         for tmp_subnet in subnets_by_cidr:
@@ -1523,19 +1503,8 @@ def ipam_release_address():
     jsonschema.validate(json_data, schemata.RELEASE_ADDRESS_SCHEMA)
     pool_id = json_data['PoolID']
     rel_address = json_data['Address']
-    pools = _get_subnetpools_by_attrs(id=pool_id)
-    if pools:
-        pool = pools[0]
-        prefixes = pool['prefixes']
-        for prefix in prefixes:
-            subnet_cidr = six.text_type(
-                ipaddress.ip_network(six.text_type(prefix)))
-
-    else:
-        raise exceptions.NoResourceException(
-            "No subnetpools with id {0} is found."
-            .format(pool_id))
     # check if any subnet with matching cidr is present
+    subnet_cidr = six.text_type(_get_cidr_from_subnetpool(id=pool_id)[0])
     subnets = _get_subnets_by_attrs(cidr=subnet_cidr)
     if not len(subnets):
         app.logger.info(_LI("Subnet already deleted."))
