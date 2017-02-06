@@ -454,6 +454,8 @@ def revoke_expose_ports(port_id):
     sgs = app.neutron.list_security_groups(
         name=utils.get_sg_expose_name(port_id))
     sgs = sgs.get('security_groups')
+    if not sgs:
+        return
     removing_sgs = [sg['id'] for sg in sgs]
 
     existing_sgs = []
