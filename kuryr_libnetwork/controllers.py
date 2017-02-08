@@ -42,6 +42,7 @@ LOG = log.getLogger(__name__)
 
 MANDATORY_NEUTRON_EXTENSION = "subnet_allocation"
 TAG_NEUTRON_EXTENSION = "tag"
+TAG_EXT_NEUTRON_EXTENSION = "tag-ext"
 SUBNET_POOLS_V4 = []
 SUBNET_POOLS_V6 = []
 
@@ -71,16 +72,20 @@ def check_for_neutron_ext_support():
                             .format(MANDATORY_NEUTRON_EXTENSION))
 
 
-def check_for_neutron_ext_tag():
-    """Validates for tags extension support availability in neutron."""
-    app.tag = True
+def check_for_neutron_tag_support(ext_name):
+    """Validates tag and tag-ext extension support availability in Neutron."""
+    if ext_name == TAG_EXT_NEUTRON_EXTENSION:
+        ext_rename = "tag_ext"
+    else:
+        ext_rename = ext_name
+    setattr(app, ext_rename, True)
     try:
-        app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
+        app.neutron.show_extension(ext_name)
     except n_exceptions.NeutronClientException as e:
-        app.tag = False
+        setattr(app, ext_rename, False)
         if e.status_code == n_exceptions.NotFound.status_code:
-            app.logger.warning(_LW("Neutron tags not supported. "
-                                   "Continue without using them."))
+            app.logger.warning(_LW("Neutron extension %s not supported. "
+                                   "Continue without using them."), ext_name)
 
 
 def load_default_subnet_pools():
@@ -1458,34 +1463,27 @@ def ipam_release_pool():
     pool_id = json_data['PoolID']
 
     # Remove subnetpool_id tag from Neutron existing subnet.
-    if app.tag:
-        try:
-            tag_extension = app.neutron.show_extension(TAG_NEUTRON_EXTENSION)
-        except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Failed to show Neutron tags "
-                                 "extension: %s"), ex)
-            raise
-        if 'subnet' in tag_extension['extension']['description']:
-            pools = _get_subnetpools_by_attrs(id=pool_id)
-            if pools:
-                pool = pools[0]
-                prefixes = pool['prefixes']
-                if len(prefixes) > 1:
-                    app.logger.warning(_LW("More than one prefixes present. "
-                                           "Picking first one."))
-                for prefix in prefixes:
-                    subnet_cidr = ipaddress.ip_network(six.text_type(prefix))
-                    break
-            else:
-                raise exceptions.NoResourceException(
-                    "No subnetpools with id {0} is found."
-                    .format(pool_id))
-            subnets_by_cidr = _get_subnets_by_attrs(
-                cidr=six.text_type(subnet_cidr))
-            for tmp_subnet in subnets_by_cidr:
-                if pool_id in tmp_subnet.get('tags', []):
-                    _neutron_subnet_remove_tag(tmp_subnet['id'], pool_id)
-                    break
+    if app.tag_ext:
+        pools = _get_subnetpools_by_attrs(id=pool_id)
+        if pools:
+            pool = pools[0]
+            prefixes = pool['prefixes']
+            if len(prefixes) > 1:
+                app.logger.warning(_LW("More than one prefixes present. "
+                                       "Picking first one."))
+            for prefix in prefixes:
+                subnet_cidr = ipaddress.ip_network(six.text_type(prefix))
+                break
+        else:
+            raise exceptions.NoResourceException(
+                "No subnetpools with id {0} is found."
+                .format(pool_id))
+        subnets_by_cidr = _get_subnets_by_attrs(
+            cidr=six.text_type(subnet_cidr))
+        for tmp_subnet in subnets_by_cidr:
+            if pool_id in tmp_subnet.get('tags', []):
+                _neutron_subnet_remove_tag(tmp_subnet['id'], pool_id)
+                break
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict as ex:
