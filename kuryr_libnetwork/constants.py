@@ -16,11 +16,9 @@ SCHEMA = {
     "SUCCESS": {}
 }
 
-# Routes are either given a RouteType of 0 and a value for NextHop;
-# or, a RouteType of 1 and no value for NextHop, meaning a connected route.
+# Routes are given a RouteType of 0 and a value for NextHop;
 ROUTE_TYPE = {
-    "NEXTHOP": 0,
-    "CONNECTED": 1
+    "NEXTHOP": 0
 }
 
 PROTOCOLS = {
