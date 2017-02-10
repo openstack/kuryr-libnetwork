@@ -336,9 +336,6 @@ class TestKuryr(base.TestKuryrBase):
                 "id": fake_neutron_net_id,
             }]
         }
-        app.neutron.list_networks(
-            id=fake_neutron_net_id).AndReturn(
-                fake_existing_networks_response)
 
         tags = utils.create_net_tags(docker_network_id)
         fake_existing_subnets_response = {
