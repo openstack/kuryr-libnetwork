@@ -262,7 +262,8 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
             interface_mac, fixed_ips)
     elif num_port == 1:
         port = filtered_ports['ports'][0]
-        response_port = app.driver.update_port(port, endpoint_id)
+        response_port = app.driver.update_port(port, endpoint_id,
+                                               interface_mac)
     else:
         raise n_exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"
@@ -1380,7 +1381,6 @@ def ipam_request_address():
                     'name': 'kuryr-unbound-port',
                     'admin_state_up': True,
                     'network_id': neutron_network_id,
-                    'binding:host_id': lib_utils.get_hostname(),
                 }
                 fixed_ips = port['fixed_ips'] = []
                 fixed_ip = {'subnet_id': subnet['id']}

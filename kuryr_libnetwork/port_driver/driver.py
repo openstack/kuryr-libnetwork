@@ -20,6 +20,7 @@ from neutronclient.common import exceptions as n_exceptions
 from kuryr.lib._i18n import _LE
 from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
+from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import utils as libnet_utils
@@ -112,7 +113,7 @@ class Driver(object):
         """
         raise NotImplementedError()
 
-    def update_port(self, port, endpoint_id):
+    def update_port(self, port, endpoint_id, interface_mac):
         """Updates port information and performs extra driver-specific actions.
 
         It returns the updated port dictionary after the required actions
@@ -121,17 +122,22 @@ class Driver(object):
         :param port: a neutron port dictionary returned from
                              python-neutronclient
         :param endpoint_id:  the ID of the endpoint as string
+        :param interface_mac: the MAC address of the endpoint
         :returns: the updated Neutron port id dictionary as returned by
                   python-neutronclient
         """
         port['name'] = libnet_utils.get_neutron_port_name(endpoint_id)
         try:
+            updated_port = {
+                'name': port['name'],
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': endpoint_id,
+                'binding:host_id': lib_utils.get_hostname(),
+            }
+            if interface_mac:
+                updated_port['mac_address'] = interface_mac
             response_port = app.neutron.update_port(port['id'],
-                {'port': {
-                    'name': port['name'],
-                    'device_owner': lib_const.DEVICE_OWNER,
-                    'device_id': endpoint_id
-                }})
+                                                    {'port': updated_port})
         except n_exceptions.NeutronClientException as ex:
             app.logger.error(_LE("Error happened during updating a "
                                  "Neutron port: %s"), ex)

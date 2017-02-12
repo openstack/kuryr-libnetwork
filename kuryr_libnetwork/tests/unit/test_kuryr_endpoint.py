@@ -196,7 +196,8 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         mock_list_subnets.assert_has_calls(expect_calls, any_order=True)
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
         mock_update_port.assert_called_with(fake_port_response['port'],
-                                            fake_docker_endpoint_id)
+                                            fake_docker_endpoint_id,
+                                            "fa:16:3e:20:57:c3")
         mock_create_host_iface.assert_called_with(
             fake_docker_endpoint_id, fake_updated_port, fake_neutron_subnets,
             fake_neutron_network['networks'][0])

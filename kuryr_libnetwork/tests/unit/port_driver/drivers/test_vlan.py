@@ -135,7 +135,7 @@ class TestVlanDriver(base.TestKuryrBase):
             fake_endpoint_id, fake_neutron_net_id,
             fake_vm_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
-            '192.168.1.2', 'fe80::f816:3eff:fe20:57c4',
+            '192.168.1.2', 'fe80::f816:3eff:fe20:57c4', 'fa:16:3e:20:57:c3',
             None, fake_neutron_trunk_id)['port']
         fake_vm_port['allowed_address_pairs'] = [
             {'ip_address': '192.168.1.3',
@@ -259,17 +259,20 @@ class TestVlanDriver(base.TestKuryrBase):
         fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_vm_port_id = uuidutils.generate_uuid()
 
+        fake_neutron_mac_address1 = 'fa:16:3e:20:57:c3'
+        fake_neutron_mac_address2 = 'fa:16:3e:20:57:c4'
+        fake_vm_mac_address = 'fa:16:3e:20:57:c5'
         fake_neutron_port = self._get_fake_port(
             fake_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
-            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9')['port']
-        fake_neutron_port['mac_address'] = 'fa:16:3e:20:57:c3'
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
+            fake_neutron_mac_address1)['port']
         fake_vm_port = self._get_fake_port(
             fake_endpoint_id, fake_neutron_net_id,
             fake_vm_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
-            '192.168.1.2', 'fe80::f816:3eff:fe20:57c4',
+            '192.168.1.2', 'fe80::f816:3eff:fe20:57c4', fake_vm_mac_address,
             None, fake_neutron_trunk_id)['port']
         fake_segmentation_id = 1
         fake_port_name = 'port1'
@@ -281,7 +284,8 @@ class TestVlanDriver(base.TestKuryrBase):
 
         vlan_driver = vlan.VlanDriver()
 
-        vlan_driver.update_port(fake_neutron_port, fake_endpoint_id)
+        vlan_driver.update_port(fake_neutron_port, fake_endpoint_id,
+                                fake_neutron_mac_address2)
 
         mock_get_seg_id.assert_called_with(fake_neutron_port_id)
 
@@ -295,7 +299,9 @@ class TestVlanDriver(base.TestKuryrBase):
                 {'port': {
                     'name': fake_port_name,
                     'device_owner': lib_const.DEVICE_OWNER,
-                    'device_id': fake_endpoint_id
+                    'device_id': fake_endpoint_id,
+                    'binding:host_id': lib_utils.get_hostname(),
+                    'mac_address': fake_neutron_mac_address2
                 }})
 
 

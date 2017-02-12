@@ -958,7 +958,8 @@ class TestKuryr(base.TestKuryrBase):
             network_id=fake_neutron_net_id, cidr='fe80::/64')
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
         mock_update_port.assert_called_with(fake_port_response['port'],
-                                            fake_docker_endpoint_id)
+                                            fake_docker_endpoint_id,
+                                            'fa:16:3e:20:57:c3')
         mock_list_networks.assert_any_call(tags=t)
         mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_updated_port, fake_neutron_subnets,
@@ -967,6 +968,133 @@ class TestKuryr(base.TestKuryrBase):
             mock_show_port.assert_called_with(fake_port_id)
         decoded_json = jsonutils.loads(response.data)
         expected = {'Interface': {}}
+        self.assertEqual(expected, decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data(
+        (False), (True))
+    def test_network_driver_create_endpoint_with_no_mac_address(self,
+            vif_plug_is_fatal, mock_vif, mock_list_subnets, mock_list_ports,
+            mock_update_port, mock_show_port, mock_list_networks,
+            mock_create_host_iface):
+        mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
+        fake_docker_network_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        t = utils.make_net_tags(fake_docker_network_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+
+        mock_list_networks.side_effect = mock_network
+        fake_neutron_network = self._get_fake_list_network(
+            fake_neutron_net_id)
+
+        # The following fake response is retrieved from the Neutron doc:
+        #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        subnet_v4_id = uuidutils.generate_uuid()
+        subnet_v6_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_docker_network_id, fake_docker_endpoint_id, subnet_v4_id)
+        fake_v6_subnet = self._get_fake_v6_subnet(
+            fake_docker_network_id, fake_docker_endpoint_id, subnet_v6_id)
+        fake_v4_subnet_response = {
+            "subnets": [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        fake_v6_subnet_response = {
+            "subnets": [
+                fake_v6_subnet['subnet']
+            ]
+        }
+
+        def mock_fake_subnet(*args, **kwargs):
+            if kwargs['cidr'] == '192.168.1.0/24':
+                return fake_v4_subnet_response
+            elif kwargs['cidr'] == 'fe80::/64':
+                return fake_v6_subnet_response
+
+        mock_list_subnets.side_effect = mock_fake_subnet
+
+        fake_port_id = uuidutils.generate_uuid()
+        fake_fixed_ips = ['subnet_id=%s' % subnet_v4_id,
+                          'ip_address=192.168.1.2',
+                          'subnet_id=%s' % subnet_v6_id,
+                          'ip_address=fe80::f816:3eff:fe20:57c4']
+        fake_mac_address = 'fa:16:3e:20:57:c3'
+        fake_port_response = self._get_fake_port(
+            fake_docker_endpoint_id, fake_neutron_net_id,
+            fake_port_id, lib_const.PORT_STATUS_ACTIVE,
+            subnet_v4_id, subnet_v6_id, neutron_mac_address=fake_mac_address)
+        fake_ports_response = {
+            "ports": [
+                fake_port_response['port']
+            ]
+        }
+        mock_list_ports.return_value = fake_ports_response
+        fake_updated_port = fake_port_response['port']
+        fake_updated_port['name'] = utils.get_neutron_port_name(
+            fake_docker_endpoint_id)
+        mock_update_port.return_value = fake_port_response['port']
+
+        fake_neutron_subnets = [fake_v4_subnet['subnet'],
+                                fake_v6_subnet['subnet']]
+        fake_create_iface_response = ('fake stdout', '')
+
+        mock_create_host_iface.return_value = fake_create_iface_response
+
+        if vif_plug_is_fatal:
+            fake_neutron_ports_response_2 = self._get_fake_port(
+                fake_docker_endpoint_id, fake_neutron_net_id,
+                fake_port_id, lib_const.PORT_STATUS_ACTIVE,
+                subnet_v4_id, subnet_v6_id)
+            mock_show_port.return_value = fake_neutron_ports_response_2
+
+        data = {
+            'NetworkID': fake_docker_network_id,
+            'EndpointID': fake_docker_endpoint_id,
+            'Options': {},
+            'Interface': {
+                'Address': '192.168.1.2/24',
+                'AddressIPv6': 'fe80::f816:3eff:fe20:57c4/64'
+            }
+        }
+        response = self.app.post('/NetworkDriver.CreateEndpoint',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(data))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_net_id, cidr='192.168.1.0/24')
+        mock_list_subnets.assert_any_call(
+            network_id=fake_neutron_net_id, cidr='fe80::/64')
+        mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
+        mock_update_port.assert_called_with(fake_port_response['port'],
+                                            fake_docker_endpoint_id, '')
+        mock_list_networks.assert_any_call(tags=t)
+        mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
+                                                  fake_updated_port,
+                                                  fake_neutron_subnets,
+                                                  fake_neutron_network[
+                                                      'networks'][0])
+        if vif_plug_is_fatal:
+            mock_show_port.assert_called_with(fake_port_id)
+        decoded_json = jsonutils.loads(response.data)
+        expected = {'Interface': {'MacAddress': fake_mac_address}}
         self.assertEqual(expected, decoded_json)
 
     def test_network_driver_endpoint_operational_info_with_no_port(self):
