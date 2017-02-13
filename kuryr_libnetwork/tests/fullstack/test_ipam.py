@@ -155,11 +155,14 @@ class IpamTest(kuryr_base.KuryrBaseTest):
         # DHCP port and container endpoint
         self.assertEqual(2, len(ports['ports']))
         # Find the kuryr port
-        kuryr_port_param = {"network_id": networks['networks'][0]['id'],
-                            "device_owner": lib_const.DEVICE_OWNER}
+        kuryr_port_param = {"network_id": networks['networks'][0]['id']}
         kuryr_ports = self.neutron_client.list_ports(
             **kuryr_port_param)
-        self.assertEqual(1, len(kuryr_ports['ports']))
+        kuryr_port = [port for port in kuryr_ports['ports'] if
+                      (lib_const.DEVICE_OWNER in port['tags'] or
+                       port['name'] ==
+                       utils.get_neutron_port_name(port['device_id']))]
+        self.assertEqual(1, len(kuryr_port))
 
         # Disconnect container from network, this release ip address.
         self.docker_client.disconnect_container_from_network(container_id,
@@ -242,12 +245,14 @@ class IpamTest(kuryr_base.KuryrBaseTest):
         # A dhcp port gets created as well; dhcp is enabled by default
         self.assertEqual(2, len(ports['ports']))
         # Find the kuryr port
-        kuryr_port_param = {"network_id": neutron_network['network']['id'],
-                            "device_owner": lib_const.DEVICE_OWNER}
+        kuryr_port_param = {"network_id": neutron_network['network']['id']}
         kuryr_ports = self.neutron_client.list_ports(
             **kuryr_port_param)
-        self.assertEqual(1, len(kuryr_ports['ports']))
-
+        kuryr_port = [port for port in kuryr_ports['ports'] if
+                      (lib_const.DEVICE_OWNER in port['tags'] or
+                       port['name'] ==
+                       utils.get_neutron_port_name(port['device_id']))]
+        self.assertEqual(1, len(kuryr_port))
         # Disconnect container from network, this release ip address.
         self.docker_client.disconnect_container_from_network(container_id,
                                                              container_net_id)
@@ -256,7 +261,11 @@ class IpamTest(kuryr_base.KuryrBaseTest):
         self.assertEqual(1, len(ports['ports']))
         kuryr_ports = self.neutron_client.list_ports(
             **kuryr_port_param)
-        self.assertEqual(0, len(kuryr_ports['ports']))
+        kuryr_port = [port for port in kuryr_ports['ports'] if
+                      (lib_const.DEVICE_OWNER in port['tags'] or
+                       port['name'] ==
+                       utils.get_neutron_port_name(port['device_id']))]
+        self.assertEqual(0, len(kuryr_port))
 
         # Cleanup resources
         self.docker_client.stop(container=container_id)
