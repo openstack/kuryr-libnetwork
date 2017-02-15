@@ -1150,6 +1150,118 @@ class TestKuryr(base.TestKuryrBase):
 
         self.assertEqual(expected_response, decoded_json)
 
+    @mock.patch.object(driver_utils, 'get_veth_pair_names')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch(
+         'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    @ddt.data(True, False)
+    def test_network_driver_join_with_static_route_return(self,
+            mock_use_tags, mock_app,
+            mock_get_container_iface_name,
+            mock_list_subnets, mock_list_ports, mock_list_networks,
+            mock_get_veth_pair_names):
+        mock_app.tag = mock_use_tags
+        fake_neutron_net_id = uuidutils.generate_uuid()
+
+        fake_v4_subnet_id = uuidutils.generate_uuid()
+        fake_v6_subnet_id = uuidutils.generate_uuid()
+        fake_host_routes = [{"destination": "192.168.2.0/24",
+                             "nexthop": "192.168.1.1"}]
+
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_net_id,
+            docker_endpoint_id="fake_id",
+            subnet_v4_id=fake_v4_subnet_id,
+            host_routes=fake_host_routes)
+        fake_v6_subnet = self._get_fake_v6_subnet(
+            fake_neutron_net_id,
+            docker_endpoint_id="fake_id",
+            subnet_v6_id=fake_v6_subnet_id)
+
+        fake_existing_subnets_response = {
+            'subnets': [
+                fake_v4_subnet['subnet'],
+                fake_v6_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_existing_subnets_response
+
+        fake_docker_net_id = lib_utils.get_hash()
+        if mock_app.tag:
+            t = utils.make_net_tags(fake_docker_net_id)
+
+        fake_neutron_existing_network_response = {
+            'networks':
+            [
+                {
+                    "status": "ACTIVE",
+                    "subnets": fake_existing_subnets_response["subnets"],
+                    "admin_state_up": True,
+                    "tenant_id": "9bacb3c5d39d41a79512987f338cf177",
+                    "router:external": False,
+                    "segments": [],
+                    "shared": False,
+                    "id": fake_neutron_net_id
+                }
+            ]
+        }
+        mock_list_networks.return_value = (
+            fake_neutron_existing_network_response)
+
+        fake_iface_name = 'fake-name'
+        mock_get_container_iface_name.return_value = fake_iface_name
+
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_container_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+        fake_neutron_ports_response = self._get_fake_ports(
+            fake_docker_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_DOWN,
+            fake_v4_subnet_id, fake_v6_subnet_id)
+        mock_list_ports.return_value = fake_neutron_ports_response
+
+        join_request = {
+            'NetworkID': fake_docker_net_id,
+            'EndpointID': fake_docker_endpoint_id,
+            'SandboxKey': utils.get_sandbox_key(fake_container_id),
+            'Options': {},
+        }
+        response = self.app.post('/NetworkDriver.Join',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(join_request))
+
+        expected_response = {
+            'Gateway': fake_v4_subnet['subnet']['gateway_ip'],
+            'GatewayIPv6': fake_v6_subnet['subnet']['gateway_ip'],
+            'InterfaceName': {
+                'DstPrefix': config.CONF.binding.veth_dst_prefix,
+                'SrcName': fake_iface_name,
+            },
+            'StaticRoutes': [
+                {'NextHop':
+                 fake_v4_subnet['subnet']['host_routes'][0]['nexthop'],
+                 'Destination':
+                 fake_v4_subnet['subnet']['host_routes'][0]['destination'],
+                 'RouteType': constants.ROUTE_TYPE['NEXTHOP']}]
+        }
+
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        if mock_app.tag:
+            mock_list_networks.assert_any_call(tags=t)
+        else:
+            mock_list_networks.assert_any_call(name=fake_docker_net_id)
+
+        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        neutron_port_name = utils.get_neutron_port_name(
+            fake_docker_endpoint_id)
+        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
+        self.assertEqual(expected_response, decoded_json)
+
     def test_network_driver_leave(self):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()

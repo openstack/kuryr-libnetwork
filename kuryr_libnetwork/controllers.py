@@ -1101,17 +1101,15 @@ def network_driver_join():
                 join_response['Gateway'] = subnet.get('gateway_ip', '')
             else:
                 join_response['GatewayIPv6'] = subnet.get('gateway_ip', '')
-            host_routes = subnet.get('host_routes', [])
 
+            # NOTE: kuryr-libnetwork do not support a connected route
+            host_routes = subnet.get('host_routes', [])
             for host_route in host_routes:
                 static_route = {
-                    'Destination': host_route['destination']
+                    'Destination': host_route['destination'],
+                    'RouteType': const.ROUTE_TYPE['NEXTHOP'],
+                    'NextHop': host_route['nexthop']
                 }
-                if host_route.get('nexthop', None):
-                    static_route['RouteType'] = const.ROUTE_TYPE['NEXTHOP']
-                    static_route['NextHop'] = host_route['nexthop']
-                else:
-                    static_route['RouteType'] = const.ROUTE_TYPE['CONNECTED']
                 join_response['StaticRoutes'].append(static_route)
 
         return flask.jsonify(join_response)
