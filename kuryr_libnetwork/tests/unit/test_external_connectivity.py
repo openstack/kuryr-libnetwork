@@ -149,9 +149,10 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
     @mock.patch(
         'kuryr_libnetwork.controllers.app.neutron.list_security_groups')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
-    @ddt.data((False), (True))
+    @ddt.data((False, False), (False, True), (True, False), (True, True))
+    @ddt.unpack
     def test_network_driver_revoke_external_connectivity(self, existing_sg,
-            mock_list_ports, mock_list_security_groups,
+            removing_sg, mock_list_ports, mock_list_security_groups,
             mock_delete_security_groups, mock_show_port,
             mock_update_port):
         fake_docker_net_id = lib_utils.get_hash()
@@ -175,8 +176,12 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
         else:
             fake_neutron_ports_response['ports'][0]['security_groups'] = [
                 fake_neutron_sec_group_id]
-        fake_neutron_sec_group_response = {
-            'security_groups': [{'id': fake_neutron_sec_group_id}]}
+        if removing_sg:
+            fake_neutron_sec_group_response = {
+                'security_groups': [{'id': fake_neutron_sec_group_id}]}
+        else:
+            fake_neutron_sec_group_response = {
+                'security_groups': []}
 
         mock_list_ports.return_value = fake_neutron_ports_response
         mock_list_security_groups.return_value = (
@@ -198,12 +203,19 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
 
         self.assertEqual(200, response.status_code)
         mock_list_ports.assert_called_with(name=neutron_port_name)
-        mock_list_security_groups.assert_called_with(
-            name=utils.get_sg_expose_name(fake_neutron_port_id))
-        mock_delete_security_groups.assert_called_with(
-                        fake_neutron_sec_group_id)
-        mock_show_port.assert_called_with(fake_neutron_port_id)
-        mock_update_port.assert_called_with(fake_neutron_port_id,
-                        {'port': {'security_groups': sgs}})
+        if removing_sg:
+            mock_list_security_groups.assert_called_with(
+                name=utils.get_sg_expose_name(fake_neutron_port_id))
+            mock_delete_security_groups.assert_called_with(
+                            fake_neutron_sec_group_id)
+            mock_show_port.assert_called_with(fake_neutron_port_id)
+            mock_update_port.assert_called_with(fake_neutron_port_id,
+                            {'port': {'security_groups': sgs}})
+        else:
+            mock_list_security_groups.assert_called_with(
+                name=utils.get_sg_expose_name(fake_neutron_port_id))
+            mock_delete_security_groups.assert_not_called()
+            mock_show_port.assert_not_called()
+            mock_update_port.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
