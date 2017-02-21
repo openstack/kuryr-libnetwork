@@ -1331,39 +1331,48 @@ def ipam_request_address():
     is_gateway = False
     allocated_address = ''
     subnet = {}
-    # check if any subnet with matching cidr is present
-    subnet_cidr, _ = _get_cidr_from_subnetpool(id=pool_id)
-    subnets_by_cidr = _get_subnets_by_attrs(cidr=six.text_type(subnet_cidr))
     # Check if the port is gateway
     options = json_data.get('Options')
     if options:
         request_address_type = options.get(const.REQUEST_ADDRESS_TYPE)
         if request_address_type == const.NETWORK_GATEWAY_OPTIONS:
             is_gateway = True
-    if subnets_by_cidr:
+
+    # check if any subnet with matching subnetpool_id is present
+    subnets_by_poolid = _get_subnets_by_attrs(subnetpool_id=pool_id)
+    if subnets_by_poolid:
+        if len(subnets_by_poolid) == 1:
+            subnet = subnets_by_poolid[0]
+            subnet_cidr = ipaddress.ip_network(six.text_type(subnet['cidr']))
+        else:
+            pool_cidr, _ = _get_cidr_from_subnetpool(id=pool_id)
+            for tmp_subnet in subnets_by_poolid:
+                subnet_cidr = ipaddress.ip_network(
+                    six.text_type(tmp_subnet['cidr']))
+                if pool_cidr == subnet_cidr:
+                    subnet = tmp_subnet
+                    break
+    else:
+        # check if any subnet with matching cidr is present
+        subnet_cidr, _ = _get_cidr_from_subnetpool(id=pool_id)
+        subnets_by_cidr = _get_subnets_by_attrs(
+            cidr=six.text_type(subnet_cidr))
         if len(subnets_by_cidr) > 1:
             for tmp_subnet in subnets_by_cidr:
-                subnet_name = tmp_subnet.get('name')
-                # Subnet created by Kuryr.
-                if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
-                    if tmp_subnet.get('subnetpool_id', '') == pool_id:
+                if tmp_subnet.get('tags') is not None:
+                    if pool_id in tmp_subnet.get('tags'):
                         subnet = tmp_subnet
-                # Subnet created by Neutron.
                 else:
-                    if tmp_subnet.get('tags') is not None:
-                        if pool_id in tmp_subnet.get('tags'):
-                            subnet = tmp_subnet
-                    else:
-                        app.logger.warning(_LW("subnetpool tag for Neutron "
-                                               "subnet %s is missing, cannot "
-                                               "gets the correct subnet."),
-                                           tmp_subnet['id'])
-            if not any(subnet) and not is_gateway:
-                raise exceptions.KuryrException(
-                    ("Subnet with cidr({0}) and pool {1}, does not "
-                    "exist.").format(subnet_cidr, pool_id))
-        else:
+                    app.logger.warning(_LW("subnetpool tag for Neutron "
+                                           "subnet %s is missing, cannot "
+                                           "gets the correct subnet."),
+                                       tmp_subnet['id'])
+        elif len(subnets_by_cidr) == 1:
             subnet = subnets_by_cidr[0]
+
+    if not any(subnet) and not is_gateway:
+        raise exceptions.KuryrException(
+            ("Subnet with pool {0} does not exist.").format(pool_id))
 
     if any(subnet):
         if is_gateway:

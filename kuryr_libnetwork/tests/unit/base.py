@@ -220,10 +220,12 @@ class TestKuryrBase(TestCase):
     def _get_fake_v4_subnet(neutron_network_id, docker_endpoint_id=None,
                             subnet_v4_id=None, subnetpool_id=None,
                             cidr='192.168.1.0/24',
-                            name=None, host_routes=None):
+                            name=None, host_routes=None, tags=None):
         if not name:
             name = str('-'.join([docker_endpoint_id,
                                 str(netaddr.IPNetwork(cidr).network)]))
+        if not tags:
+            tags = []
         gateway_ip = netaddr.IPNetwork(cidr).network + 1
         start_v4_ip = gateway_ip + 1
         end_v4_ip = netaddr.IPNetwork(cidr).broadcast - 1
@@ -243,7 +245,7 @@ class TestKuryrBase(TestCase):
                 "enable_dhcp": True,
                 "subnetpool_id": '',
                 "host_routes": host_routes,
-                "tags": []
+                "tags": tags
             }
         }
         if subnetpool_id:
