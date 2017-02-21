@@ -1527,9 +1527,12 @@ def ipam_release_address():
     jsonschema.validate(json_data, schemata.RELEASE_ADDRESS_SCHEMA)
     pool_id = json_data['PoolID']
     rel_address = json_data['Address']
-    # check if any subnet with matching cidr is present
-    subnet_cidr = six.text_type(_get_cidr_from_subnetpool(id=pool_id)[0])
-    subnets = _get_subnets_by_attrs(cidr=subnet_cidr)
+    # check if any subnet with matching subnetpool_id is present
+    subnets = _get_subnets_by_attrs(subnetpool_id=pool_id)
+    if not len(subnets):
+        # check if any subnet with matching cidr is present
+        subnet_cidr = six.text_type(_get_cidr_from_subnetpool(id=pool_id)[0])
+        subnets = _get_subnets_by_attrs(cidr=subnet_cidr)
     if not len(subnets):
         app.logger.info(_LI("Subnet already deleted."))
         return flask.jsonify(const.SCHEMA['SUCCESS'])
