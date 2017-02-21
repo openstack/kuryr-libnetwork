@@ -1083,9 +1083,14 @@ def network_driver_join():
                 .format(neutron_port_name))
         neutron_port = filtered_ports[0]
         all_subnets = _get_subnets_by_attrs(network_id=neutron_network_id)
-        if len(all_subnets) > 2:  # subnets for IPv4 and/or IPv6
+        kuryr_subnets = []
+        for subnet in all_subnets:
+            subnet_name = subnet.get('name')
+            if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
+                kuryr_subnets.append(subnet)
+        if len(kuryr_subnets) > 1:
             raise exceptions.DuplicatedResourceException(
-                "Multiple Neutron subnets exist for the network_id={0} "
+                "Multiple Kuryr subnets exist for the network_id={0} "
                 .format(neutron_network_id))
 
         iface_name = app.driver.get_container_iface_name(neutron_port['id'])
@@ -1099,10 +1104,13 @@ def network_driver_join():
         }
 
         for subnet in all_subnets:
-            if subnet['ip_version'] == 4:
-                join_response['Gateway'] = subnet.get('gateway_ip', '')
-            else:
-                join_response['GatewayIPv6'] = subnet.get('gateway_ip', '')
+            for fixed_ip in neutron_port['fixed_ips']:
+                if fixed_ip['subnet_id'] == subnet['id']:
+                    if subnet['ip_version'] == 4:
+                        join_response['Gateway'] = subnet.get('gateway_ip', '')
+                    else:
+                        join_response['GatewayIPv6'] = subnet.get(
+                            'gateway_ip', '')
 
             # NOTE: kuryr-libnetwork do not support a connected route
             host_routes = subnet.get('host_routes', [])
