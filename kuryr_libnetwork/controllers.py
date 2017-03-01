@@ -264,7 +264,7 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
         port = filtered_ports['ports'][0]
         response_port = app.driver.update_port(port, endpoint_id)
     else:
-        raise n_exceptions.DuplicatedResourceException(
+        raise exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"
             .format(interface_cidrv4, interface_cidrv6))
 
