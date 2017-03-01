@@ -98,7 +98,8 @@ class TestKuryrBase(TestCase):
         return v4_subnetpools
 
     @staticmethod
-    def _get_fake_v6_subnetpools(subnetpool_id, prefixes=['fe80::/64']):
+    def _get_fake_v6_subnetpools(subnetpool_id, prefixes=['fe80::/64'],
+                                 name="kuryr6"):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2-ext.html#listSubnetPools  # noqa
         v6_subnetpools = {
@@ -108,7 +109,7 @@ class TestKuryrBase(TestCase):
                 "default_prefixlen": "64",
                 "id": subnetpool_id,
                 "max_prefixlen": "64",
-                "name": "kuryr6",
+                "name": name,
                 "default_quota": None,
                 "tenant_id": "9fadcee8aa7c40cdb2114fff7d569c08",
                 "prefixes": prefixes,
