@@ -202,11 +202,14 @@ class TestKuryrBase(TestCase):
     @classmethod
     def _get_fake_ports(cls, docker_endpoint_id, neutron_network_id,
                         fake_neutron_port_id, neutron_port_status,
-                        fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id):
+                        fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id,
+                        neutron_subnet_v4_address="192.168.1.2",
+                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4"):
         fake_port = cls._get_fake_port(
             docker_endpoint_id, neutron_network_id,
             fake_neutron_port_id, neutron_port_status,
-            fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)
+            fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id,
+            neutron_subnet_v4_address, neutron_subnet_v6_address)
         fake_port = fake_port['port']
         fake_ports = {
             'ports': [
@@ -221,6 +224,8 @@ class TestKuryrBase(TestCase):
                             subnet_v4_id=None, subnetpool_id=None,
                             cidr='192.168.1.0/24',
                             name=None, host_routes=None, tags=None):
+        if host_routes is None:
+            host_routes = []
         if not name:
             name = str('-'.join([docker_endpoint_id,
                                 str(netaddr.IPNetwork(cidr).network)]))
@@ -256,21 +261,26 @@ class TestKuryrBase(TestCase):
         return fake_v4_subnet
 
     @staticmethod
-    def _get_fake_v6_subnet(docker_network_id, docker_endpoint_id,
-                            subnet_v6_id, subnetpool_id=None):
+    def _get_fake_v6_subnet(docker_network_id, docker_endpoint_id=None,
+                            subnet_v6_id=None, subnetpool_id=None,
+                            cidr='fe80::/64', name=None):
+        if not name:
+            name = str('-'.join([docker_endpoint_id, 'fe80::']))
+        gateway_ip = netaddr.IPNetwork(cidr).network + 1
+        start_ip = gateway_ip + 1
+        end_ip = netaddr.IPNetwork(cidr).broadcast - 1
         fake_v6_subnet = {
             'subnet': {
-                "name": '-'.join([docker_endpoint_id,
-                                  'fe80::']),
+                "name": name,
                 "network_id": docker_network_id,
                 "tenant_id": "c1210485b2424d48804aad5d39c61b8f",
                 "allocation_pools": [{
-                    "start": "fe80::f816:3eff:fe20:57c4",
-                    "end": "fe80::ffff:ffff:ffff:ffff"
+                    "start": str(start_ip),
+                    "end": str(end_ip)
                 }],
-                "gateway_ip": "fe80::f816:3eff:fe20:57c3",
+                "gateway_ip": str(gateway_ip),
                 "ip_version": 6,
-                "cidr": 'fe80::/64',
+                "cidr": cidr,
                 "id": subnet_v6_id,
                 "enable_dhcp": True
             }

@@ -1156,6 +1156,123 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch(
          'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+    def test_network_driver_join_multiple_subnets(
+            self, mock_get_container_iface_name,
+            mock_list_subnets, mock_list_ports, mock_list_networks,
+            mock_get_veth_pair_names):
+        fake_docker_net_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+        fake_container_id = lib_utils.get_hash()
+        fake_address_v4 = "10.2.0.3"
+        fake_address_v6 = "fe80::f816:3eff:fe20:57c4"
+
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        t = utils.make_net_tags(fake_docker_net_id)
+        te = t + ',' + constants.KURYR_EXISTING_NEUTRON_NET
+
+        def mock_network(*args, **kwargs):
+            if kwargs['tags'] == te:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id,
+                    check_existing=True)
+            elif kwargs['tags'] == t:
+                return self._get_fake_list_network(
+                    fake_neutron_net_id)
+        mock_list_networks.side_effect = mock_network
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_subnetpool_id = uuidutils.generate_uuid()
+        neutron_port_name = utils.get_neutron_port_name(
+            fake_docker_endpoint_id)
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id_2 = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id_2 = uuidutils.generate_uuid()
+        fake_neutron_ports_response = self._get_fake_ports(
+            fake_docker_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_DOWN,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            fake_address_v4, fake_address_v6)
+
+        fake_subnet_v4_1 = self._get_fake_v4_subnet(
+            fake_neutron_net_id,
+            name="subnet1",
+            subnet_v4_id=fake_neutron_v4_subnet_id,
+            cidr="10.2.0.0/24",
+            subnetpool_id=fake_neutron_subnetpool_id)
+        fake_subnet_v4_2 = self._get_fake_v4_subnet(
+            fake_neutron_net_id,
+            name="subnet2",
+            subnet_v4_id=fake_neutron_v4_subnet_id_2,
+            cidr="10.2.1.0/24",
+            subnetpool_id=fake_neutron_subnetpool_id)
+        fake_subnet_v6_1 = self._get_fake_v6_subnet(
+            fake_neutron_net_id,
+            name="subnet_v6_1",
+            subnet_v6_id=fake_neutron_v6_subnet_id,
+            cidr="fe80::/64",
+            subnetpool_id=fake_neutron_subnetpool_id)
+        fake_subnet_v6_2 = self._get_fake_v6_subnet(
+            fake_neutron_net_id,
+            name="subnet_v6_2",
+            subnet_v6_id=fake_neutron_v6_subnet_id_2,
+            cidr="fe81::/64",
+            subnetpool_id=fake_neutron_subnetpool_id)
+        fake_neutron_subnets = [
+            fake_subnet_v4_1['subnet'],
+            fake_subnet_v4_2['subnet'],
+            fake_subnet_v6_1['subnet'],
+            fake_subnet_v6_2['subnet']
+        ]
+        fake_neutron_subnets_response = {"subnets": fake_neutron_subnets}
+        fake_iface_name = 'fake-name'
+
+        mock_get_container_iface_name.return_value = fake_iface_name
+
+        fake_subnets_dict_by_id = {subnet['id']: subnet
+                                   for subnet in fake_neutron_subnets}
+
+        mock_list_ports.return_value = fake_neutron_ports_response
+        mock_list_subnets.return_value = fake_neutron_subnets_response
+        join_request = {
+            'NetworkID': fake_docker_net_id,
+            'EndpointID': fake_docker_endpoint_id,
+            'SandboxKey': utils.get_sandbox_key(fake_container_id),
+            'Options': {},
+        }
+        response = self.app.post('/NetworkDriver.Join',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(join_request))
+
+        fake_neutron_v4_subnet = fake_subnets_dict_by_id[
+            fake_neutron_v4_subnet_id]
+        fake_neutron_v6_subnet = fake_subnets_dict_by_id[
+            fake_neutron_v6_subnet_id]
+        expected_response = {
+            'Gateway': fake_neutron_v4_subnet['gateway_ip'],
+            'GatewayIPv6': fake_neutron_v6_subnet['gateway_ip'],
+            'InterfaceName': {
+                'DstPrefix': config.CONF.binding.veth_dst_prefix,
+                'SrcName': fake_iface_name,
+            },
+            'StaticRoutes': []
+        }
+
+        self.assertEqual(200, response.status_code)
+
+        decoded_json = jsonutils.loads(response.data)
+        mock_list_networks.assert_any_call(tags=t)
+        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
+
+        self.assertEqual(expected_response, decoded_json)
+
+    @mock.patch.object(driver_utils, 'get_veth_pair_names')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch(
+         'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data(True, False)
     def test_network_driver_join_with_static_route_return(self,
