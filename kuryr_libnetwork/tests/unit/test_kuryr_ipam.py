@@ -311,7 +311,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             subnet_v4_id,
             neutron_subnet_v4_address="10.0.0.5")
         port_request = {
-            'name': 'kuryr-unbound-port',
+            'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
         }
@@ -415,7 +415,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_ports.return_value = fake_ports_response
 
         port_request = {
-            'name': 'kuryr-unbound-port',
+            'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
         }
@@ -464,37 +464,58 @@ class TestKuryrIpam(base.TestKuryrBase):
         neutron_network_id = uuidutils.generate_uuid()
         docker_endpoint_id = lib_utils.get_hash()
         subnet_v4_id = uuidutils.generate_uuid()
+        subnet_v6_id = uuidutils.generate_uuid()
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        fake_kuryr_subnetpool_v6_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             neutron_network_id, docker_endpoint_id, subnet_v4_id,
             subnetpool_id=fake_kuryr_subnetpool_id,
             cidr=FAKE_IP4_CIDR)
+        fake_v6_subnet = self._get_fake_v6_subnet(
+            neutron_network_id, docker_endpoint_id, subnet_v6_id,
+            subnetpool_id=fake_kuryr_subnetpool_v6_id,
+            cidr=FAKE_IP6_CIDR)
         fake_subnet_response = {
             'subnets': [
                 fake_v4_subnet['subnet']
             ]
         }
-        mock_list_subnets.return_value = fake_subnet_response
+        fake_subnet_response_v6 = {
+            'subnets': [
+                fake_v6_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.side_effect = [
+            fake_subnet_response, fake_subnet_response_v6]
 
         # faking update_port or create_port
         requested_address = '10.0.0.5'
+        requested_address_v6 = 'fe80::6'
         fake_neutron_port_id = uuidutils.generate_uuid()
         fake_port = base.TestKuryrBase._get_fake_port(
             docker_endpoint_id, neutron_network_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
-            subnet_v4_id,
-            neutron_subnet_v4_address=requested_address)
+            subnet_v4_id, subnet_v6_id,
+            neutron_subnet_v4_address=requested_address,
+            neutron_subnet_v6_address=requested_address_v6)
 
         fixed_ip_existing = [('subnet_id=%s' % subnet_v4_id)]
+        fixed_ipv6_existing = [('subnet_id=%s' % subnet_v6_id)]
         fixed_ip_existing.append('ip_address=%s' % requested_address)
-        fake_existing_port = fake_port['port']
+        fixed_ipv6_existing.append('ip_address=%s' % requested_address_v6)
+        fake_existing_port = dict(fake_port['port'])
         fake_existing_port['binding:host_id'] = ''
         fake_existing_port['binding:vif_type'] = 'unbound'
         fake_ports_response = {'ports': [fake_existing_port]}
-
-        mock_list_ports.return_value = fake_ports_response
+        fake_existing_port_2 = dict(fake_port['port'])
+        fake_existing_port_2['name'] = const.NEUTRON_UNBOUND_PORT
+        fake_existing_port_2['binding:host_id'] = lib_utils.get_hostname()
+        fake_ports_response_2 = {'ports': [fake_existing_port_2]}
+        mock_list_ports.side_effect = [
+            fake_ports_response, fake_ports_response_2]
 
         update_port = {
+            'name': const.NEUTRON_UNBOUND_PORT,
             'admin_state_up': True,
             'binding:host_id': lib_utils.get_hostname(),
         }
@@ -508,22 +529,38 @@ class TestKuryrIpam(base.TestKuryrBase):
         }
         mock_port_add_tag.return_value = None
         response = self.app.post('/IpamDriver.RequestAddress',
-                                content_type='application/json',
-                                data=jsonutils.dumps(fake_request))
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(fake_request))
 
         self.assertEqual(200, response.status_code)
-        mock_list_subnets.assert_called_with(
-            subnetpool_id=fake_kuryr_subnetpool_id)
-        mock_list_ports.assert_called_with(
-            fixed_ips=fixed_ip_existing)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(requested_address + '/16', decoded_json['Address'])
+
+        fake_request_2 = {
+            'PoolID': fake_kuryr_subnetpool_v6_id,
+            'Address': requested_address_v6,
+            'Options': {}
+        }
+        response = self.app.post('/IpamDriver.RequestAddress',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(fake_request_2))
+
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(requested_address_v6 + '/64', decoded_json['Address'])
+
+        mock_list_subnets.assert_has_calls([
+            mock.call(subnetpool_id=fake_kuryr_subnetpool_id),
+            mock.call(subnetpool_id=fake_kuryr_subnetpool_v6_id)])
+        mock_list_ports.assert_has_calls([
+            mock.call(fixed_ips=fixed_ip_existing),
+            mock.call(fixed_ips=fixed_ipv6_existing)])
         mock_update_port.assert_called_with(fake_neutron_port_id,
             {'port': update_port})
         if mock_app.tag_ext:
-            mock_port_add_tag.assert_called_once()
+            self.assertEqual(2, mock_port_add_tag.call_count)
         else:
-            mock_port_add_tag.assert_not_called()
-        decoded_json = jsonutils.loads(response.data)
-        self.assertEqual(requested_address + '/16', decoded_json['Address'])
+            self.assertEqual(0, mock_port_add_tag.call_count)
 
     @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
@@ -583,7 +620,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             neutron_subnet_v4_address="10.0.0.5")
         mock_create_port.return_value = fake_port
         port_request = {
-            'name': 'kuryr-unbound-port',
+            'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
         }
@@ -737,7 +774,7 @@ class TestKuryrIpam(base.TestKuryrBase):
             neutron_subnet_v4_address="10.0.0.5")
         mock_create_port.return_value = fake_port
         port_request = {
-            'name': 'kuryr-unbound-port',
+            'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
         }

@@ -456,6 +456,7 @@ def _update_existing_port(existing_port, fixed_ip):
     vif_type = existing_port.get('binding:vif_type')
     if not host and vif_type == 'unbound':
         updated_port = {
+            'name': const.NEUTRON_UNBOUND_PORT,
             'admin_state_up': True,
             'binding:host_id': lib_utils.get_hostname(),
         }
@@ -464,10 +465,14 @@ def _update_existing_port(existing_port, fixed_ip):
             {'port': updated_port})
         existing_port = updated_port_resp['port']
     else:
-        raise exceptions.AddressInUseException(
-            "Requested ip address {0} already belongs to a "
-            "bound Neutron port: {1}".format(fixed_ip,
-            existing_port['id']))
+        port_name = existing_port.get('name', '')
+        if (str(port_name) != const.NEUTRON_UNBOUND_PORT or
+                len(existing_port['fixed_ips']) <= 1 or
+                host != lib_utils.get_hostname()):
+            raise exceptions.AddressInUseException(
+                "Requested ip address {0} already belongs to "
+                "a bound Neutron port: {1}".format(fixed_ip,
+                existing_port['id']))
 
     return existing_port
 
@@ -1425,7 +1430,7 @@ def ipam_request_address():
             neutron_network_id = subnet['network_id']
             try:
                 port = {
-                    'name': 'kuryr-unbound-port',
+                    'name': const.KURYR_UNBOUND_PORT,
                     'admin_state_up': True,
                     'network_id': neutron_network_id,
                 }
@@ -1461,7 +1466,8 @@ def ipam_request_address():
                                               lib_const.DEVICE_OWNER)
 
                 LOG.debug("created port %s", created_port)
-                allocated_address = created_port['fixed_ips'][0]['ip_address']
+                allocated_address = (req_address or
+                    created_port['fixed_ips'][0]['ip_address'])
                 allocated_address = '{}/{}'.format(allocated_address,
                                                    subnet_cidr.prefixlen)
             except n_exceptions.NeutronClientException as ex:

@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    In before, creating a container with an existing Neutron port that has both
+    ipv4 and ipv6 would fail. For example:
+
+    $ docker run --net=dualnet -itd --name=container --ip 10.2.0.4 \
+        --ip6 fe80::8 busybox
+    ...
+    docker: Error response from daemon: IpamDriver.RequestAddress: Requested ip address {'subnet_id': u'xxx', 'ip_address': u'fe80::8'} already belongs to a bound Neutron port: XXX.
+
+    This was fixed in this release (Bug #1668803).
