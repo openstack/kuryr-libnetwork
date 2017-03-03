@@ -161,6 +161,7 @@ class TestKuryrBase(TestCase):
                        neutron_subnet_v6_id=None,
                        neutron_subnet_v4_address="192.168.1.2",
                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4",
+                       neutron_mac_address="fa:16:3e:20:57:c3",
                        device_owner=None,
                        neutron_trunk_id=None,
                        tags=None):
@@ -175,7 +176,7 @@ class TestKuryrBase(TestCase):
                 "network_id": neutron_network_id,
                 "tenant_id": "d6700c0c9ffa4f1cb322cd4a1f3906fa",
                 "device_owner": device_owner,
-                "mac_address": "fa:16:3e:20:57:c3",
+                "mac_address": neutron_mac_address,
                 "fixed_ips": [],
                 "id": neutron_port_id,
                 "security_groups": [],

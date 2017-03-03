@@ -15,9 +15,11 @@ from oslo_utils import uuidutils
 
 from kuryr.lib import binding
 from kuryr.lib.binding.drivers import utils
+from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork.port_driver.drivers import veth
 from kuryr_libnetwork.tests.unit import base
+from kuryr_libnetwork import utils as libnet_utils
 
 
 class TestVethDriver(base.TestKuryrBase):
@@ -78,3 +80,72 @@ class TestVethDriver(base.TestKuryrBase):
         response = veth_driver.get_container_iface_name(fake_neutron_port_id)
         mock_get_veth_pair_names.assert_called_with(fake_neutron_port_id)
         self.assertEqual(response, "fake_container_ifname")
+
+    @mock.patch('kuryr_libnetwork.app.neutron.update_port')
+    @mock.patch.object(libnet_utils, 'get_neutron_port_name')
+    def test_update_port_with_mac_address(self, mock_get_port_name,
+                                          mock_update_port):
+        fake_endpoint_id = lib_utils.get_hash()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_mac_address1 = 'fa:16:3e:20:57:c3'
+        fake_mac_address2 = 'fa:16:3e:20:57:c4'
+        fake_neutron_port = self._get_fake_port(
+            fake_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
+            fake_mac_address1)['port']
+        fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
+        mock_get_port_name.return_value = fake_port_name
+
+        veth_driver = veth.VethDriver()
+        veth_driver.update_port(fake_neutron_port, fake_endpoint_id,
+                                fake_mac_address2)
+
+        mock_get_port_name.assert_called_with(fake_endpoint_id)
+        expected_update_port = {
+            'port': {
+                'name': fake_port_name,
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': fake_endpoint_id,
+                'binding:host_id': lib_utils.get_hostname(),
+                'mac_address': fake_mac_address2
+            }
+        }
+        mock_update_port.assert_called_with(fake_neutron_port_id,
+                                            expected_update_port)
+
+    @mock.patch('kuryr_libnetwork.app.neutron.update_port')
+    @mock.patch.object(libnet_utils, 'get_neutron_port_name')
+    def test_update_port_with_no_mac_address(self, mock_get_port_name,
+                                             mock_update_port):
+        fake_endpoint_id = lib_utils.get_hash()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_port = self._get_fake_port(
+            fake_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9')['port']
+        fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
+        mock_get_port_name.return_value = fake_port_name
+
+        veth_driver = veth.VethDriver()
+        veth_driver.update_port(fake_neutron_port, fake_endpoint_id, '')
+
+        mock_get_port_name.assert_called_with(fake_endpoint_id)
+        expected_update_port = {
+            'port': {
+                'name': fake_port_name,
+                'device_owner': lib_const.DEVICE_OWNER,
+                'device_id': fake_endpoint_id,
+                'binding:host_id': lib_utils.get_hostname()
+            }
+        }
+        mock_update_port.assert_called_with(fake_neutron_port_id,
+                                            expected_update_port)

@@ -56,12 +56,13 @@ class VlanDriver(base.BaseNestedDriver):
         """
         return None
 
-    def update_port(self, port, endpoint_id):
+    def update_port(self, port, endpoint_id, interface_mac):
         segmentation_id = self._get_segmentation_id(port['id'])
         self._attach_subport(self.trunk_port['trunk_details']['trunk_id'],
                              port['id'],
                              segmentation_id)
-        return super(VlanDriver, self).update_port(port, endpoint_id)
+        return super(VlanDriver, self).update_port(port, endpoint_id,
+                                                   interface_mac)
 
     def create_host_iface(self, endpoint_id, neutron_port, subnets,
                           network=None):
