@@ -1426,6 +1426,14 @@ def ipam_request_address():
                         created_port_resp = app.neutron.update_port(
                             existing_port['id'],
                             {'port': updated_port})
+                        created_port = created_port_resp['port']
+                        # REVISIT(yedongcan) For tag-ext extension not
+                        # supported, the Neutron existing port still can not
+                        # be deleted in ipam_release_address.
+                        if app.tag_ext:
+                            _neutron_port_add_tag(
+                                created_port['id'],
+                                const.KURYR_EXISTING_NEUTRON_PORT)
                     else:
                         raise exceptions.AddressInUseException(
                             "Requested ip address {0} already belongs to a "
@@ -1433,11 +1441,11 @@ def ipam_request_address():
                             existing_port['id']))
                 else:
                     created_port_resp = app.neutron.create_port({'port': port})
+                    created_port = created_port_resp['port']
+                    if app.tag_ext:
+                        _neutron_port_add_tag(created_port['id'],
+                                              lib_const.DEVICE_OWNER)
 
-                created_port = created_port_resp['port']
-                if app.tag_ext:
-                    _neutron_port_add_tag(created_port['id'],
-                                          lib_const.DEVICE_OWNER)
                 LOG.debug("created port %s", created_port)
                 allocated_address = created_port['fixed_ips'][0]['ip_address']
                 allocated_address = '{}/{}'.format(allocated_address,

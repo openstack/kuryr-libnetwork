@@ -349,12 +349,11 @@ class TestKuryrIpam(base.TestKuryrBase):
             use_tag_ext, mock_app, mock_list_subnets, mock_list_ports,
             mock_update_port, mock_create_port, mock_port_add_tag):
         mock_app.tag_ext = use_tag_ext
-        requested_address = '10.0.0.5'
-        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         # faking list_subnets
-        docker_endpoint_id = lib_utils.get_hash()
         neutron_network_id = uuidutils.generate_uuid()
+        docker_endpoint_id = lib_utils.get_hash()
         subnet_v4_id = uuidutils.generate_uuid()
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             neutron_network_id, docker_endpoint_id, subnet_v4_id,
             subnetpool_id=fake_kuryr_subnetpool_id,
@@ -367,6 +366,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_subnets.return_value = fake_subnet_response
 
         # faking update_port or create_port
+        requested_address = '10.0.0.5'
         fake_neutron_port_id = uuidutils.generate_uuid()
         fake_port = base.TestKuryrBase._get_fake_port(
             docker_endpoint_id, neutron_network_id,
@@ -375,6 +375,8 @@ class TestKuryrIpam(base.TestKuryrBase):
             neutron_subnet_v4_address=requested_address)
 
         fixed_ip_existing = [('subnet_id=%s' % subnet_v4_id)]
+        fixed_ip_existing.append('ip_address=%s' % requested_address)
+
         if existing_port:
             fake_existing_port = fake_port['port']
             fake_existing_port['binding:host_id'] = ''
@@ -382,8 +384,6 @@ class TestKuryrIpam(base.TestKuryrBase):
             fake_ports_response = {'ports': [fake_existing_port]}
         else:
             fake_ports_response = {'ports': []}
-
-        fixed_ip_existing.append('ip_address=%s' % requested_address)
         mock_list_ports.return_value = fake_ports_response
 
         if existing_port:
@@ -424,12 +424,16 @@ class TestKuryrIpam(base.TestKuryrBase):
         if existing_port:
             mock_update_port.assert_called_with(fake_neutron_port_id,
                 {'port': update_port})
+            if mock_app.tag_ext:
+                mock_port_add_tag.assert_called_once()
+            else:
+                mock_port_add_tag.assert_not_called()
         else:
             mock_create_port.assert_called_with({'port': port_request})
-        if mock_app.tag_ext:
-            mock_port_add_tag.assert_called()
-        else:
-            mock_port_add_tag.assert_not_called()
+            if mock_app.tag_ext:
+                mock_port_add_tag.assert_called()
+            else:
+                mock_port_add_tag.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(requested_address + '/16', decoded_json['Address'])
 

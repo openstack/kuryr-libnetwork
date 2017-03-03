@@ -34,6 +34,7 @@ NEUTRON_ID_UH_OPTION = 'kuryr.net.uuid.uh'
 
 DOCKER_EXPOSED_PORTS_OPTION = 'com.docker.network.endpoint.exposedports'
 KURYR_EXISTING_NEUTRON_NET = 'kuryr.net.existing'
+KURYR_EXISTING_NEUTRON_PORT = 'kuryr.port.existing'
 NETWORK_GATEWAY_OPTIONS = 'com.docker.network.gateway'
 NETWORK_GENERIC_OPTIONS = 'com.docker.network.generic'
 NEUTRON_NAME_OPTION = 'neutron.net.name'
