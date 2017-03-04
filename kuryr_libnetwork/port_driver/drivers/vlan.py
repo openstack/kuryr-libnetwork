@@ -134,9 +134,9 @@ class VlanDriver(base.BaseNestedDriver):
                 vm_port['trunk_details']['trunk_id'],
                 {'sub_ports': subports})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during subport deletion "
-                                 "%(port_id)s: %(ex)s"),
-                             {'port_id': neutron_port['id'], 'ex': ex})
+            LOG.error(_LE("Error happened during subport deletion "
+                          "%(port_id)s: %(ex)s"),
+                      {'port_id': neutron_port['id'], 'ex': ex})
             raise
         self._release_segmentation_id(neutron_port['id'])
         return stdout, stderr
@@ -152,9 +152,9 @@ class VlanDriver(base.BaseNestedDriver):
         try:
             app.neutron.trunk_add_subports(trunk_id, {'sub_ports': subport})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened adding subport %(port_id)s "
-                                 "to trunk port %(trunk_id)s: %(ex)s"),
-                             port_id, trunk_id, ex)
+            LOG.error(_LE("Error happened adding subport %(port_id)s "
+                          "to trunk port %(trunk_id)s: %(ex)s"),
+                      port_id, trunk_id, ex)
             raise
 
     def _get_segmentation_id(self, id):

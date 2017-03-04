@@ -19,6 +19,7 @@ import jsonschema
 
 from neutronclient.common import exceptions as n_exceptions
 from oslo_concurrency import processutils
+from oslo_log import log
 from werkzeug import exceptions as w_exceptions
 
 from kuryr.lib._i18n import _LE
@@ -27,6 +28,7 @@ from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import constants as const
 
 
+LOG = log.getLogger(__name__)
 SG_POSTFIX = 'exposed_ports'
 
 
@@ -52,7 +54,7 @@ def make_json_app(import_name, **kwargs):
     @app.errorhandler(jsonschema.ValidationError)
     @app.errorhandler(processutils.ProcessExecutionError)
     def make_json_error(ex):
-        app.logger.error(_LE("Unexpected error happened: %s"), ex)
+        LOG.error(_LE("Unexpected error happened: %s"), ex)
         traceback.print_exc(file=sys.stderr)
         response = flask.jsonify({"Err": str(ex)})
         response.status_code = w_exceptions.InternalServerError.code

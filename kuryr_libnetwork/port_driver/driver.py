@@ -13,6 +13,7 @@
 import abc
 import six
 
+from oslo_log import log
 from oslo_utils import importutils
 
 from neutronclient.common import exceptions as n_exceptions
@@ -24,6 +25,8 @@ from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import utils as libnet_utils
+
+LOG = log.getLogger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -139,8 +142,8 @@ class Driver(object):
             response_port = app.neutron.update_port(port['id'],
                                                     {'port': updated_port})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during updating a "
-                                 "Neutron port: %s"), ex)
+            LOG.error(_LE("Error happened during updating a "
+                          "Neutron port: %s"), ex)
             raise
         return response_port['port']
 

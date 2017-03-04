@@ -84,8 +84,8 @@ def check_for_neutron_tag_support(ext_name):
     except n_exceptions.NeutronClientException as e:
         setattr(app, ext_rename, False)
         if e.status_code == n_exceptions.NotFound.status_code:
-            app.logger.warning(_LW("Neutron extension %s not supported. "
-                                   "Continue without using them."), ext_name)
+            LOG.warning(_LW("Neutron extension %s not supported. "
+                            "Continue without using them."), ext_name)
 
 
 def load_default_subnet_pools():
@@ -98,7 +98,7 @@ def load_default_subnet_pools():
 
 def load_port_driver():
     app.driver = driver.get_driver_instance()
-    app.logger.debug("Using port driver '%s'", str(app.driver))
+    LOG.debug("Using port driver '%s'", str(app.driver))
 
 
 def _cache_default_subnetpool_ids(app):
@@ -113,8 +113,8 @@ def _cache_default_subnetpool_ids(app):
                 for subnetpool in subnetpools['subnetpools']:
                     default_subnetpool_id_set.add(subnetpool['id'])
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during retrieving the default"
-                                 " subnet pools: %s"), ex)
+            LOG.error(_LE("Error happened during retrieving the default"
+                          " subnet pools: %s"), ex)
         app.DEFAULT_POOL_IDS = frozenset(default_subnetpool_id_set)
 
 
@@ -207,8 +207,8 @@ def _create_port(endpoint_id, neutron_network_id, interface_mac, fixed_ips):
     try:
         rcvd_port = app.neutron.create_port({'port': port})
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during creating a"
-                             " Neutron port: %s"), ex)
+        LOG.error(_LE("Error happened during creating a"
+                      " Neutron port: %s"), ex)
         raise
     return rcvd_port['port']
 
@@ -309,9 +309,9 @@ def _neutron_add_tag(resource_type, resource_id, tag):
     try:
         app.neutron.add_tag(resource_type, resource_id, tag)
     except n_exceptions.NotFound:
-        app.logger.warning(_LW("Neutron tags extension for given resource type"
-                               " is not supported, cannot add tag to %s."),
-                           resource_type)
+        LOG.warning(_LW("Neutron tags extension for given "
+                        "resource type is not supported, "
+                        "cannot add tag to %s."), resource_type)
 
 
 def _neutron_remove_tag(resource_type, resource_id, tag):
@@ -337,8 +337,8 @@ def _port_active(neutron_port_id, vif_plug_timeout):
         try:
             port = app.neutron.show_port(neutron_port_id)
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE('Could not get the port %s to check '
-                                 'its status'), ex)
+            LOG.error(_LE('Could not get the port %s to check '
+                          'its status'), ex)
         else:
             if port['port']['status'] == lib_const.PORT_STATUS_ACTIVE:
                 port_active = True
@@ -365,8 +365,8 @@ def _program_expose_ports(options, port_id):
         sg_id = sg['security_group']['id']
 
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during creating a "
-                             "Neutron security group: %s"), ex)
+        LOG.error(_LE("Error happened during creating a "
+                      "Neutron security group: %s"), ex)
         raise exceptions.ExportPortFailure(
             ("Could not create required security group {0} "
              "for setting up exported port ").format(sec_group))
@@ -380,7 +380,7 @@ def _program_expose_ports(options, port_id):
             proto_port_dict[proto].append(port)
         except KeyError:
             # This should not happen as Docker client catches such errors
-            app.logger.error(_LE("Unrecognizable protocol %s"), proto)
+            LOG.error(_LE("Unrecognizable protocol %s"), proto)
             app.neutron.delete_security_group(sg_id)
             raise exceptions.ExportPortFailure(
                 ("Bad protocol number for exposed port. Deleting "
@@ -406,9 +406,9 @@ def _program_expose_ports(options, port_id):
                 app.neutron.create_security_group_rule({'security_group_rule':
                                                         sec_group_rule})
             except n_exceptions.NeutronClientException as ex:
-                app.logger.error(_LE("Error happened during creating a "
-                                     "Neutron security group "
-                                     "rule: %s"), ex)
+                LOG.error(_LE("Error happened during creating a "
+                              "Neutron security group "
+                              "rule: %s"), ex)
                 app.neutron.delete_security_group(sg_id)
                 raise exceptions.ExportPortFailure(
                     ("Could not create required security group rules {0} "
@@ -426,8 +426,8 @@ def _program_expose_ports(options, port_id):
         app.neutron.update_port(port_id,
                                 {'port': {'security_groups': sgs}})
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during updating a "
-                             "Neutron port: %s"), ex)
+        LOG.error(_LE("Error happened during updating a "
+                      "Neutron port: %s"), ex)
         app.neutron.delete_security_group(sg_id)
         raise exceptions.ExportPortFailure(
             ("Could not update port with required security groups{0} "
@@ -441,8 +441,8 @@ def _get_cidr_from_subnetpool(**kwargs):
         pool_id = pool['id']
         prefixes = pool['prefixes']
         if len(prefixes) > 1:
-            app.logger.warning(_LW("More than one prefixes present. "
-                               "Picking first one."))
+            LOG.warning(_LW("More than one prefixes present. "
+                            "Picking first one."))
 
         return ipaddress.ip_network(six.text_type(prefixes[0])), pool_id
     else:
@@ -472,15 +472,15 @@ def revoke_expose_ports(port_id):
                                     {'port':
                                      {'security_groups': existing_sgs}})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during updating a "
-                                 "Neutron port with a new list of "
-                                 "security groups: {0}").format(ex))
+            LOG.error(_LE("Error happened during updating a "
+                          "Neutron port with a new list of "
+                          "security groups: {0}").format(ex))
     try:
         for sg in removing_sgs:
             app.neutron.delete_security_group(sg)
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during deleting a "
-                             "Neutron security group: {0}").format(ex))
+        LOG.error(_LE("Error happened during deleting a "
+                      "Neutron security group: {0}").format(ex))
 
 
 @app.route('/Plugin.Activate', methods=['POST'])
@@ -495,7 +495,7 @@ def plugin_activate():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#handshake  # noqa
     """
-    app.logger.debug("Received /Plugin.Activate")
+    LOG.debug("Received /Plugin.Activate")
     return flask.jsonify(const.SCHEMA['PLUGIN_ACTIVATE'])
 
 
@@ -512,7 +512,7 @@ def plugin_scope():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#set-capability  # noqa
     """
-    app.logger.debug("Received /NetworkDriver.GetCapabilities")
+    LOG.debug("Received /NetworkDriver.GetCapabilities")
     capabilities = {'Scope': cfg.CONF.capability_scope}
     return flask.jsonify(capabilities)
 
@@ -529,7 +529,7 @@ def network_driver_discover_new():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#discovernew-notification  # noqa
     """
-    app.logger.debug("Received /NetworkDriver.DiscoverNew")
+    LOG.debug("Received /NetworkDriver.DiscoverNew")
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -545,7 +545,7 @@ def network_driver_discover_delete():
 
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#discoverdelete-notification  # noqa
     """
-    app.logger.debug("Received /NetworkDriver.DiscoverDelete")
+    LOG.debug("Received /NetworkDriver.DiscoverDelete")
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -589,8 +589,8 @@ def network_driver_create_network():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#create-network  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.CreateNetwork", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.CreateNetwork", json_data)
     jsonschema.validate(json_data, schemata.NETWORK_CREATE_SCHEMA)
     container_net_id = json_data['NetworkID']
     neutron_network_name = utils.make_net_name(container_net_id, tags=app.tag)
@@ -599,9 +599,9 @@ def network_driver_create_network():
     if 'Gateway' in json_data['IPv4Data'][0]:
         gateway_cidr = json_data['IPv4Data'][0]['Gateway']
         gateway_ip = gateway_cidr.split('/')[0]
-        app.logger.debug("gateway_cidr %(gateway_cidr)s, "
-            "gateway_ip %(gateway_ip)s",
-            {'gateway_cidr': gateway_cidr, 'gateway_ip': gateway_ip})
+        LOG.debug("gateway_cidr %(gateway_cidr)s, "
+                  "gateway_ip %(gateway_ip)s",
+                  {'gateway_cidr': gateway_cidr, 'gateway_ip': gateway_ip})
 
     neutron_uuid = None
     neutron_name = None
@@ -631,8 +631,8 @@ def network_driver_create_network():
         try:
             neutron_uuid = app.driver.get_default_network_id()
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Failed to retrieve the default driver "
-                                 "network due to Neutron error: %s"), ex)
+            LOG.error(_LE("Failed to retrieve the default driver "
+                          "network due to Neutron error: %s"), ex)
             raise
 
     if not neutron_uuid and not neutron_name:
@@ -643,9 +643,10 @@ def network_driver_create_network():
         _neutron_net_add_tags(network['network']['id'], container_net_id,
                               tags=app.tag)
 
-        app.logger.info(_LI("Created a new network with name "
-            "%(neutron_network_name)s successfully: %(network)s"),
-            {'neutron_network_name': neutron_network_name, 'network': network})
+        LOG.info(_LI("Created a new network with name "
+                     "%(neutron_network_name)s successfully: %(network)s"),
+                 {'neutron_network_name': neutron_network_name,
+                  'network': network})
     else:
         try:
             if neutron_uuid:
@@ -660,8 +661,8 @@ def network_driver_create_network():
                        "exist.").format(specified_network))
             network_id = networks[0]['id']
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during listing "
-                                 "Neutron networks: %s"), ex)
+            LOG.error(_LE("Error happened during listing "
+                          "Neutron networks: %s"), ex)
             raise
         if app.tag:
             _neutron_net_add_tags(network_id, container_net_id, tags=app.tag)
@@ -669,12 +670,12 @@ def network_driver_create_network():
         else:
             network = app.neutron.update_network(
                 neutron_uuid, {'network': {'name': neutron_network_name}})
-            app.logger.info(_LI("Updated the network with new name "
-                "%(neutron_network_name)s successfully: %(network)s"),
-                {'neutron_network_name': neutron_network_name,
-                 'network': network})
-        app.logger.info(_LI("Using existing network %s "
-                            "successfully"), specified_network)
+            LOG.info(_LI("Updated the network with new name "
+                         "%(neutron_network_name)s successfully: %(network)s"),
+                     {'neutron_network_name': neutron_network_name,
+                      'network': network})
+        LOG.info(_LI("Using existing network %s "
+                     "successfully"), specified_network)
 
     cidr = ipaddress.ip_network(six.text_type(pool_cidr))
     subnets = _get_subnets_by_attrs(network_id=network_id,
@@ -722,8 +723,8 @@ def network_driver_delete_network():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#delete-network  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.DeleteNetwork", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.DeleteNetwork", json_data)
     jsonschema.validate(json_data, schemata.NETWORK_DELETE_SCHEMA)
 
     container_net_id = json_data['NetworkID']
@@ -736,15 +737,14 @@ def network_driver_delete_network():
             existing_networks = _get_networks_by_identifier(
                 existing_network_identifier)
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during listing "
-                                 "Neutron networks: %s"), ex)
+            LOG.error(_LE("Error happened during listing "
+                          "Neutron networks: %s"), ex)
             raise
 
         if existing_networks:
-            app.logger.warning(_LW("Network is a pre existing Neutron "
-                                   "network, not deleting in Neutron. "
-                                   "removing tags: %s"),
-                               existing_network_identifier)
+            LOG.warning(_LW("Network is a pre existing Neutron "
+                            "network, not deleting in Neutron. "
+                            "removing tags: %s"), existing_network_identifier)
             neutron_net_id = existing_networks[0]['id']
             _neutron_net_remove_tags(neutron_net_id, container_net_id)
             _neutron_net_remove_tag(neutron_net_id,
@@ -758,25 +758,24 @@ def network_driver_delete_network():
                     if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
                         app.neutron.delete_subnet(subnet['id'])
                 except n_exceptions.Conflict as ex:
-                    app.logger.error(_LE("Subnet %s is in use, "
-                                         "can't be deleted."), subnet['id'])
+                    LOG.error(_LE("Subnet %s is in use, "
+                                  "can't be deleted."), subnet['id'])
                 except n_exceptions.NeutronClientException as ex:
-                    app.logger.error(_LE("Error happened during deleting a "
-                                         "subnet created by kuryr: %s"), ex)
+                    LOG.error(_LE("Error happened during deleting a "
+                                  "subnet created by kuryr: %s"), ex)
             return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     try:
         filtered_networks = _get_networks_by_identifier(
             neutron_network_identifier)
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during listing "
-                             "Neutron networks: %s"), ex)
+        LOG.error(_LE("Error happened during listing "
+                      "Neutron networks: %s"), ex)
         raise
 
     if not filtered_networks:
-        app.logger.warning(_LW("Network with identifier %s cannot be "
-                               "found"),
-                           neutron_network_identifier)
+        LOG.warning(_LW("Network with identifier %s cannot be found"),
+                    neutron_network_identifier)
     else:
         neutron_network_id = filtered_networks[0]['id']
         filtered_subnets = _get_subnets_by_attrs(
@@ -801,23 +800,22 @@ def network_driver_delete_network():
                     # and continue to proceed.
                     app.neutron.delete_subnet(subnet['id'])
             except n_exceptions.Conflict as ex:
-                app.logger.error(_LE(
-                    "Subnet, %s, is in use. Network can't be deleted."),
-                        subnet['id'])
+                LOG.error(_LE("Subnet, %s, is in use. Network can't "
+                              "be deleted."), subnet['id'])
                 raise
             except n_exceptions.NeutronClientException as ex:
-                app.logger.error(_LE("Error happened during deleting a "
-                                     "Neutron subnets: %s"), ex)
+                LOG.error(_LE("Error happened during deleting a "
+                              "Neutron subnets: %s"), ex)
                 raise
 
         try:
             app.neutron.delete_network(neutron_network_id)
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during deleting a "
-                                 "Neutron network: %s"), ex)
+            LOG.error(_LE("Error happened during deleting a "
+                          "Neutron network: %s"), ex)
             raise
-        app.logger.info(_LI("Deleted the network with ID %s "
-                            "successfully"), neutron_network_id)
+        LOG.info(_LI("Deleted the network with ID %s "
+                     "successfully"), neutron_network_id)
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -856,8 +854,8 @@ def network_driver_create_endpoint():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#create-endpoint  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for "
-                     "/NetworkDriver.CreateEndpoint", json_data)
+    LOG.debug("Received JSON data %s for "
+              "/NetworkDriver.CreateEndpoint", json_data)
     jsonschema.validate(json_data, schemata.ENDPOINT_CREATE_SCHEMA)
 
     endpoint_id = json_data['EndpointID']
@@ -886,22 +884,22 @@ def network_driver_create_endpoint():
         try:
             (stdout, stderr) = app.driver.create_host_iface(
                 endpoint_id, neutron_port, subnets, filtered_networks[0])
-            app.logger.debug(stdout)
+            LOG.debug(stdout)
             if stderr:
-                app.logger.error(stderr)
+                LOG.error(stderr)
         except (exceptions.VethCreationFailure,
                 exceptions.BindingNotSupportedFailure) as ex:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Preparing the veth '
-                                     'pair was failed: %s.'), ex)
+                LOG.error(_LE('Preparing the veth '
+                              'pair was failed: %s.'), ex)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE(
-                    'Could not bind the Neutron port to the veth endpoint.'))
+                LOG.error(_LE('Could not bind the Neutron port to '
+                              'the veth endpoint.'))
         except (exceptions.KuryrException,
                 n_exceptions.NeutronClientException) as ex:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Failed to set up the interface: %s'), ex)
+                LOG.error(_LE('Failed to set up the interface: %s'), ex)
 
         if app.vif_plug_is_fatal:
             port_active = _port_active(neutron_port['id'],
@@ -948,8 +946,8 @@ def network_driver_endpoint_operational_info():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#endpoint-operational-info  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for "
-                     "/NetworkDriver.EndpointOperInfo", json_data)
+    LOG.debug("Received JSON data %s for "
+              "/NetworkDriver.EndpointOperInfo", json_data)
     jsonschema.validate(json_data, schemata.ENDPOINT_INFO_SCHEMA)
 
     endpoint_id = json_data['EndpointID']
@@ -976,8 +974,8 @@ def network_driver_delete_endpoint():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#delete-endpoint  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.DeleteEndpoint", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.DeleteEndpoint", json_data)
     jsonschema.validate(json_data, schemata.ENDPOINT_DELETE_SCHEMA)
 
     neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
@@ -1002,21 +1000,20 @@ def network_driver_delete_endpoint():
         try:
             stdout, stderr = app.driver.delete_host_iface(
                 endpoint_id, neutron_port)
-            app.logger.debug(stdout)
+            LOG.debug(stdout)
             if stderr:
-                app.logger.error(stderr)
+                LOG.error(stderr)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Could not unbind the Neutron port from'
-                                     'the veth endpoint.'))
+                LOG.error(_LE('Could not unbind the Neutron port from'
+                              'the veth endpoint.'))
         except exceptions.VethDeletionFailure:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Cleaning the veth pair up was failed.'))
+                LOG.error(_LE('Cleaning the veth pair up was failed.'))
         except (exceptions.KuryrException,
                 n_exceptions.NeutronClientException) as ex:
             with excutils.save_and_reraise_exception():
-                app.logger.error(_LE('Error while removing the interface: %s'),
-                                 ex)
+                LOG.error(_LE('Error while removing the interface: %s'), ex)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
@@ -1059,8 +1056,7 @@ def network_driver_join():
       https://github.com/docker/libnetwork/blob/master/docs/remote.md#join  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for /NetworkDriver.Join",
-                     json_data)
+    LOG.debug("Received JSON data %s for /NetworkDriver.Join", json_data)
     jsonschema.validate(json_data, schemata.JOIN_SCHEMA)
 
     neutron_network_identifier = _make_net_identifier(json_data['NetworkID'],
@@ -1139,8 +1135,8 @@ def network_driver_leave():
         }
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.Leave", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.Leave", json_data)
     jsonschema.validate(json_data, schemata.LEAVE_SCHEMA)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
@@ -1157,8 +1153,8 @@ def network_driver_program_external_connectivity():
       https://github.com/docker/libnetwork/blob/master/driverapi/driverapi.go
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.ProgramExternalConnectivity", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.ProgramExternalConnectivity", json_data)
     # TODO(banix): Add support for exposed ports
     port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
     if port:
@@ -1179,8 +1175,8 @@ def network_driver_revoke_external_connectivity():
       https://github.com/docker/libnetwork/blob/master/driverapi/driverapi.go
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for"
-                     " /NetworkDriver.RevokeExternalConnectivity", json_data)
+    LOG.debug("Received JSON data %s for"
+              " /NetworkDriver.RevokeExternalConnectivity", json_data)
     # TODO(banix): Add support for removal of exposed ports
     port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
     if port:
@@ -1199,7 +1195,7 @@ def ipam_get_capabilities():
     See the following link for more details about the spec:
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#getcapabilities  # noqa
     """
-    app.logger.debug("Received /IpamDriver.GetCapabilities")
+    LOG.debug("Received /IpamDriver.GetCapabilities")
     capabilities = {'RequiresMACAddress': False}
     return flask.jsonify(capabilities)
 
@@ -1216,7 +1212,7 @@ def ipam_get_default_address_spaces():
 
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#getdefaultaddressspaces  # noqa
     """
-    app.logger.debug("Received /IpamDriver.GetDefaultAddressSpaces")
+    LOG.debug("Received /IpamDriver.GetDefaultAddressSpaces")
     address_spaces = {
         'LocalDefaultAddressSpace': cfg.CONF.local_default_address_space,
         'GlobalDefaultAddressSpace': cfg.CONF.global_default_address_space}
@@ -1251,8 +1247,8 @@ def ipam_request_pool():
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#requestpool  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for /IpamDriver.RequestPool",
-                     json_data)
+    LOG.debug("Received JSON data %s for /IpamDriver.RequestPool",
+              json_data)
     jsonschema.validate(json_data, schemata.REQUEST_POOL_SCHEMA)
     requested_pool = json_data['Pool']
     requested_subpool = json_data['SubPool']
@@ -1265,7 +1261,7 @@ def ipam_request_pool():
     if options:
         pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
     if requested_pool:
-        app.logger.info(_LI("Creating subnetpool with the given pool CIDR"))
+        LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
         if requested_subpool:
             cidr = ipaddress.ip_network(six.text_type(requested_subpool))
         else:
@@ -1273,9 +1269,9 @@ def ipam_request_pool():
         subnet_cidr = six.text_type(cidr)
         subnets_by_cidr = _get_subnets_by_attrs(cidr=subnet_cidr)
         if len(subnets_by_cidr):
-            app.logger.warning(_LW("There is already existing subnet for the "
-                               "same cidr. Please check and specify pool name "
-                               "in Options."))
+            LOG.warning(_LW("There is already existing subnet for the "
+                            "same cidr. Please check and specify pool name "
+                            "in Options."))
         if not pool_name:
             pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
             pools = _get_subnetpools_by_attrs(name=pool_name)
@@ -1332,8 +1328,8 @@ def ipam_request_address():
     https://github.com/docker/libnetwork/blob/master/docs/ipam.md#requestaddress  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for /IpamDriver.RequestAddress",
-                     json_data)
+    LOG.debug("Received JSON data %s for "
+              "/IpamDriver.RequestAddress", json_data)
     jsonschema.validate(json_data, schemata.REQUEST_ADDRESS_SCHEMA)
     pool_id = json_data['PoolID']
     req_address = json_data['Address']
@@ -1372,10 +1368,10 @@ def ipam_request_address():
                     if pool_id in tmp_subnet.get('tags'):
                         subnet = tmp_subnet
                 else:
-                    app.logger.warning(_LW("subnetpool tag for Neutron "
-                                           "subnet %s is missing, cannot "
-                                           "gets the correct subnet."),
-                                       tmp_subnet['id'])
+                    LOG.warning(_LW("subnetpool tag for Neutron "
+                                    "subnet %s is missing, cannot "
+                                    "gets the correct subnet."),
+                                tmp_subnet['id'])
         elif len(subnets_by_cidr) == 1:
             subnet = subnets_by_cidr[0]
 
@@ -1442,13 +1438,13 @@ def ipam_request_address():
                 if app.tag_ext:
                     _neutron_port_add_tag(created_port['id'],
                                           lib_const.DEVICE_OWNER)
-                app.logger.debug("created port %s", created_port)
+                LOG.debug("created port %s", created_port)
                 allocated_address = created_port['fixed_ips'][0]['ip_address']
                 allocated_address = '{}/{}'.format(allocated_address,
                                                    subnet_cidr.prefixlen)
             except n_exceptions.NeutronClientException as ex:
-                app.logger.error(_LE("Error happened during ip allocation on "
-                                     "Neutron side: %s"), ex)
+                LOG.error(_LE("Error happened during ip allocation on "
+                              "Neutron side: %s"), ex)
                 raise
     else:
         # Auxiliary address or gw_address is received at network creation time.
@@ -1482,8 +1478,8 @@ def ipam_release_pool():
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#releasepool  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for /IpamDriver.ReleasePool",
-                     json_data)
+    LOG.debug("Received JSON data %s for /IpamDriver.ReleasePool",
+              json_data)
     jsonschema.validate(json_data, schemata.RELEASE_POOL_SCHEMA)
     pool_id = json_data['PoolID']
 
@@ -1499,11 +1495,11 @@ def ipam_release_pool():
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict as ex:
-        app.logger.info(_LI("The subnetpool with ID %s is still in use."
-                        " It can't be deleted for now."), pool_id)
+        LOG.info(_LI("The subnetpool with ID %s is still in use."
+                     " It can't be deleted for now."), pool_id)
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened during deleting a "
-                             "Neutron subnetpool: %s"), ex)
+        LOG.error(_LE("Error happened during deleting a "
+                      "Neutron subnetpool: %s"), ex)
         raise
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
@@ -1530,8 +1526,8 @@ def ipam_release_address():
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#releaseaddress  # noqa
     """
     json_data = flask.request.get_json(force=True)
-    app.logger.debug("Received JSON data %s for /IpamDriver.ReleaseAddress",
-                     json_data)
+    LOG.debug("Received JSON data %s for /IpamDriver.ReleaseAddress",
+              json_data)
     jsonschema.validate(json_data, schemata.RELEASE_ADDRESS_SCHEMA)
     pool_id = json_data['PoolID']
     rel_address = json_data['Address']
@@ -1542,7 +1538,7 @@ def ipam_release_address():
         subnet_cidr = six.text_type(_get_cidr_from_subnetpool(id=pool_id)[0])
         subnets = _get_subnets_by_attrs(cidr=subnet_cidr)
     if not len(subnets):
-        app.logger.info(_LI("Subnet already deleted."))
+        LOG.info(_LI("Subnet already deleted."))
         return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     iface = ipaddress.ip_interface(six.text_type(rel_address))
@@ -1559,8 +1555,8 @@ def ipam_release_address():
                     if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id']):
                         app.neutron.delete_port(port['id'])
     except n_exceptions.NeutronClientException as ex:
-        app.logger.error(_LE("Error happened while fetching "
-                             "and deleting port, %s"), ex)
+        LOG.error(_LE("Error happened while fetching "
+                      "and deleting port, %s"), ex)
         raise
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])

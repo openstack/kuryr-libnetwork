@@ -152,6 +152,6 @@ class NestedDriver(base.BaseNestedDriver):
                              'allowed_address_pairs': address_pairs
                     }})
         except n_exceptions.NeutronClientException as ex:
-            app.logger.error(_LE("Error happened during updating Neutron "
-                "port %(port_id)s: %(ex)s"), port_id, ex)
+            LOG.error(_LE("Error happened during updating Neutron "
+                          "port %(port_id)s: %(ex)s"), port_id, ex)
             raise
