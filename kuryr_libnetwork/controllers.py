@@ -1357,8 +1357,12 @@ def ipam_request_pool():
     pools = []
     options = json_data.get('Options')
     if options:
-        pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
-        pool_id = options.get(const.NEUTRON_POOL_UUID_OPTION)
+        if v6:
+            pool_name = options.get(const.NEUTRON_V6_POOL_NAME_OPTION)
+            pool_id = options.get(const.NEUTRON_V6_POOL_UUID_OPTION)
+        else:
+            pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
+            pool_id = options.get(const.NEUTRON_POOL_UUID_OPTION)
     if requested_pool:
         LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
         if requested_subpool:
