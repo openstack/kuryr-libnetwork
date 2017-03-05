@@ -34,12 +34,12 @@ REQUEST_POOL_SCHEMA = {
         u'Pool': {
             u'description': u'A range of IP Addresses represented in '
                             u'CIDR format address/mask.',
-            u'$ref': u'#/definitions/commons/definitions/cidr'
+            u'$ref': u'#/definitions/commons/definitions/cidrv4_or_cidrv6'
         },
         u'SubPool': {
             u'description': u'A subset of IP range from Pool in'
                             u'CIDR format address/mask.',
-            u'$ref': u'#/definitions/commons/definitions/cidr'
+            u'$ref': u'#/definitions/commons/definitions/cidrv4_or_cidrv6'
         },
         u'Options': {
             u'type': [u'object', u'null'],

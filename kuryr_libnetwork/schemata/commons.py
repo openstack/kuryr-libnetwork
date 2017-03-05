@@ -38,6 +38,7 @@ IPV6_PATTERN = EPSILON_PATTERN + u'|^' + IPV6_PATTERN_BASE + u'$'
 CIDRV6_PATTERN = EPSILON_PATTERN + u'|^(' + IPV6_PATTERN_BASE + \
                  u'(/(1[0-2][0-8]|[1-9]?[0-9]))' + u')$'
 IPV4_OR_IPV6_PATTERN = IPV4_PATTERN + u'|^' + IPV6_PATTERN_BASE + u'$'
+CIDRV4_OR_CIDRV6_PATTERN = CIDRV4_PATTERN + u'|^' + CIDRV6_PATTERN + u'$'
 UUID_BASE = u'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 UUID_PATTERN = EPSILON_PATTERN + u'|' + UUID_BASE
 
@@ -108,6 +109,11 @@ COMMONS = {
             u'type': u'string',
             u'description': u'A IPv4 CIDR of the subnet.',
             u'example': u'10.0.0.0/24'
+        },
+        u'cidrv4_or_cidrv6': {
+            u'pattern': CIDRV4_OR_CIDRV6_PATTERN,
+            u'type': u'string',
+            u'description': u'An IPv4 or IPv6 CIDR of the subnet.'
         },
         u'id': {
             u'pattern': u'^([0-9a-f]{64})$',
