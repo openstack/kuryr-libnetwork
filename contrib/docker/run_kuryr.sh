@@ -7,6 +7,8 @@ if [ ! -d /etc/kuryr ]; then
 
 bindir = /usr/libexec/kuryr
 capability_scope = $CAPABILITY_SCOPE
+log_dir = /var/log/kuryr
+log_file = kuryr.log
 
 [neutron]
 project_domain_name = $USER_DOMAIN_NAME
