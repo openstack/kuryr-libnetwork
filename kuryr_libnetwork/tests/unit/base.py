@@ -165,13 +165,16 @@ class TestKuryrBase(TestCase):
                        neutron_mac_address="fa:16:3e:20:57:c3",
                        device_owner=None,
                        neutron_trunk_id=None,
-                       tags=None):
+                       tags=None,
+                       name=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createPort  # noqa
+        if not name:
+            name = utils.get_neutron_port_name(docker_endpoint_id)
         fake_port = {
             'port': {
                 "status": neutron_port_status,
-                "name": utils.get_neutron_port_name(docker_endpoint_id),
+                "name": name,
                 "allowed_address_pairs": [],
                 "admin_state_up": True,
                 "network_id": neutron_network_id,

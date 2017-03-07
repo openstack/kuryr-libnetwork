@@ -264,6 +264,18 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
         port = filtered_ports['ports'][0]
         response_port = app.driver.update_port(port, endpoint_id,
                                                interface_mac)
+    # For the container boot from dual-net, request_address will
+    # create two ports(v4 and v6 address), we should only allow one
+    # for port bind.
+    elif num_port == 2:
+        for port in filtered_ports.get('ports', []):
+            port_name = port.get('name')
+            if str(port_name).startswith(const.KURYR_UNBOUND_PORT):
+                app.neutron.delete_port(port['id'])
+        fixed_ips = (
+            lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
+        response_port = _create_port(endpoint_id, neutron_network_id,
+            interface_mac, fixed_ips)
     else:
         raise exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"
@@ -1111,7 +1123,7 @@ def network_driver_join():
             subnet_name = subnet.get('name')
             if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
                 kuryr_subnets.append(subnet)
-        if len(kuryr_subnets) > 1:
+        if len(kuryr_subnets) > 2:
             raise exceptions.DuplicatedResourceException(
                 "Multiple Kuryr subnets exist for the network_id={0} "
                 .format(neutron_network_id))
