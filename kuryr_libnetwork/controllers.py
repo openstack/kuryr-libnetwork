@@ -451,6 +451,27 @@ def _get_cidr_from_subnetpool(**kwargs):
             .format(kwargs))
 
 
+def _update_existing_port(existing_port, fixed_ip):
+    host = existing_port.get('binding:host_id')
+    vif_type = existing_port.get('binding:vif_type')
+    if not host and vif_type == 'unbound':
+        updated_port = {
+            'admin_state_up': True,
+            'binding:host_id': lib_utils.get_hostname(),
+        }
+        updated_port_resp = app.neutron.update_port(
+            existing_port['id'],
+            {'port': updated_port})
+        existing_port = updated_port_resp['port']
+    else:
+        raise exceptions.AddressInUseException(
+            "Requested ip address {0} already belongs to a "
+            "bound Neutron port: {1}".format(fixed_ip,
+            existing_port['id']))
+
+    return existing_port
+
+
 def revoke_expose_ports(port_id):
     sgs = app.neutron.list_security_groups(
         name=utils.get_sg_expose_name(port_id))
@@ -1423,30 +1444,15 @@ def ipam_request_address():
 
                 if num_ports:
                     existing_port = filtered_ports['ports'][0]
-                    created_port_resp = {'port': existing_port}
-                    host = existing_port.get('binding:host_id')
-                    vif_type = existing_port.get('binding:vif_type')
-                    if not host and vif_type == 'unbound':
-                        updated_port = {
-                            'admin_state_up': True,
-                            'binding:host_id': lib_utils.get_hostname(),
-                        }
-                        created_port_resp = app.neutron.update_port(
-                            existing_port['id'],
-                            {'port': updated_port})
-                        created_port = created_port_resp['port']
-                        # REVISIT(yedongcan) For tag-ext extension not
-                        # supported, the Neutron existing port still can not
-                        # be deleted in ipam_release_address.
-                        if app.tag_ext:
-                            _neutron_port_add_tag(
-                                created_port['id'],
-                                const.KURYR_EXISTING_NEUTRON_PORT)
-                    else:
-                        raise exceptions.AddressInUseException(
-                            "Requested ip address {0} already belongs to a "
-                            "bound Neutron port: {1}".format(fixed_ip,
-                            existing_port['id']))
+                    created_port = _update_existing_port(existing_port,
+                                                         fixed_ip)
+                    # REVISIT(yedongcan) For tag-ext extension not
+                    # supported, the Neutron existing port still can not
+                    # be deleted in ipam_release_address.
+                    if app.tag_ext:
+                        _neutron_port_add_tag(
+                            created_port['id'],
+                            const.KURYR_EXISTING_NEUTRON_PORT)
                 else:
                     created_port_resp = app.neutron.create_port({'port': port})
                     created_port = created_port_resp['port']
