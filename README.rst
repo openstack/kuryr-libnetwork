@@ -350,14 +350,31 @@ Known nested-containers limitations
 Testing Kuryr
 -------------
 
-For a quick check that Kuryr is working, create a network::
+For a quick check that Kuryr is working, create a IPv4 network::
 
     $ docker network create --driver kuryr --ipam-driver kuryr \
-    --subnet 10.10.0.0/16 --gateway=10.10.0.1 test_net
+    --subnet 10.10.0.0/16 --gateway=10.10.0.1 test_v4_net
     785f8c1b5ae480c4ebcb54c1c48ab875754e4680d915b270279e4f6a1aa52283
     $ docker network ls
-    NETWORK ID          NAME                DRIVER
-    785f8c1b5ae4        test_net            kuryr
+    NETWORK ID          NAME                   DRIVER           SCOPE
+    785f8c1b5ae4        test_v4_net            kuryr            local
+
+Or you can test with a dual-stack network::
+
+    $ docker network create --driver kuryr --ipam-driver kuryr \
+    --subnet 10.20.0.0/16 --gateway=10.20.0.1 --ipv6 --subnet 2001:db8:a0b:12f0::/64 \
+    --gateway 2001:db8:a0b:12f0::1 test_net
+    81e1a12eedfb168fbe73186faec4db5088aae4457244f960f38e14f4338e5760
+    $ docker network ls
+    NETWORK ID          NAME                DRIVER              SCOPE
+    81e1a12eedfb        test_net            kuryr               local
+
+Known IPv6 network limitations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Due to the `Docker --ipv6 tag bug <https://github.com/docker/docker/issues/28055>`_ version
+1.12 and 1.13 have problem to create network only with IPv6.
+
 
 To test it with tox::
 
