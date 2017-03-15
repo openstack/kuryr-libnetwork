@@ -521,6 +521,22 @@ def revoke_expose_ports(port_id):
                       "Neutron security group: {0}").format(ex))
 
 
+def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
+    new_kuryr_subnet = [{
+        'name': utils.make_subnet_name(pool_cidr),
+        'network_id': network_id,
+        'ip_version': subnet_cidr.version,
+        'cidr': six.text_type(subnet_cidr),
+        'enable_dhcp': app.enable_dhcp,
+    }]
+    new_kuryr_subnet[0]['subnetpool_id'] = pool_id
+    if gateway:
+        new_kuryr_subnet[0]['gateway_ip'] = gateway
+
+    app.neutron.create_subnet({'subnets': new_kuryr_subnet})
+    LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
+
+
 @app.route('/Plugin.Activate', methods=['POST'])
 def plugin_activate():
     """Returns the list of the implemented drivers.
@@ -632,41 +648,73 @@ def network_driver_create_network():
     jsonschema.validate(json_data, schemata.NETWORK_CREATE_SCHEMA)
     container_net_id = json_data['NetworkID']
     neutron_network_name = utils.make_net_name(container_net_id, tags=app.tag)
-    pool_cidr = json_data['IPv4Data'][0]['Pool']
-    gateway_ip = ''
-    if 'Gateway' in json_data['IPv4Data'][0]:
-        gateway_cidr = json_data['IPv4Data'][0]['Gateway']
-        gateway_ip = gateway_cidr.split('/')[0]
-        LOG.debug("gateway_cidr %(gateway_cidr)s, "
-                  "gateway_ip %(gateway_ip)s",
-                  {'gateway_cidr': gateway_cidr, 'gateway_ip': gateway_ip})
+    v4_pool_cidr = None
+    v6_pool_cidr = None
+    v4_gateway_ip = ''
+    v6_gateway_ip = ''
+
+    def _get_gateway_ip(ip_data):
+        gateway_ip = ''
+        if 'Gateway' in ip_data:
+            gateway_cidr = ip_data['Gateway']
+            gateway_ip = gateway_cidr.split('/')[0]
+        return gateway_ip
+
+    if json_data['IPv4Data']:
+        v4_pool_cidr = json_data['IPv4Data'][0]['Pool']
+        v4_gateway_ip = _get_gateway_ip(json_data['IPv4Data'][0])
+
+    if json_data['IPv6Data']:
+        v6_pool_cidr = json_data['IPv6Data'][0]['Pool']
+        v6_gateway_ip = _get_gateway_ip(json_data['IPv6Data'][0])
 
     neutron_uuid = None
     neutron_name = None
-    pool_name = ''
-    pool_id = ''
+    existing_pool_id = ''
+    v4_pool_name = ''
+    v4_pool_id = ''
+    v6_pool_name = ''
+    v6_pool_id = ''
     options = json_data.get('Options')
     if options:
         generic_options = options.get(const.NETWORK_GENERIC_OPTIONS)
         if generic_options:
             neutron_uuid = generic_options.get(const.NEUTRON_UUID_OPTION)
             neutron_name = generic_options.get(const.NEUTRON_NAME_OPTION)
-            pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
-            pool_id = generic_options.get(const.NEUTRON_POOL_UUID_OPTION)
+            v4_pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
+            v6_pool_name = generic_options.get(
+                const.NEUTRON_V6_POOL_NAME_OPTION)
+            existing_pool_id = generic_options.get(
+                const.NEUTRON_POOL_UUID_OPTION)
 
-    if pool_id:
-        pools = _get_subnetpools_by_attrs(id=pool_id)
-    elif pool_name:
-        pools = _get_subnetpools_by_attrs(name=pool_name)
+    def _get_pool_id(pool_name, pool_cidr):
+        pool_id = ''
+        if not pool_name and pool_cidr:
+            pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
+        if pool_name:
+            pools = _get_subnetpools_by_attrs(name=pool_name)
+            if pools:
+                pool_id = pools[0]['id']
+            else:
+                raise exceptions.KuryrException(
+                    ("Specified pool name({0}) does not "
+                     "exist.").format(pool_name))
+        return pool_id
+
+    if existing_pool_id:
+        pools = _get_subnetpools_by_attrs(id=existing_pool_id)
+        if pools:
+            existing_pool_id = pools[0]['id']
+        else:
+            raise exceptions.KuryrException(
+                ("Specified pool id({0}) does not "
+                 "exist.").format(existing_pool_id))
+
+    if existing_pool_id:
+        v4_pool_id = existing_pool_id
     else:
-        pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-        pools = _get_subnetpools_by_attrs(name=pool_name)
-
-    if not pools:
-        raise exceptions.KuryrException(
-              ("Specified pool id/name({0}) does not "
-               "exist.").format(pool_id or pool_name))
-    pool_id = pools[0]['id']
+        v4_pool_id = _get_pool_id(v4_pool_name, v4_pool_cidr)
+    v6_pool_id = _get_pool_id(v6_pool_name, v6_pool_cidr)
 
     # let the user override the driver default
     if not neutron_uuid and not neutron_name:
@@ -719,32 +767,40 @@ def network_driver_create_network():
         LOG.info(_LI("Using existing network %s "
                      "successfully"), specified_network)
 
-    cidr = ipaddress.ip_network(six.text_type(pool_cidr))
-    subnets = _get_subnets_by_attrs(network_id=network_id,
-                                    cidr=six.text_type(cidr))
-    if len(subnets) > 1:
-        raise exceptions.DuplicatedResourceException(
-            "Multiple Neutron subnets exist for the network_id={0}"
-            "and cidr={1}".format(network_id, cidr))
+    def _get_existing_neutron_subnets(pool_cidr, network_id):
+        cidr = None
+        subnets = []
+        if pool_cidr:
+            cidr = ipaddress.ip_network(six.text_type(pool_cidr))
+            subnets = _get_subnets_by_attrs(network_id=network_id,
+                                            cidr=six.text_type(cidr))
+        if len(subnets) > 1:
+            raise exceptions.DuplicatedResourceException(
+                "Multiple Neutron subnets exist for the network_id={0}"
+                "and cidr={1}".format(network_id, cidr))
+        return cidr, subnets
+
+    v4_cidr, v4_subnets = _get_existing_neutron_subnets(v4_pool_cidr,
+                                                        network_id)
+    v6_cidr, v6_subnets = _get_existing_neutron_subnets(v6_pool_cidr,
+                                                        network_id)
+
+    def _add_tag_for_existing_subnet(subnet, pool_id):
+        if len(subnet) == 1:
+            _neutron_subnet_add_tag(subnet[0]['id'], pool_id)
 
     # This will add a subnetpool_id(created by kuryr) tag
-    # for existing Neutron subnet.
-    if app.tag and len(subnets) == 1:
-        _neutron_subnet_add_tag(subnets[0]['id'], pool_id)
+    # for existing Neutron subnets.
+    if app.tag:
+        _add_tag_for_existing_subnet(v4_subnets, v4_pool_id)
+        _add_tag_for_existing_subnet(v6_subnets, v6_pool_id)
 
-    if not subnets:
-        new_subnets = [{
-            'name': utils.make_subnet_name(pool_cidr),
-            'network_id': network_id,
-            'ip_version': cidr.version,
-            'cidr': six.text_type(cidr),
-            'enable_dhcp': app.enable_dhcp,
-        }]
-        new_subnets[0]['subnetpool_id'] = pool_id
-        if gateway_ip:
-            new_subnets[0]['gateway_ip'] = gateway_ip
-
-        app.neutron.create_subnet({'subnets': new_subnets})
+    if not v4_subnets and v4_pool_cidr:
+        _create_kuryr_subnet(v4_pool_cidr, v4_cidr, v4_pool_id,
+                             network_id, v4_gateway_ip)
+    if not v6_subnets and v6_pool_cidr:
+        _create_kuryr_subnet(v6_pool_cidr, v6_cidr, v6_pool_id,
+                             network_id, v6_gateway_ip)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 

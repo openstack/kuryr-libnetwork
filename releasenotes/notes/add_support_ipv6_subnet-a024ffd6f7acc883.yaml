@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Support creating an IPv6 subnet from Docker client. Users can pass --ipv6 and
+    IPv6 subnet attribute in CLI.
+issues:
+  - |
+    Docker version 1.12 and 1.13 have problem to pass ipv6 tag [1], according to
+    this limitation, current support is for dual-stack only.
+    [1] https://github.com/docker/docker/issues/28055

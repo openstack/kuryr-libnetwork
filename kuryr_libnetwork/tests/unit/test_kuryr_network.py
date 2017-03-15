@@ -60,13 +60,21 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             'Options': {}
         }
 
-        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+        fake_kuryr_v4_subnetpool_id = uuidutils.generate_uuid()
+        fake_v4_pool_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
-        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
-        kuryr_subnetpools = self._get_fake_v4_subnetpools(
-            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
-        mock_list_subnetpools.return_value = {
-            'subnetpools': kuryr_subnetpools['subnetpools']}
+        kuryr_v4_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_v4_subnetpool_id, name=fake_v4_pool_name)
+
+        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
+        fake_v6_pool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv6Data'][0]['Pool'])
+        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
+            fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
+        mock_list_subnetpools.side_effect = [
+            {'subnetpools': kuryr_v4_subnetpools['subnetpools']},
+            {'subnetpools': kuryr_v6_subnetpools['subnetpools']}
+        ]
 
         fake_request = {
             "network": {
@@ -78,7 +86,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         response = self._invoke_create_request(network_request)
         self.assertEqual(401, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
+        mock_list_subnetpools.assert_any_call(name=fake_v4_pool_name)
+        mock_list_subnetpools.assert_any_call(name=fake_v6_pool_name)
         mock_create_network.assert_called_with(fake_request)
         self.assertIn('Err', decoded_json)
         self.assertEqual(
@@ -107,19 +116,28 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             'Options': {}
         }
 
-        fake_subnetpool_name = lib_utils.get_neutron_subnetpool_name(
+        fake_kuryr_v4_subnetpool_id = uuidutils.generate_uuid()
+        fake_v4_pool_name = lib_utils.get_neutron_subnetpool_name(
             network_request['IPv4Data'][0]['Pool'])
-        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
-        kuryr_subnetpools = self._get_fake_v4_subnetpools(
-            fake_kuryr_subnetpool_id, name=fake_subnetpool_name)
-        mock_list_subnetpools.return_value = {
-            'subnetpools': kuryr_subnetpools['subnetpools']}
+        kuryr_v4_subnetpools = self._get_fake_v4_subnetpools(
+            fake_kuryr_v4_subnetpool_id, name=fake_v4_pool_name)
+
+        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
+        fake_v6_pool_name = lib_utils.get_neutron_subnetpool_name(
+            network_request['IPv6Data'][0]['Pool'])
+        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
+            fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
+        mock_list_subnetpools.side_effect = [
+            {'subnetpools': kuryr_v4_subnetpools['subnetpools']},
+            {'subnetpools': kuryr_v6_subnetpools['subnetpools']}
+        ]
 
         mock_get_default_network_id.side_effect = exceptions.Unauthorized
         response = self._invoke_create_request(network_request)
         self.assertEqual(401, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        mock_list_subnetpools.assert_called_with(name=fake_subnetpool_name)
+        mock_list_subnetpools.assert_any_call(name=fake_v4_pool_name)
+        mock_list_subnetpools.assert_any_call(name=fake_v6_pool_name)
         mock_get_default_network_id.assert_called()
         self.assertIn('Err', decoded_json)
         self.assertEqual(
