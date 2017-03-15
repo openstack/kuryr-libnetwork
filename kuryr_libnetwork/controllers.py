@@ -640,17 +640,21 @@ def network_driver_create_network():
             neutron_uuid = generic_options.get(const.NEUTRON_UUID_OPTION)
             neutron_name = generic_options.get(const.NEUTRON_NAME_OPTION)
             pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
+            pool_id = generic_options.get(const.NEUTRON_POOL_UUID_OPTION)
 
-    if not pool_name:
-        pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-
-    pools = _get_subnetpools_by_attrs(name=pool_name)
-    if pools:
-        pool_id = pools[0]['id']
+    if pool_id:
+        pools = _get_subnetpools_by_attrs(id=pool_id)
+    elif pool_name:
+        pools = _get_subnetpools_by_attrs(name=pool_name)
     else:
+        pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
+        pools = _get_subnetpools_by_attrs(name=pool_name)
+
+    if not pools:
         raise exceptions.KuryrException(
-              ("Specified pool name({0}) does not "
-               "exist.").format(pool_name))
+              ("Specified pool id/name({0}) does not "
+               "exist.").format(pool_id or pool_name))
+    pool_id = pools[0]['id']
 
     # let the user override the driver default
     if not neutron_uuid and not neutron_name:
@@ -1279,13 +1283,14 @@ def ipam_request_pool():
     requested_pool = json_data['Pool']
     requested_subpool = json_data['SubPool']
     v6 = json_data['V6']
-    pool_id = ''
     subnet_cidr = ''
     pool_name = ''
+    pool_id = ''
     pools = []
     options = json_data.get('Options')
     if options:
         pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
+        pool_id = options.get(const.NEUTRON_POOL_UUID_OPTION)
     if requested_pool:
         LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
         if requested_subpool:
@@ -1298,7 +1303,7 @@ def ipam_request_pool():
             LOG.warning(_LW("There is already existing subnet for the "
                             "same cidr. Please check and specify pool name "
                             "in Options."))
-        if not pool_name:
+        if not pool_name and not pool_id:
             pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
             pools = _get_subnetpools_by_attrs(name=pool_name)
             if len(pools):
@@ -1315,11 +1320,14 @@ def ipam_request_pool():
             pool = created_subnetpool_response['subnetpool']
             pool_id = pool['id']
         else:
-            existing_pools = _get_subnetpools_by_attrs(name=pool_name)
+            if pool_id:
+                existing_pools = _get_subnetpools_by_attrs(id=pool_id)
+            else:
+                existing_pools = _get_subnetpools_by_attrs(name=pool_name)
             if not existing_pools:
                 raise exceptions.KuryrException(
-                    ("Specified subnetpool name({0}) does not "
-                    "exist.").format(pool_name))
+                    ("Specified subnetpool id/name({0}) does not "
+                    "exist.").format(pool_id or pool_name))
             pool_id = existing_pools[0]['id']
             LOG.info(_LI("Using existing Neutron subnetpool %s successfully"),
                      pool_id)
