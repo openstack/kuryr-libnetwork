@@ -751,7 +751,7 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch(
         'kuryr_libnetwork.controllers.app.driver.get_default_network_id')
     @ddt.data((True), (False))
-    def test_network_driver_create_network_with_v4_pool_name_option(self,
+    def test_network_driver_create_network_with_pool_name_option(self,
             driver_default_net, mock_get_default_network_id,
             mock_list_networks, mock_create_network, mock_add_tag,
             mock_create_subnet, mock_list_subnetpools,
@@ -761,6 +761,11 @@ class TestKuryr(base.TestKuryrBase):
         fake_v4_pool_name = "fake_pool_name"
         kuryr_v4_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_v4_subnetpool_id, name=fake_v4_pool_name)
+
+        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
+        fake_v6_pool_name = "fake_v6pool_name"
+        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
+            fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
 
         docker_network_id = lib_utils.get_hash()
         network_request = {
@@ -778,15 +783,11 @@ class TestKuryr(base.TestKuryrBase):
             'Options': {
                 'com.docker.network.enable_ipv6': True,
                 'com.docker.network.generic': {
-                    'neutron.pool.name': fake_v4_pool_name
+                    'neutron.pool.name': fake_v4_pool_name,
+                    'neutron.pool.v6.name': fake_v6_pool_name,
                 }
             }
         }
-        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
-        fake_v6_pool_name = lib_utils.get_neutron_subnetpool_name(
-            network_request['IPv6Data'][0]['Pool'])
-        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
-            fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
 
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
@@ -926,6 +927,10 @@ class TestKuryr(base.TestKuryrBase):
         kuryr_v4_subnetpools = self._get_fake_v4_subnetpools(
             fake_kuryr_v4_subnetpool_id)
 
+        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
+        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
+            fake_kuryr_v6_subnetpool_id)
+
         docker_network_id = lib_utils.get_hash()
         network_request = {
             'NetworkID': docker_network_id,
@@ -943,14 +948,10 @@ class TestKuryr(base.TestKuryrBase):
                 'com.docker.network.enable_ipv6': False,
                 'com.docker.network.generic': {
                     'neutron.pool.uuid': fake_kuryr_v4_subnetpool_id,
+                    'neutron.pool.v6.uuid': fake_kuryr_v6_subnetpool_id,
                 }
             }
         }
-        fake_kuryr_v6_subnetpool_id = uuidutils.generate_uuid()
-        fake_v6_pool_name = lib_utils.get_neutron_subnetpool_name(
-            network_request['IPv6Data'][0]['Pool'])
-        kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
-            fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
 
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa

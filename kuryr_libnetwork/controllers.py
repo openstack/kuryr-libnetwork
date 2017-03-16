@@ -670,7 +670,6 @@ def network_driver_create_network():
 
     neutron_uuid = None
     neutron_name = None
-    existing_pool_id = ''
     v4_pool_name = ''
     v4_pool_id = ''
     v6_pool_name = ''
@@ -684,8 +683,10 @@ def network_driver_create_network():
             v4_pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
             v6_pool_name = generic_options.get(
                 const.NEUTRON_V6_POOL_NAME_OPTION)
-            existing_pool_id = generic_options.get(
+            v4_pool_id = generic_options.get(
                 const.NEUTRON_POOL_UUID_OPTION)
+            v6_pool_id = generic_options.get(
+                const.NEUTRON_V6_POOL_UUID_OPTION)
 
     def _get_pool_id(pool_name, pool_cidr):
         pool_id = ''
@@ -701,20 +702,21 @@ def network_driver_create_network():
                      "exist.").format(pool_name))
         return pool_id
 
-    if existing_pool_id:
-        pools = _get_subnetpools_by_attrs(id=existing_pool_id)
-        if pools:
-            existing_pool_id = pools[0]['id']
-        else:
+    def _verify_pool_id(pool_id):
+        pools = _get_subnetpools_by_attrs(id=pool_id)
+        if not pools:
             raise exceptions.KuryrException(
                 ("Specified pool id({0}) does not "
-                 "exist.").format(existing_pool_id))
+                 "exist.").format(pool_id))
 
-    if existing_pool_id:
-        v4_pool_id = existing_pool_id
+    if v4_pool_id:
+        _verify_pool_id(v4_pool_id)
     else:
         v4_pool_id = _get_pool_id(v4_pool_name, v4_pool_cidr)
-    v6_pool_id = _get_pool_id(v6_pool_name, v6_pool_cidr)
+    if v6_pool_id:
+        _verify_pool_id(v6_pool_id)
+    else:
+        v6_pool_id = _get_pool_id(v6_pool_name, v6_pool_cidr)
 
     # let the user override the driver default
     if not neutron_uuid and not neutron_name:
