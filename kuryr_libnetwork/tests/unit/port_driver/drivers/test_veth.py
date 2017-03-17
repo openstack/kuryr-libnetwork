@@ -33,7 +33,7 @@ class TestVethDriver(base.TestKuryrBase):
     def test_get_default_network_id(self):
         veth_driver = veth.VethDriver()
         host_network = veth_driver.get_default_network_id()
-        self.assertEqual(host_network, None)
+        self.assertIsNone(host_network)
 
     @mock.patch.object(binding, 'port_bind')
     def test_create_host_iface(self, mock_port_bind):
