@@ -126,18 +126,22 @@ class TestKuryrIpam(base.TestKuryrBase):
             kuryr_subnetpools = self._get_fake_v4_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr],
                 name=fake_name)
+            options = {
+                const.NEUTRON_POOL_NAME_OPTION: fake_name}
         else:
             kuryr_subnetpools = self._get_fake_v6_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr],
                 name=fake_name)
+            options = {
+                const.NEUTRON_V6_POOL_NAME_OPTION: fake_name}
         mock_list_subnetpools.return_value = kuryr_subnetpools
 
         fake_request = {
             'AddressSpace': '',
             'Pool': pool_cidr,
             'SubPool': pool_cidr,
-            'Options': {'neutron.pool.name': fake_name},
-            'V6': False
+            'Options': options,
+            'V6': False if pool_cidr == FAKE_IP4_CIDR else True
         }
         response = self.app.post('/IpamDriver.RequestPool',
                                 content_type='application/json',
@@ -160,17 +164,21 @@ class TestKuryrIpam(base.TestKuryrBase):
         if pool_cidr == FAKE_IP4_CIDR:
             kuryr_subnetpools = self._get_fake_v4_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr])
+            options = {
+                const.NEUTRON_POOL_UUID_OPTION: fake_kuryr_subnetpool_id}
         else:
             kuryr_subnetpools = self._get_fake_v6_subnetpools(
                 fake_kuryr_subnetpool_id, prefixes=[pool_cidr])
+            options = {
+                const.NEUTRON_V6_POOL_UUID_OPTION: fake_kuryr_subnetpool_id}
         mock_list_subnetpools.return_value = kuryr_subnetpools
 
         fake_request = {
             'AddressSpace': '',
             'Pool': pool_cidr,
             'SubPool': pool_cidr,
-            'Options': {'neutron.pool.uuid': fake_kuryr_subnetpool_id},
-            'V6': False
+            'Options': options,
+            'V6': False if pool_cidr == FAKE_IP4_CIDR else True
         }
         response = self.app.post('/IpamDriver.RequestPool',
                                 content_type='application/json',
