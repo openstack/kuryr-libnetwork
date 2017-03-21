@@ -1057,6 +1057,72 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_delete_port.assert_called_with(
             fake_port['port']['id'])
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
+    @mock.patch('kuryr_libnetwork.controllers.app')
+    def test_ipam_driver_release_address_w_existing_port(self,
+            mock_app, mock_list_subnets, mock_list_ports, mock_delete_port,
+            mock_update_port, mock_remove_tag):
+        # TODO(hongbin): Current implementation still delete existing ports
+        # if tag extension is not enabled. This needs to be fixed and test
+        # case needs to be added after.
+        mock_app.tag_ext = True
+        # faking list_subnets
+        fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
+        docker_network_id = lib_utils.get_hash()
+        docker_endpoint_id = lib_utils.get_hash()
+        subnet_v4_id = uuidutils.generate_uuid()
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            docker_network_id, docker_endpoint_id, subnet_v4_id,
+            subnetpool_id=fake_kuryr_subnetpool_id,
+            cidr=FAKE_IP4_CIDR)
+        fake_subnet_response = {
+            'subnets': [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        mock_list_subnets.return_value = fake_subnet_response
+
+        fake_ip4 = '10.0.0.5'
+        # faking list_ports and delete_port
+        neutron_network_id = uuidutils.generate_uuid()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_port = base.TestKuryrBase._get_fake_port(
+            docker_endpoint_id, neutron_network_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            subnet_v4_id,
+            neutron_subnet_v4_address=fake_ip4,
+            device_owner=lib_const.DEVICE_OWNER,
+            tags=const.KURYR_EXISTING_NEUTRON_PORT)
+
+        fake_port['port']['fixed_ips'] = [
+            {'subnet_id': subnet_v4_id, 'ip_address': fake_ip4}
+        ]
+
+        list_port_response = {'ports': [fake_port['port']]}
+        mock_list_ports.return_value = list_port_response
+
+        fake_request = {
+            'PoolID': fake_kuryr_subnetpool_id,
+            'Address': fake_ip4
+        }
+        response = self.app.post('/IpamDriver.ReleaseAddress',
+                                content_type='application/json',
+                                data=jsonutils.dumps(fake_request))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_subnets.assert_called_with(
+            subnetpool_id=fake_kuryr_subnetpool_id)
+        mock_list_ports.assert_called()
+        mock_update_port.assert_called()
+        mock_delete_port.assert_not_called()
+        mock_remove_tag.assert_called_with('ports',
+                                           fake_port['port']['id'],
+                                           const.KURYR_EXISTING_NEUTRON_PORT)
+
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')

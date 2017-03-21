@@ -317,6 +317,10 @@ def _neutron_port_add_tag(portid, tag):
     _neutron_add_tag('ports', portid, tag)
 
 
+def _neutron_port_remove_tag(portid, tag):
+    _neutron_remove_tag('ports', portid, tag)
+
+
 def _neutron_add_tag(resource_type, resource_id, tag):
     try:
         app.neutron.add_tag(resource_type, resource_id, tag)
@@ -1671,6 +1675,12 @@ def ipam_release_address():
                 for tmp_subnet in subnets:
                     if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id']):
                         app.neutron.delete_port(port['id'])
+            elif tags and const.KURYR_EXISTING_NEUTRON_PORT in tags:
+                updated_port = {'name': '', 'device_owner': '',
+                                'device_id': '', 'binding:host_id': ''}
+                app.neutron.update_port(port['id'], {'port': updated_port})
+                _neutron_port_remove_tag(port['id'],
+                                         const.KURYR_EXISTING_NEUTRON_PORT)
     except n_exceptions.NeutronClientException as ex:
         LOG.error(_LE("Error happened while fetching "
                       "and deleting port, %s"), ex)

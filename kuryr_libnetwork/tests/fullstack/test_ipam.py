@@ -387,7 +387,7 @@ class IpamTest(kuryr_base.KuryrBaseTest):
                         (const.KURYR_EXISTING_NEUTRON_PORT in port['tags'] or
                          port['name'] ==
                          utils.get_neutron_port_name(port['device_id']))]
-        self.assertEqual(1, len(neutron_port))
+        self.assertEqual(0, len(neutron_port))
 
         # Cleanup resources
         self.docker_client.stop(container=container_id)
