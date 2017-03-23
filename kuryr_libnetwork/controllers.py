@@ -1370,7 +1370,6 @@ def ipam_request_pool():
             pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
             pool_id = options.get(const.NEUTRON_POOL_UUID_OPTION)
     if requested_pool:
-        LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
         if requested_subpool:
             cidr = ipaddress.ip_network(six.text_type(requested_subpool))
         else:
@@ -1393,6 +1392,7 @@ def ipam_request_pool():
                 'name': pool_name,
                 'default_prefixlen': cidr.prefixlen,
                 'prefixes': [subnet_cidr]}
+            LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
             created_subnetpool_response = app.neutron.create_subnetpool(
                 {'subnetpool': new_subnetpool})
             pool = created_subnetpool_response['subnetpool']
