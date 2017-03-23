@@ -24,7 +24,7 @@ fi
 
 /usr/sbin/uwsgi \
     --plugin /usr/lib/uwsgi/python \
-    --http-socket :23750 \
+    --http-socket $HTTP_SOCKET \
     -w kuryr_libnetwork.server:app \
     --master \
     --processes "$PROCESSES"

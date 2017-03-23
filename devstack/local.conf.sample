@@ -9,6 +9,9 @@ SERVICE_PASSWORD=pass
 SERVICE_TOKEN=pass
 ADMIN_PASSWORD=pass
 
+# If you want to try pluginv2 in devstack, set to True
+ENABLE_PLUGINV2=False
+
 # Install kuryr git master source code by default.
 # If you want to use stable kuryr lib, please comment out this line.
 LIBS_FROM_GIT=kuryr

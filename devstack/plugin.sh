@@ -75,7 +75,12 @@ function configure_kuryr {
         "$KURYR_AUTH_CACHE_DIR" neutron
     fi
 
-    iniset -sudo ${KURYR_CONFIG} DEFAULT bindir "$binding_path/libexec/kuryr"
+    if [[ "$ENABLE_PLUGINV2" == "True" ]]; then
+        # bindir is /user/libexec/kuryr in docker image
+        iniset -sudo ${KURYR_CONFIG} DEFAULT bindir "/usr/libexec/kuryr"
+    else
+        iniset -sudo ${KURYR_CONFIG} DEFAULT bindir "$binding_path/libexec/kuryr"
+    fi
 }
 
 
@@ -94,23 +99,30 @@ if is_service_enabled kuryr-libnetwork; then
             fi
             sudo cp -rf ${DEST}/kuryr/usr/libexec/kuryr/* ${DISTRO_DISTUTILS_DATA_PATH}/libexec/kuryr
         fi
+        if [[ ! -d "${KURYR_LOG_DIR}" ]]; then
+            echo -n "${KURYR_LOG_DIR} directory is missing. Creating it... "
+            sudo mkdir -p ${KURYR_LOG_DIR}
+            echo "Done"
+        fi
         install_etcd_data_store
         setup_develop $KURYR_HOME
 
     elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
 
-        if [[ ! -d "${KURYR_ACTIVATOR_DIR}" ]]; then
-            echo -n "${KURYR_ACTIVATOR_DIR} directory is missing. Creating it... "
-            sudo mkdir -p ${KURYR_ACTIVATOR_DIR}
-            echo "Done"
-        fi
+        # This is needed in legacy plugin
+        if [[ "$ENABLE_PLUGINV2" != "True" ]]; then
+            if [[ ! -d "${KURYR_ACTIVATOR_DIR}" ]]; then
+                echo -n "${KURYR_ACTIVATOR_DIR} directory is missing. Creating it... "
+                sudo mkdir -p ${KURYR_ACTIVATOR_DIR}
+                echo "Done"
+            fi
 
-        if [[ ! -f "${KURYR_ACTIVATOR}" ]]; then
-             echo -n "${KURYR_ACTIVATOR} is missing. Copying the default one... "
-             sudo cp ${KURYR_DEFAULT_ACTIVATOR} ${KURYR_ACTIVATOR}
-             echo "Done"
+            if [[ ! -f "${KURYR_ACTIVATOR}" ]]; then
+                 echo -n "${KURYR_ACTIVATOR} is missing. Copying the default one... "
+                 sudo cp ${KURYR_DEFAULT_ACTIVATOR} ${KURYR_ACTIVATOR}
+                 echo "Done"
+            fi
         fi
-
 
         create_kuryr_account
         configure_kuryr "${DISTRO_DISTUTILS_DATA_PATH}"
@@ -178,14 +190,30 @@ if is_service_enabled kuryr-libnetwork; then
         #               If Kuryr start up in "post-config" phase, there is no way to make sure
         #               Kuryr can start before neutron-server, so Kuryr start in "extra" phase.
         #               Bug: https://bugs.launchpad.net/kuryr/+bug/1587522
-        run_process kuryr-libnetwork "/usr/bin/sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
+        if [[ "$ENABLE_PLUGINV2" == "True" ]]; then
+            # Build pluginv2 rootfs
+            cd $DEST/kuryr-libnetwork/
+            sudo sh contrib/docker/v2plugin/v2plugin_rootfs.sh
+
+            # Build and install pluginv2 image
+            sudo docker plugin create kuryr/libnetwork2 ./
+
+            # Enable pluginv2
+            sudo docker plugin enable kuryr/libnetwork2:latest
+        else
+            run_process kuryr-libnetwork "/usr/bin/sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
+        fi
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
 
     fi
 
     if [[ "$1" == "unstack" ]]; then
-        stop_process kuryr-libnetwork
+        if [[ "$ENABLE_PLUGINV2" == "True" ]]; then
+            sudo docker plugin disable kuryr/libnetwork2:latest
+        else
+            stop_process kuryr-libnetwork
+        fi
         stop_process etcd-server
         rm -rf $DEST/etcd/
         stop_process docker-engine

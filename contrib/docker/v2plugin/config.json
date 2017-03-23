@@ -1,0 +1,117 @@
+{
+    "Description": "kuryr-libnetwork plugin for Docker",
+    "Documentation": "http://docs.openstack.org/developer/kuryr-libnetwork",
+    "Entrypoint": ["/opt/kuryr-libnetwork/contrib/docker/run_kuryr.sh"],
+    "Interface" : {
+        "Types": ["docker.networkdriver/1.0", "docker.ipamdriver/1.0"],
+        "Socket": "kuryr-libnetwork.sock"
+    },
+    "network": {
+        "type": "host"
+    },
+    "Env": [
+        {
+            "Description": "Username",
+            "Name": "SERVICE_USER",
+            "Settable": [
+                "value"
+            ],
+            "Value": "admin"
+        },
+        {
+            "Description": "Project name to scope to",
+            "Name": "SERVICE_PROJECT_NAME",
+            "Settable": [
+                "value"
+            ],
+            "Value": "admin"
+        },
+        {
+            "Description": "User's password",
+            "Name": "SERVICE_PASSWORD",
+            "Settable": [
+                "value"
+            ],
+            "Value": "pass"
+        },
+        {
+            "Description": "Domain name containing project",
+            "Name": "SERVICE_DOMAIN_NAME",
+            "Settable": [
+                "value"
+            ],
+            "Value": "Default"
+        },
+        {
+            "Description": "User's domain name",
+            "Name": "USER_DOMAIN_NAME",
+            "Settable": [
+                "value"
+            ],
+            "Value": "Default"
+        },
+        {
+            "Description": "Authentication URL",
+            "Name": "IDENTITY_URL",
+            "Settable": [
+                "value"
+            ],
+            "Value": "http://127.0.0.1:35357/v3"
+        },
+        {
+            "Description": "Kuryr plugin scope reported to libnetwork",
+            "Name": "CAPABILITY_SCOPE",
+            "Settable": [
+                "value"
+            ],
+            "Value": "local"
+        },
+        {
+            "Description": "http-socket in uwsgi",
+            "Name": "HTTP_SOCKET",
+            "Settable": [
+                "value"
+            ],
+            "Value": "/run/docker/plugins/kuryr-libnetwork.sock"
+        },
+        {
+            "Description": "log level",
+            "Name": "LOG_LEVEL",
+            "Settable": [
+                "value"
+            ],
+            "Value": "INFO"
+        },
+        {
+            "Description": "uwsgi process number",
+            "Name": "PROCESSES",
+            "Settable": [
+                "value"
+            ],
+            "Value": "2"
+        }
+    ],
+    "mounts": [
+        {
+            "type": "bind",
+            "options": ["rbind", "rw"],
+            "source": "/var/run/openvswitch",
+            "destination": "/var/run/openvswitch"
+        },
+        {
+            "type": "bind",
+            "options": ["rbind", "rw"],
+            "source": "/var/log/kuryr",
+            "destination": "/var/log/kuryr"
+        },
+        {
+            "type": "bind",
+            "options": ["rbind", "ro"],
+            "source": "/etc/kuryr",
+            "destination": "/etc/kuryr"
+        }
+    ],
+    "Linux": {
+        "Capabilities": ["CAP_NET_ADMIN"]
+    }
+}
