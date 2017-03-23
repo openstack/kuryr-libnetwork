@@ -27,5 +27,4 @@ fi
     --http-socket :23750 \
     -w kuryr_libnetwork.server:app \
     --master \
-    --processes "$PROCESSES" \
-    --threads "$THREADS"
+    --processes "$PROCESSES"
