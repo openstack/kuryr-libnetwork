@@ -173,6 +173,91 @@ class IpamTest(kuryr_base.KuryrBaseTest):
         self.docker_client.remove_network(container_net_id)
 
     def test_container_ipam_release_address(self):
+        fake_ipam = {
+            "Driver": "kuryr",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.15.0.0/16",
+                    "IPRange": "10.15.0.0/24",
+                    "Gateway": "10.15.0.1"
+                }
+            ]
+        }
+
+        container_net_name = lib_utils.get_random_string(8)
+        container_net = self.docker_client.create_network(
+            name=container_net_name,
+            driver='kuryr',
+            ipam=fake_ipam)
+        container_net_id = container_net.get('Id')
+        try:
+            networks = self.neutron_client.list_networks(
+                tags=utils.make_net_tags(container_net_id))
+        except Exception as e:
+            self.docker_client.remove_network(container_net_id)
+            message = ("Failed to list neutron networks: %s")
+            self.fail(message % e.args[0])
+        self.assertEqual(1, len(networks['networks']))
+
+        # Boot a container, and connect to the docker network.
+        container_name = lib_utils.get_random_string(8)
+        container = self.docker_client.create_container(
+            image='kuryr/busybox',
+            command='/bin/sleep 600',
+            hostname='kuryr_test_container',
+            name=container_name)
+        warn_msg = container.get('Warning')
+        container_id = container.get('Id')
+        self.assertIsNone(warn_msg, 'Warn in creating container')
+        self.assertIsNotNone(container_id, 'Create container id must not '
+                                           'be None')
+        self.docker_client.start(container=container_id)
+        self.docker_client.connect_container_to_network(container_id,
+                                                        container_net_id)
+        try:
+            ports = self.neutron_client.list_ports(
+                network_id=networks['networks'][0]['id'])
+        except Exception as e:
+            self.docker_client.disconnect_container_from_network(
+                container_id,
+                container_net_id)
+            message = ("Failed to list neutron ports: %s")
+            self.fail(message % e.args[0])
+
+        # A dhcp port gets created as well; dhcp is enabled by default
+        self.assertEqual(2, len(ports['ports']))
+        # Find the kuryr port
+        kuryr_port_param = {"network_id": networks['networks'][0]['id']}
+        kuryr_ports = self.neutron_client.list_ports(
+            **kuryr_port_param)
+        kuryr_port = [port for port in kuryr_ports['ports'] if
+                      (lib_const.DEVICE_OWNER in port['tags'] or
+                       port['name'] ==
+                       utils.get_neutron_port_name(port['device_id']))]
+        self.assertEqual(1, len(kuryr_port))
+
+        # Disconnect container from network, this release ip address.
+        self.docker_client.disconnect_container_from_network(container_id,
+                                                             container_net_id)
+        ports = self.neutron_client.list_ports(
+            network_id=networks['networks'][0]['id'])
+        # DHCP port leave behind.
+        self.assertEqual(1, len(ports['ports']))
+
+        kuryr_ports = self.neutron_client.list_ports(
+            **kuryr_port_param)
+        kuryr_port = [port for port in kuryr_ports['ports'] if
+                      (lib_const.DEVICE_OWNER in port['tags'] or
+                       port['name'] ==
+                       utils.get_neutron_port_name(port['device_id']))]
+        self.assertEqual(0, len(kuryr_port))
+
+        # Cleanup resources
+        self.docker_client.stop(container=container_id)
+        self.docker_client.remove_network(container_net_id)
+
+    def test_container_ipam_release_address_with_existing_network(self):
         # pre-created Neutron network and subnet
         neutron_net_name = lib_utils.get_random_string(8)
         neutron_network = self.neutron_client.create_network(
