@@ -142,8 +142,6 @@ Other options you can set as '-e' parameters in Docker run:
 * LOG_LEVEL for defining, for example, "DEBUG" logging messages.
 * PROCESSES for defining how many kuryr processes to use to handle the
   libnetwork requests.
-* THREADS for defining how many threads per process to use to handle the
-  libnetwork requests.
 
 Note that you will probably have to change the 127.0.0.1 IDENTITY_URL address
 for the address where your Keystone is running. In this case it is 127.0.0.1
