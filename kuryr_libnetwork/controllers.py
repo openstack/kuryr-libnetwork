@@ -29,7 +29,7 @@ from oslo_utils import excutils
 from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
-from kuryr.lib._i18n import _LE, _LI, _LW
+
 from kuryr_libnetwork import app
 from kuryr_libnetwork import config
 from kuryr_libnetwork import constants as const
@@ -84,8 +84,8 @@ def check_for_neutron_tag_support(ext_name):
     except n_exceptions.NeutronClientException as e:
         setattr(app, ext_rename, False)
         if e.status_code == n_exceptions.NotFound.status_code:
-            LOG.warning(_LW("Neutron extension %s not supported. "
-                            "Continue without using them."), ext_name)
+            LOG.warning("Neutron extension %s not supported. "
+                        "Continue without using them.", ext_name)
 
 
 def load_default_subnet_pools():
@@ -113,8 +113,8 @@ def _cache_default_subnetpool_ids(app):
                 for subnetpool in subnetpools['subnetpools']:
                     default_subnetpool_id_set.add(subnetpool['id'])
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during retrieving the default"
-                          " subnet pools: %s"), ex)
+            LOG.error("Error happened during retrieving the default"
+                      " subnet pools: %s", ex)
         app.DEFAULT_POOL_IDS = frozenset(default_subnetpool_id_set)
 
 
@@ -207,8 +207,8 @@ def _create_port(endpoint_id, neutron_network_id, interface_mac, fixed_ips):
     try:
         rcvd_port = app.neutron.create_port({'port': port})
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during creating a"
-                      " Neutron port: %s"), ex)
+        LOG.error("Error happened during creating a"
+                  " Neutron port: %s", ex)
         raise
     return rcvd_port['port']
 
@@ -325,9 +325,9 @@ def _neutron_add_tag(resource_type, resource_id, tag):
     try:
         app.neutron.add_tag(resource_type, resource_id, tag)
     except n_exceptions.NotFound:
-        LOG.warning(_LW("Neutron tags extension for given "
-                        "resource type is not supported, "
-                        "cannot add tag to %s."), resource_type)
+        LOG.warning("Neutron tags extension for given "
+                    "resource type is not supported, "
+                    "cannot add tag to %s.", resource_type)
 
 
 def _neutron_remove_tag(resource_type, resource_id, tag):
@@ -353,8 +353,8 @@ def _port_active(neutron_port_id, vif_plug_timeout):
         try:
             port = app.neutron.show_port(neutron_port_id)
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE('Could not get the port %s to check '
-                          'its status'), ex)
+            LOG.error('Could not get the port %s to check '
+                      'its status', ex)
         else:
             if port['port']['status'] == lib_const.PORT_STATUS_ACTIVE:
                 port_active = True
@@ -381,8 +381,8 @@ def _program_expose_ports(options, port_id):
         sg_id = sg['security_group']['id']
 
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during creating a "
-                      "Neutron security group: %s"), ex)
+        LOG.error("Error happened during creating a "
+                  "Neutron security group: %s", ex)
         raise exceptions.ExportPortFailure(
             ("Could not create required security group {0} "
              "for setting up exported port ").format(sec_group))
@@ -396,7 +396,7 @@ def _program_expose_ports(options, port_id):
             proto_port_dict[proto].append(port)
         except KeyError:
             # This should not happen as Docker client catches such errors
-            LOG.error(_LE("Unrecognizable protocol %s"), proto)
+            LOG.error("Unrecognizable protocol %s", proto)
             app.neutron.delete_security_group(sg_id)
             raise exceptions.ExportPortFailure(
                 ("Bad protocol number for exposed port. Deleting "
@@ -422,9 +422,9 @@ def _program_expose_ports(options, port_id):
                 app.neutron.create_security_group_rule({'security_group_rule':
                                                         sec_group_rule})
             except n_exceptions.NeutronClientException as ex:
-                LOG.error(_LE("Error happened during creating a "
-                              "Neutron security group "
-                              "rule: %s"), ex)
+                LOG.error("Error happened during creating a "
+                          "Neutron security group "
+                          "rule: %s", ex)
                 app.neutron.delete_security_group(sg_id)
                 raise exceptions.ExportPortFailure(
                     ("Could not create required security group rules {0} "
@@ -442,8 +442,8 @@ def _program_expose_ports(options, port_id):
         app.neutron.update_port(port_id,
                                 {'port': {'security_groups': sgs}})
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during updating a "
-                      "Neutron port: %s"), ex)
+        LOG.error("Error happened during updating a "
+                  "Neutron port: %s", ex)
         app.neutron.delete_security_group(sg_id)
         raise exceptions.ExportPortFailure(
             ("Could not update port with required security groups{0} "
@@ -457,8 +457,8 @@ def _get_cidr_from_subnetpool(**kwargs):
         pool_id = pool['id']
         prefixes = pool['prefixes']
         if len(prefixes) > 1:
-            LOG.warning(_LW("More than one prefixes present. "
-                            "Picking first one."))
+            LOG.warning("More than one prefixes present. "
+                        "Picking first one.")
 
         return ipaddress.ip_network(six.text_type(prefixes[0])), pool_id
     else:
@@ -514,15 +514,15 @@ def revoke_expose_ports(port_id):
                                     {'port':
                                      {'security_groups': existing_sgs}})
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during updating a "
-                          "Neutron port with a new list of "
-                          "security groups: {0}").format(ex))
+            LOG.error("Error happened during updating a "
+                      "Neutron port with a new list of "
+                      "security groups: {0}".format(ex))
     try:
         for sg in removing_sgs:
             app.neutron.delete_security_group(sg)
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during deleting a "
-                      "Neutron security group: {0}").format(ex))
+        LOG.error("Error happened during deleting a "
+                  "Neutron security group: {0}".format(ex))
 
 
 def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
@@ -727,8 +727,8 @@ def network_driver_create_network():
         try:
             neutron_uuid = app.driver.get_default_network_id()
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Failed to retrieve the default driver "
-                          "network due to Neutron error: %s"), ex)
+            LOG.error("Failed to retrieve the default driver "
+                      "network due to Neutron error: %s", ex)
             raise
 
     if not neutron_uuid and not neutron_name:
@@ -739,8 +739,8 @@ def network_driver_create_network():
         _neutron_net_add_tags(network['network']['id'], container_net_id,
                               tags=app.tag)
 
-        LOG.info(_LI("Created a new network with name "
-                     "%(neutron_network_name)s successfully: %(network)s"),
+        LOG.info("Created a new network with name "
+                 "%(neutron_network_name)s successfully: %(network)s",
                  {'neutron_network_name': neutron_network_name,
                   'network': network})
     else:
@@ -757,8 +757,8 @@ def network_driver_create_network():
                        "exist.").format(specified_network))
             network_id = networks[0]['id']
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during listing "
-                          "Neutron networks: %s"), ex)
+            LOG.error("Error happened during listing "
+                      "Neutron networks: %s", ex)
             raise
         if app.tag:
             _neutron_net_add_tags(network_id, container_net_id, tags=app.tag)
@@ -766,12 +766,12 @@ def network_driver_create_network():
         else:
             network = app.neutron.update_network(
                 neutron_uuid, {'network': {'name': neutron_network_name}})
-            LOG.info(_LI("Updated the network with new name "
-                         "%(neutron_network_name)s successfully: %(network)s"),
+            LOG.info("Updated the network with new name "
+                     "%(neutron_network_name)s successfully: %(network)s",
                      {'neutron_network_name': neutron_network_name,
                       'network': network})
-        LOG.info(_LI("Using existing network %s "
-                     "successfully"), specified_network)
+        LOG.info("Using existing network %s "
+                 "successfully", specified_network)
 
     def _get_existing_neutron_subnets(pool_cidr, network_id):
         cidr = None
@@ -841,14 +841,14 @@ def network_driver_delete_network():
             existing_networks = _get_networks_by_identifier(
                 existing_network_identifier)
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during listing "
-                          "Neutron networks: %s"), ex)
+            LOG.error("Error happened during listing "
+                      "Neutron networks: %s", ex)
             raise
 
         if existing_networks:
-            LOG.warning(_LW("Network is a pre existing Neutron "
-                            "network, not deleting in Neutron. "
-                            "removing tags: %s"), existing_network_identifier)
+            LOG.warning("Network is a pre existing Neutron "
+                        "network, not deleting in Neutron. "
+                        "removing tags: %s", existing_network_identifier)
             neutron_net_id = existing_networks[0]['id']
             _neutron_net_remove_tags(neutron_net_id, container_net_id)
             _neutron_net_remove_tag(neutron_net_id,
@@ -862,23 +862,23 @@ def network_driver_delete_network():
                     if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
                         app.neutron.delete_subnet(subnet['id'])
                 except n_exceptions.Conflict as ex:
-                    LOG.error(_LE("Subnet %s is in use, "
-                                  "can't be deleted."), subnet['id'])
+                    LOG.error("Subnet %s is in use, "
+                              "can't be deleted.", subnet['id'])
                 except n_exceptions.NeutronClientException as ex:
-                    LOG.error(_LE("Error happened during deleting a "
-                                  "subnet created by kuryr: %s"), ex)
+                    LOG.error("Error happened during deleting a "
+                              "subnet created by kuryr: %s", ex)
             return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     try:
         filtered_networks = _get_networks_by_identifier(
             neutron_network_identifier)
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during listing "
-                      "Neutron networks: %s"), ex)
+        LOG.error("Error happened during listing "
+                  "Neutron networks: %s", ex)
         raise
 
     if not filtered_networks:
-        LOG.warning(_LW("Network with identifier %s cannot be found"),
+        LOG.warning("Network with identifier %s cannot be found",
                     neutron_network_identifier)
     else:
         neutron_network_id = filtered_networks[0]['id']
@@ -904,22 +904,22 @@ def network_driver_delete_network():
                     # and continue to proceed.
                     app.neutron.delete_subnet(subnet['id'])
             except n_exceptions.Conflict as ex:
-                LOG.error(_LE("Subnet, %s, is in use. Network can't "
-                              "be deleted."), subnet['id'])
+                LOG.error("Subnet, %s, is in use. Network can't "
+                          "be deleted.", subnet['id'])
                 raise
             except n_exceptions.NeutronClientException as ex:
-                LOG.error(_LE("Error happened during deleting a "
-                              "Neutron subnets: %s"), ex)
+                LOG.error("Error happened during deleting a "
+                          "Neutron subnets: %s", ex)
                 raise
 
         try:
             app.neutron.delete_network(neutron_network_id)
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during deleting a "
-                          "Neutron network: %s"), ex)
+            LOG.error("Error happened during deleting a "
+                      "Neutron network: %s", ex)
             raise
-        LOG.info(_LI("Deleted the network with ID %s "
-                     "successfully"), neutron_network_id)
+        LOG.info("Deleted the network with ID %s "
+                 "successfully", neutron_network_id)
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
@@ -994,16 +994,16 @@ def network_driver_create_endpoint():
         except (exceptions.VethCreationFailure,
                 exceptions.BindingNotSupportedFailure) as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Preparing the veth '
-                              'pair was failed: %s.'), ex)
+                LOG.error('Preparing the veth '
+                          'pair was failed: %s.', ex)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Could not bind the Neutron port to '
-                              'the veth endpoint.'))
+                LOG.error('Could not bind the Neutron port to '
+                          'the veth endpoint.')
         except (exceptions.KuryrException,
                 n_exceptions.NeutronClientException) as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Failed to set up the interface: %s'), ex)
+                LOG.error('Failed to set up the interface: %s', ex)
 
         if app.vif_plug_is_fatal:
             port_active = _port_active(neutron_port['id'],
@@ -1109,15 +1109,15 @@ def network_driver_delete_endpoint():
                 LOG.error(stderr)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Could not unbind the Neutron port from'
-                              'the veth endpoint.'))
+                LOG.error('Could not unbind the Neutron port from'
+                          'the veth endpoint.')
         except exceptions.VethDeletionFailure:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Cleaning the veth pair up was failed.'))
+                LOG.error('Cleaning the veth pair up was failed.')
         except (exceptions.KuryrException,
                 n_exceptions.NeutronClientException) as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error while removing the interface: %s'), ex)
+                LOG.error('Error while removing the interface: %s', ex)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
@@ -1377,9 +1377,9 @@ def ipam_request_pool():
         subnet_cidr = six.text_type(cidr)
         subnets_by_cidr = _get_subnets_by_attrs(cidr=subnet_cidr)
         if len(subnets_by_cidr):
-            LOG.warning(_LW("There is already existing subnet for the "
-                            "same cidr. Please check and specify pool name "
-                            "in Options."))
+            LOG.warning("There is already existing subnet for the "
+                        "same cidr. Please check and specify pool name "
+                        "in Options.")
         if not pool_name and not pool_id:
             pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
             pools = _get_subnetpools_by_attrs(name=pool_name)
@@ -1392,7 +1392,7 @@ def ipam_request_pool():
                 'name': pool_name,
                 'default_prefixlen': cidr.prefixlen,
                 'prefixes': [subnet_cidr]}
-            LOG.info(_LI("Creating subnetpool with the given pool CIDR"))
+            LOG.info("Creating subnetpool with the given pool CIDR")
             created_subnetpool_response = app.neutron.create_subnetpool(
                 {'subnetpool': new_subnetpool})
             pool = created_subnetpool_response['subnetpool']
@@ -1407,7 +1407,7 @@ def ipam_request_pool():
                     ("Specified subnetpool id/name({0}) does not "
                     "exist.").format(pool_id or pool_name))
             pool_id = existing_pools[0]['id']
-            LOG.info(_LI("Using existing Neutron subnetpool %s successfully"),
+            LOG.info("Using existing Neutron subnetpool %s successfully",
                      pool_id)
     else:
         if v6:
@@ -1488,9 +1488,9 @@ def ipam_request_address():
                     if pool_id in tmp_subnet.get('tags'):
                         subnet = tmp_subnet
                 else:
-                    LOG.warning(_LW("subnetpool tag for Neutron "
-                                    "subnet %s is missing, cannot "
-                                    "gets the correct subnet."),
+                    LOG.warning("subnetpool tag for Neutron "
+                                "subnet %s is missing, cannot "
+                                "gets the correct subnet.",
                                 tmp_subnet['id'])
         elif len(subnets_by_cidr) == 1:
             subnet = subnets_by_cidr[0]
@@ -1557,8 +1557,8 @@ def ipam_request_address():
                 allocated_address = '{}/{}'.format(allocated_address,
                                                    subnet_cidr.prefixlen)
             except n_exceptions.NeutronClientException as ex:
-                LOG.error(_LE("Error happened during ip allocation on "
-                              "Neutron side: %s"), ex)
+                LOG.error("Error happened during ip allocation on "
+                          "Neutron side: %s", ex)
                 raise
     else:
         # Auxiliary address or gw_address is received at network creation time.
@@ -1618,11 +1618,11 @@ def ipam_release_pool():
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict as ex:
-        LOG.info(_LI("The subnetpool with ID %s is still in use."
-                     " It can't be deleted for now."), pool_id)
+        LOG.info("The subnetpool with ID %s is still in use."
+                 " It can't be deleted for now.", pool_id)
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened during deleting a "
-                      "Neutron subnetpool: %s"), ex)
+        LOG.error("Error happened during deleting a "
+                  "Neutron subnetpool: %s", ex)
         raise
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
@@ -1661,7 +1661,7 @@ def ipam_release_address():
         subnet_cidr = six.text_type(_get_cidr_from_subnetpool(id=pool_id)[0])
         subnets = _get_subnets_by_attrs(cidr=subnet_cidr)
     if not len(subnets):
-        LOG.info(_LI("Subnet already deleted."))
+        LOG.info("Subnet already deleted.")
         return flask.jsonify(const.SCHEMA['SUCCESS'])
 
     iface = ipaddress.ip_interface(six.text_type(rel_address))
@@ -1684,8 +1684,8 @@ def ipam_release_address():
                 _neutron_port_remove_tag(port['id'],
                                          const.KURYR_EXISTING_NEUTRON_PORT)
     except n_exceptions.NeutronClientException as ex:
-        LOG.error(_LE("Error happened while fetching "
-                      "and deleting port, %s"), ex)
+        LOG.error("Error happened while fetching "
+                  "and deleting port, %s", ex)
         raise
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])

@@ -18,7 +18,6 @@ from oslo_utils import importutils
 
 from neutronclient.common import exceptions as n_exceptions
 
-from kuryr.lib._i18n import _LE
 from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
@@ -142,8 +141,8 @@ class Driver(object):
             response_port = app.neutron.update_port(port['id'],
                                                     {'port': updated_port})
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during updating a "
-                          "Neutron port: %s"), ex)
+            LOG.error("Error happened during updating a "
+                      "Neutron port: %s", ex)
             raise
         return response_port['port']
 
