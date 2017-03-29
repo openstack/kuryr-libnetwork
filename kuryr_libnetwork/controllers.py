@@ -607,6 +607,46 @@ def network_driver_discover_delete():
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
 
+@app.route('/NetworkDriver.AllocateNetwork', methods=['POST'])
+def network_driver_allocate_network():
+    """Allocate network specific resources passing network id and network specific config.
+
+    Libnetwork miss this API in their doc.
+    https://github.com/docker/libnetwork/issues/1699
+
+    See the following like for more detail about the spec:
+
+      https://github.com/docker/libnetwork/blob/master/driverapi/driverapi.go # noqa
+    """
+    json_data = flask.request.get_json(force=True)
+    LOG.debug("Received JSON data %s for "
+              "/NetworkDriver.AllocateNetwork", json_data)
+    # Note(limao): This API will only called in docker swarm mode,
+    #              we do not have specific resource need to allocate
+    #              right now, so just return SUCCESS.
+    return flask.jsonify(const.SCHEMA['SUCCESS'])
+
+
+@app.route('/NetworkDriver.FreeNetwork', methods=['POST'])
+def network_driver_free_network():
+    """Free network specific resources associated with a given network id.
+
+    Libnetwork miss this API in their doc.
+    https://github.com/docker/libnetwork/issues/1699
+
+    See the following like for more detail about the spec:
+
+      https://github.com/docker/libnetwork/blob/master/driverapi/driverapi.go # noqa
+    """
+    json_data = flask.request.get_json(force=True)
+    LOG.debug("Received JSON data %s for "
+              "/NetworkDriver.FreeNetwork", json_data)
+    # Note(limao): This API will only called in docker swarm mode,
+    #              we do not have network resource to free right now,
+    #              so just return SUCCESS.
+    return flask.jsonify(const.SCHEMA['SUCCESS'])
+
+
 @app.route('/NetworkDriver.CreateNetwork', methods=['POST'])
 def network_driver_create_network():
     """Creates a new Neutron Network which name is the given NetworkID.
