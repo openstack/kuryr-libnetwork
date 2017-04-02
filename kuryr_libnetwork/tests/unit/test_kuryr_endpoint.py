@@ -63,9 +63,25 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         fake_neutron_network_id = uuidutils.generate_uuid()
         fake_neutron_subnet_v4_id = uuidutils.generate_uuid()
         fake_neutron_subnet_v6_id = uuidutils.generate_uuid()
-        fake_subnets = self._get_fake_subnets(
-            fake_docker_endpoint_id, fake_neutron_network_id,
-            fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id)
+
+        fake_v4_subnet = self._get_fake_v4_subnet(
+            fake_neutron_network_id,
+            fake_docker_endpoint_id,
+            fake_neutron_subnet_v4_id)
+        fake_v6_subnet = self._get_fake_v6_subnet(
+            fake_neutron_network_id,
+            fake_docker_endpoint_id,
+            fake_neutron_subnet_v6_id)
+        fake_v4_subnet_response = {
+            "subnets": [
+                fake_v4_subnet['subnet']
+            ]
+        }
+        fake_v6_subnet_response = {
+            "subnets": [
+                fake_v6_subnet['subnet']
+            ]
+        }
 
         fake_fixed_ips = ['subnet_id=%s' % fake_neutron_subnet_v4_id,
                           'ip_address=192.168.1.2',
@@ -79,8 +95,9 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
 
         def mock_fake_subnet(*args, **kwargs):
             if kwargs['cidr'] == '192.168.1.0/24':
-                return fake_subnets
-            return {'subnets': []}
+                return fake_v4_subnet_response
+            elif kwargs['cidr'] == 'fe80::/64':
+                return fake_v6_subnet_response
         mock_list_subnets.side_effect = mock_fake_subnet
         mock_list_networks.return_value = fake_neutron_network
         mock_create_port.side_effect = GivenException
