@@ -45,6 +45,8 @@ class TestKuryr(base.TestKuryrBase):
     - POST /NetworkDriver.Leave
     - POST /NetworkDriver.DiscoverNew
     - POST /NetworkDriver.DiscoverDelete
+    - POST /NetworkDriver.AllocateNetwork
+    - POST /NetworkDriver.FreeNetwork
     """
     @ddt.data(('/Plugin.Activate', constants.SCHEMA['PLUGIN_ACTIVATE']),
         ('/NetworkDriver.GetCapabilities',
@@ -2257,6 +2259,38 @@ class TestKuryr(base.TestKuryrBase):
                                  content_type='application/json',
                                  data=jsonutils.dumps(leave_request))
 
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+
+    def test_network_driver_allocate_network(self):
+        docker_network_id = lib_utils.get_hash()
+        allocate_network_request = {
+            'NetworkID': docker_network_id,
+            'IPv4Data': [{
+                'AddressSpace': 'foo',
+                'Pool': '192.168.42.0/24',
+                'Gateway': '192.168.42.1/24',
+            }],
+            'IPv6Data': [],
+            'Options': {}
+        }
+
+        response = self.app.post('/NetworkDriver.AllocateNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(
+                                      allocate_network_request))
+        self.assertEqual(200, response.status_code)
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+
+    def test_network_driver_free_network(self):
+        docker_network_id = lib_utils.get_hash()
+        free_network_request = {'NetworkID': docker_network_id}
+
+        response = self.app.post('/NetworkDriver.FreeNetwork',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(free_network_request))
         self.assertEqual(200, response.status_code)
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
