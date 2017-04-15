@@ -13,7 +13,6 @@
 from neutronclient.common import exceptions as n_exceptions
 from oslo_log import log
 
-from kuryr.lib._i18n import _LE
 from kuryr.lib import binding
 from kuryr.lib import exceptions
 
@@ -152,6 +151,6 @@ class NestedDriver(base.BaseNestedDriver):
                              'allowed_address_pairs': address_pairs
                     }})
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during updating Neutron "
-                          "port %(port_id)s: %(ex)s"), port_id, ex)
+            LOG.error("Error happened during updating Neutron "
+                      "port %(port_id)s: %(ex)s", port_id, ex)
             raise

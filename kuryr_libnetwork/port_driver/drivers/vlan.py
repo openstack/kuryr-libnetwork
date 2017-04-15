@@ -13,7 +13,6 @@
 from neutronclient.common import exceptions as n_exceptions
 from oslo_log import log
 
-from kuryr.lib._i18n import _LE
 from kuryr.lib import binding
 from kuryr.lib import exceptions
 from kuryr.lib import segmentation_type_drivers as seg_driver
@@ -134,8 +133,8 @@ class VlanDriver(base.BaseNestedDriver):
                 vm_port['trunk_details']['trunk_id'],
                 {'sub_ports': subports})
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened during subport deletion "
-                          "%(port_id)s: %(ex)s"),
+            LOG.error("Error happened during subport deletion "
+                      "%(port_id)s: %(ex)s",
                       {'port_id': neutron_port['id'], 'ex': ex})
             raise
         self._release_segmentation_id(neutron_port['id'])
@@ -152,8 +151,8 @@ class VlanDriver(base.BaseNestedDriver):
         try:
             app.neutron.trunk_add_subports(trunk_id, {'sub_ports': subport})
         except n_exceptions.NeutronClientException as ex:
-            LOG.error(_LE("Error happened adding subport %(port_id)s "
-                          "to trunk port %(trunk_id)s: %(ex)s"),
+            LOG.error("Error happened adding subport %(port_id)s "
+                      "to trunk port %(trunk_id)s: %(ex)s",
                       port_id, trunk_id, ex)
             raise
 

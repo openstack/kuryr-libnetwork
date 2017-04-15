@@ -22,7 +22,6 @@ from oslo_concurrency import processutils
 from oslo_log import log
 from werkzeug import exceptions as w_exceptions
 
-from kuryr.lib._i18n import _LE
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import constants as const
@@ -54,7 +53,7 @@ def make_json_app(import_name, **kwargs):
     @app.errorhandler(jsonschema.ValidationError)
     @app.errorhandler(processutils.ProcessExecutionError)
     def make_json_error(ex):
-        LOG.error(_LE("Unexpected error happened: %s"), ex)
+        LOG.error("Unexpected error happened: %s", ex)
         traceback.print_exc(file=sys.stderr)
         response = flask.jsonify({"Err": str(ex)})
         response.status_code = w_exceptions.InternalServerError.code
