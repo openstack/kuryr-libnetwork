@@ -116,7 +116,7 @@ if is_service_enabled kuryr-libnetwork; then
         configure_kuryr "${DISTRO_DISTUTILS_DATA_PATH}"
 
         # Run etcd first
-        run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
+        pgrep -x "etcd" >/dev/null || run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
 
         # FIXME(mestery): By default, Ubuntu ships with /bin/sh pointing to
         # the dash shell.
