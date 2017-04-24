@@ -70,9 +70,11 @@ class DockerNetworkContext(context.Context):
                                                    driver="kuryr",
                                                    ipam=ipam)
                 self.context["netid"] = res.get("Id")
+                self.context["netname"] = "kuryr_network"
             else:
                 res = docker_client.create_network(name="docker_network")
                 self.context["netid"] = res.get("Id")
+                self.context["netname"] = "docker_network"
             LOG.debug("Container network id is '%s'" % self.context["netid"])
         except Exception as e:
             msg = "Can't create docker network: %s" % e.message
