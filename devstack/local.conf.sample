@@ -16,6 +16,7 @@ ENABLE_PLUGINV2=False
 # If you want to use stable kuryr lib, please comment out this line.
 LIBS_FROM_GIT=kuryr
 
+enable_plugin devstack-plugin-container https://github.com/openstack/devstack-plugin-container
 enable_plugin kuryr-libnetwork https://git.openstack.org/openstack/kuryr-libnetwork
 enable_plugin neutron https://git.openstack.org/openstack/neutron
 

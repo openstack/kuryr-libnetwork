@@ -129,53 +129,13 @@ if is_service_enabled kuryr-libnetwork; then
 
         # Run etcd first
         pgrep -x "etcd" >/dev/null || run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
-
-        # FIXME(mestery): By default, Ubuntu ships with /bin/sh pointing to
-        # the dash shell.
-        # ..
-        # ..
-        # The dots above represent a pause as you pick yourself up off the
-        # floor. This means the latest version of "install_docker.sh" to load
-        # docker fails because dash can't interpret some of it's bash-specific
-        # things. It's a bug in install_docker.sh that it relies on those and
-        # uses a shebang of /bin/sh, but that doesn't help us if we want to run
-        # docker and specifically Kuryr. So, this works around that.
-        sudo update-alternatives --install /bin/sh sh /bin/bash 100
-
-        # Install docker only if it's not already installed. The following checks
-        # whether the docker-engine package is already installed, as this is the
-        # most common way for installing docker from binaries. In case it's been
-        # manually installed, the install_docker.sh script will prompt a warning
-        # if another docker executable is found
-        check_docker || {
-            wget http://get.docker.com -O install_docker.sh
-            sudo chmod 777 install_docker.sh
-            sudo sh install_docker.sh
-            sudo rm install_docker.sh
-        }
-
-        # After an ./unstack it will be stopped. So it is ok if it returns exit-code == 1
-        sudo service docker stop || true
-
-        run_process docker-engine "/usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT" "" "root"
-
-        # We put the stack user as owner of the socket so we do not need to
-        # run the Docker commands with sudo when developing.
-        echo -n "Waiting for Docker to create its socket file"
-        while [ ! -e "$KURYR_DOCKER_ENGINE_SOCKET_FILE" ]; do
-            echo -n "."
-            sleep 1
-        done
-        echo ""
-        sudo chown "$STACK_USER":docker "$KURYR_DOCKER_ENGINE_SOCKET_FILE"
-
-        echo "Build busybox docker image for fullstack and rally test"
-        cd $DEST/kuryr-libnetwork/contrib/busybox
-        sudo usermod -aG docker $STACK_USER
-        sh build_image.sh
     fi
 
     if [[ "$1" == "stack" && "$2" == "extra" ]]; then
+        echo "Build busybox docker image for fullstack and rally test"
+        cd $DEST/kuryr-libnetwork/contrib/busybox
+        sh build_image.sh
+
         # FIXME(limao): When Kuryr start up, it need to detect if neutron support tag plugin.
         #               Kuryr will call neutron extension api to verify if neutron support tag.
         #               So Kuryr need to start after neutron-server finish load tag plugin.
@@ -216,10 +176,6 @@ if is_service_enabled kuryr-libnetwork; then
         fi
         stop_process etcd-server
         rm -rf $DEST/etcd/
-        stop_process docker-engine
-        # Stop process does not handle well Docker 1.12+ new multi process
-        # split and doesn't kill them all. Let's leverage Docker's own pidfile
-        sudo kill -s SIGTERM "$(cat /var/run/docker.pid)"
     fi
 fi
 
