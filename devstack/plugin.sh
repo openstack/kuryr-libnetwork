@@ -145,7 +145,7 @@ if is_service_enabled kuryr-libnetwork; then
         # After an ./unstack it will be stopped. So it is ok if it returns exit-code == 1
         sudo service docker stop || true
 
-        run_process docker-engine "sudo /usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT"
+        run_process docker-engine "/usr/bin/sudo /usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT"
 
         # We put the stack user as owner of the socket so we do not need to
         # run the Docker commands with sudo when developing.
@@ -178,7 +178,7 @@ if is_service_enabled kuryr-libnetwork; then
         #               If Kuryr start up in "post-config" phase, there is no way to make sure
         #               Kuryr can start before neutron-server, so Kuryr start in "extra" phase.
         #               Bug: https://bugs.launchpad.net/kuryr/+bug/1587522
-        run_process kuryr-libnetwork "sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
+        run_process kuryr-libnetwork "/usr/bin/sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
 
