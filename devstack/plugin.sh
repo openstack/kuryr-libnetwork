@@ -157,7 +157,7 @@ if is_service_enabled kuryr-libnetwork; then
         # After an ./unstack it will be stopped. So it is ok if it returns exit-code == 1
         sudo service docker stop || true
 
-        run_process docker-engine "/usr/bin/sudo /usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT"
+        run_process docker-engine "/usr/bin/docker daemon -H unix://$KURYR_DOCKER_ENGINE_SOCKET_FILE -H tcp://0.0.0.0:$KURYR_DOCKER_ENGINE_PORT --cluster-store etcd://localhost:$KURYR_ETCD_PORT" "" "root"
 
         # We put the stack user as owner of the socket so we do not need to
         # run the Docker commands with sudo when developing.
@@ -201,7 +201,7 @@ if is_service_enabled kuryr-libnetwork; then
             # Enable pluginv2
             sudo docker plugin enable kuryr/libnetwork2:latest
         else
-            run_process kuryr-libnetwork "/usr/bin/sudo PYTHONPATH=$PYTHONPATH:$DEST/kuryr python $DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG"
+            run_process kuryr-libnetwork "$DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG" "" "root"
         fi
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
