@@ -291,6 +291,45 @@ Note the root privilege is required for creating and deleting the veth pairs
 with `pyroute2 <http://docs.pyroute2.org/>`_ to run.
 
 
+kuryr-libnetwork docker managed pluginv2
+----------------------------------------
+
+How to build kuryr-libnetwork docker managed pluginv2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Docker Engine’s `plugins system <https://docs.docker.com/engine/extend>`_
+allows you to install, start, stop, and remove plugins using Docker Engine
+for docker 1.13 and older.
+
+Download kuryr-libnetwork source code, and run
+contrib/docker/v2plugin/v2plugin_rootfs.sh in the top folder of
+kuryr-libentwork. This script will copy config.json to the top
+folder and build rootfs. ::
+
+    $ git clone https://git.openstack.org/openstack/kuryr-libnetwork
+    $ cd kuryr-libnetwork
+    $ ./contrib/docker/v2plugin/v2plugin_rootfs.sh
+    $ docker plugin create kuryr/libnetwork2 ./
+
+
+How to use kuryr-libnetwork docker managed pluginv2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If user build pluginv2 locally, user need to enable pluginv2. ::
+
+    $ docker plugin enable kuryr/libnetwork2
+
+If user install pluginv2 from docker hub, the pluginv2 will be enabled
+directly after install. ::
+
+    $ docker plugin install kuryr/libnetwork2
+
+When user create kuryr network, driver name and ipam-driver name are
+kuryr/libnetwork2:latest  ::
+
+    $ docker network create --driver=kuryr/libnetwork2:latest --ipam-driver=kuryr/libnetwork2:latest ...
+
+
 How to try out nested-containers locally
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
