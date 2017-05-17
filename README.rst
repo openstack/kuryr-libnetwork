@@ -275,7 +275,9 @@ If SSL needs to be enabled follow this step or skip to next step::
     For locally generating and testing, please refer to below link:
         http://tech.paulcz.net/2016/01/secure-docker-with-tls/
 
-Run Kuryr Server from command below::
+Run Kuryr Server with the command below. If you have uwsgi installed this
+command would run Kuryr under it. You can override this behaviour by
+setting `KURYR_USE_UWSGI=False`::
 
     $ sudo ./scripts/run_kuryr.sh
 
