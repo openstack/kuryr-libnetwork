@@ -19,11 +19,10 @@ KURYR_POOL_PREFIX=${KURYR_POOL_PREFIX:-10.10.0.0/16}
 KURYR_POOL_PREFIX_LEN=${KURYR_POOL_PREFIX_LEN:-24}
 
 KURYR_DOCKER_ENGINE_PORT=${KURYR_DOCKER_ENGINE_PORT:-2375}
-KURYR_ETCD_PORT=${KURYR_ETCD_PORT:-4001}
-DOCKER_CLUSTER_STORE=${DOCKER_CLUSTER_STORE:-etcd://localhost:$KURYR_ETCD_PORT}
+DOCKER_CLUSTER_STORE=${DOCKER_CLUSTER_STORE:-etcd://localhost:2379}
 
 GITREPO["kuryr"]=${KURYR_REPO:-${GIT_BASE}/openstack/kuryr.git}
 GITBRANCH["kuryr"]=${KURYR_BRANCH:-master}
 GITDIR["kuryr"]=$DEST/kuryr
 
-enable_service kuryr-libnetwork etcd-server docker-engine
+enable_service kuryr-libnetwork etcd3 docker-engine

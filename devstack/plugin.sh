@@ -16,20 +16,6 @@ XTRACE=$(set +o | grep xtrace)
 set +o xtrace
 
 echo_summary "kuryr-libnetwork's plugin.sh was called..."
-ETCD_VERSION=v2.2.2
-
-function install_etcd_data_store {
-
-    if [ ! -f "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd" ]; then
-        echo "Installing etcd server"
-        mkdir $DEST/etcd
-        wget https://github.com/coreos/etcd/releases/download/$ETCD_VERSION/etcd-$ETCD_VERSION-linux-amd64.tar.gz -O $DEST/etcd/etcd-$ETCD_VERSION-linux-amd64.tar.gz
-        tar xzvf $DEST/etcd/etcd-$ETCD_VERSION-linux-amd64.tar.gz -C $DEST/etcd
-    fi
-
-    # Clean previous DB data
-    rm -rf $DEST/etcd/db.etcd
-}
 
 
 function check_docker {
@@ -104,7 +90,6 @@ if is_service_enabled kuryr-libnetwork; then
             sudo mkdir -p ${KURYR_LOG_DIR}
             echo "Done"
         fi
-        install_etcd_data_store
         setup_develop $KURYR_HOME
 
     elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
@@ -126,9 +111,6 @@ if is_service_enabled kuryr-libnetwork; then
 
         create_kuryr_account
         configure_kuryr "${DISTRO_DISTUTILS_DATA_PATH}"
-
-        # Run etcd first
-        pgrep -x "etcd" >/dev/null || run_process etcd-server "$DEST/etcd/etcd-$ETCD_VERSION-linux-amd64/etcd --data-dir $DEST/etcd/db.etcd --advertise-client-urls http://0.0.0.0:$KURYR_ETCD_PORT  --listen-client-urls http://0.0.0.0:$KURYR_ETCD_PORT"
     fi
 
     if [[ "$1" == "stack" && "$2" == "extra" ]]; then
@@ -174,8 +156,6 @@ if is_service_enabled kuryr-libnetwork; then
         else
             stop_process kuryr-libnetwork
         fi
-        stop_process etcd-server
-        rm -rf $DEST/etcd/
     fi
 fi
 
