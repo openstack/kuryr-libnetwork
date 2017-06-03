@@ -305,6 +305,14 @@ def _neutron_net_remove_tags(netid, tag):
         _neutron_net_remove_tag(netid, tag)
 
 
+def _neutron_subnetpool_add_tag(poolid, tag):
+    _neutron_add_tag('subnetpools', poolid, tag)
+
+
+def _neutron_subnetpool_remove_tag(poolid, tag):
+    _neutron_remove_tag('subnetpools', poolid, tag)
+
+
 def _neutron_subnet_add_tag(subnetid, tag):
     _neutron_add_tag('subnets', subnetid, tag)
 
@@ -1452,6 +1460,9 @@ def ipam_request_pool():
                     "exist.").format(pool_id or pool_name))
 
             pool_id = existing_pools[0]['id']
+            if app.tag_ext:
+                _neutron_subnetpool_add_tag(
+                    pool_id, const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
             prefixes = existing_pools[0]['prefixes']
             pool_cidr = ipaddress.ip_network(six.text_type(prefixes[0]))
             if pool_cidr == cidr:
@@ -1660,7 +1671,15 @@ def ipam_release_pool():
     pools = _get_subnetpools_by_attrs(id=pool_id)
     if pools:
         pool_name = pools[0]['name']
-        if not pool_name.startswith(cfg.CONF.subnetpool_name_prefix):
+        if app.tag_ext:
+            tags = pools[0].get('tags', [])
+            if const.KURYR_EXISTING_NEUTRON_SUBNETPOOL in tags:
+                _neutron_subnetpool_remove_tag(
+                    pool_id, const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
+                LOG.debug('Skip the cleanup since this is an existing Neutron '
+                          'subnetpool.')
+                return flask.jsonify(const.SCHEMA['SUCCESS'])
+        elif not pool_name.startswith(cfg.CONF.subnetpool_name_prefix):
             LOG.debug('Skip the cleanup since this is an existing Neutron '
                       'subnetpool.')
             return flask.jsonify(const.SCHEMA['SUCCESS'])
