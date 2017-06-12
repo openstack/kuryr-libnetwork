@@ -541,6 +541,26 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
     LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
 
 
+def _create_kuryr_subnetpool(pool_cidr):
+    pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
+    pools = _get_subnetpools_by_attrs(name=pool_name)
+    if len(pools):
+        raise exceptions.KuryrException(
+               "Another pool with same cidr exist. ipam and network"
+               " options not used to pass pool name")
+
+    cidr = ipaddress.ip_network(six.text_type(pool_cidr))
+    new_subnetpool = {
+        'name': pool_name,
+        'default_prefixlen': cidr.prefixlen,
+        'prefixes': [pool_cidr]}
+    LOG.info("Creating subnetpool with the given pool CIDR")
+    created_subnetpool_response = app.neutron.create_subnetpool(
+        {'subnetpool': new_subnetpool})
+    pool = created_subnetpool_response['subnetpool']
+    return pool
+
+
 @app.route('/Plugin.Activate', methods=['POST'])
 def plugin_activate():
     """Returns the list of the implemented drivers.
@@ -1400,7 +1420,6 @@ def ipam_request_pool():
     subnet_cidr = ''
     pool_name = ''
     pool_id = ''
-    pools = []
     options = json_data.get('Options')
     if options:
         if v6:
@@ -1421,22 +1440,7 @@ def ipam_request_pool():
                         "same cidr. Please check and specify pool name "
                         "in Options.")
         if not pool_name and not pool_id:
-            pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
-            pools = _get_subnetpools_by_attrs(name=pool_name)
-            if len(pools):
-                raise exceptions.KuryrException(
-                       "Another pool with same cidr exist. ipam and network"
-                       " options not used to pass pool name")
-
-            new_subnetpool = {
-                'name': pool_name,
-                'default_prefixlen': cidr.prefixlen,
-                'prefixes': [subnet_cidr]}
-            LOG.info("Creating subnetpool with the given pool CIDR")
-            created_subnetpool_response = app.neutron.create_subnetpool(
-                {'subnetpool': new_subnetpool})
-            pool = created_subnetpool_response['subnetpool']
-            pool_id = pool['id']
+            pool_id = _create_kuryr_subnetpool(subnet_cidr)['id']
         else:
             if pool_id:
                 existing_pools = _get_subnetpools_by_attrs(id=pool_id)
@@ -1449,6 +1453,7 @@ def ipam_request_pool():
             pool_id = existing_pools[0]['id']
             LOG.info("Using existing Neutron subnetpool %s successfully",
                      pool_id)
+
     else:
         if v6:
             default_pool_list = SUBNET_POOLS_V6
