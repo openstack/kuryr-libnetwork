@@ -857,7 +857,7 @@ def network_driver_create_network():
 
     # This will add a subnetpool_id(created by kuryr) tag
     # for existing Neutron subnets.
-    if app.tag:
+    if app.tag_ext:
         _add_tag_for_existing_subnet(v4_subnets, v4_pool_id)
         _add_tag_for_existing_subnet(v6_subnets, v6_pool_id)
 
