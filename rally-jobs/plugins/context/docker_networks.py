@@ -52,7 +52,7 @@ class DockerNetworkContext(context.Context):
     def setup(self):
         """Create kuryr or non-kuryr docker network, and prepare image cache"""
         try:
-            docker_client = docker.Client(base_url="tcp://0.0.0.0:2375")
+            docker_client = docker.APIClient(base_url="tcp://0.0.0.0:2375")
 
             if self.config["is_kuryr"]:
                 ipam = {

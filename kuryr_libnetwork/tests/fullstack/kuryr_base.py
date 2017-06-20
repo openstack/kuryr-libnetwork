@@ -81,7 +81,7 @@ class KuryrBaseTest(base.BaseTestCase):
     """
     def setUp(self):
         super(KuryrBaseTest, self).setUp()
-        self.docker_client = docker.Client(
+        self.docker_client = docker.APIClient(
             base_url='tcp://0.0.0.0:2375')
         try:
             self.neutron_client = get_neutron_client_from_env()
