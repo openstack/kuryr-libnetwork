@@ -1450,10 +1450,15 @@ def ipam_request_pool():
                 raise exceptions.KuryrException(
                     ("Specified subnetpool id/name({0}) does not "
                     "exist.").format(pool_id or pool_name))
-            pool_id = existing_pools[0]['id']
-            LOG.info("Using existing Neutron subnetpool %s successfully",
-                     pool_id)
 
+            pool_id = existing_pools[0]['id']
+            prefixes = existing_pools[0]['prefixes']
+            pool_cidr = ipaddress.ip_network(six.text_type(prefixes[0]))
+            if pool_cidr == cidr:
+                LOG.info("Using existing Neutron subnetpool %s successfully",
+                         pool_id)
+            else:
+                pool_id = _create_kuryr_subnetpool(subnet_cidr)['id']
     else:
         if v6:
             default_pool_list = SUBNET_POOLS_V6
