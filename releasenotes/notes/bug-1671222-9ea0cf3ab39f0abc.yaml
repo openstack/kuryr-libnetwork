@@ -1,0 +1,5 @@
+---
+other:
+  - |
+    Tag existing subnetpool if tag extension is enabled in Neutron.
+    This will ensure the subnetpool to deleted is the one kuryr created.

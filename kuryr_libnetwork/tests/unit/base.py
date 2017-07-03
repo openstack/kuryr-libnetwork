@@ -76,9 +76,11 @@ class TestKuryrBase(TestCase):
 
     @staticmethod
     def _get_fake_v4_subnetpools(subnetpool_id, prefixes=["192.168.1.0/24"],
-                                 name="kuryr"):
+                                 name="kuryr", tags=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2-ext.html#listSubnetPools  # noqa
+        if tags is None:
+            tags = []
         v4_subnetpools = {
             "subnetpools": [{
                 "min_prefixlen": "24",
@@ -91,7 +93,8 @@ class TestKuryrBase(TestCase):
                 "tenant_id": "9fadcee8aa7c40cdb2114fff7d569c08",
                 "prefixes": prefixes,
                 "ip_version": 4,
-                "shared": False
+                "shared": False,
+                "tags": tags
             }]
         }
 
