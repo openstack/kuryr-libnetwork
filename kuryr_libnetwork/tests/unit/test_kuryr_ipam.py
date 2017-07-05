@@ -887,9 +887,9 @@ class TestKuryrIpam(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data((False), (True))
-    def test_ipam_driver_request_address_overlapping_cidr_in_kuryr(self,
-            use_tag_ext, mock_app, mock_list_subnetpools, mock_list_subnets,
-        mock_create_port, mock_port_add_tag):
+    def test_ipam_driver_request_address_overlapping_cidr_in_kuryr(
+            self, use_tag_ext, mock_app, mock_list_subnetpools,
+            mock_list_subnets, mock_create_port, mock_port_add_tag):
         mock_app.tag_ext = use_tag_ext
         # faking list_subnetpools
         fake_kuryr_subnetpool_id = uuidutils.generate_uuid()
@@ -1043,7 +1043,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertIn('Err', decoded_json)
         err_message = ("Requested gateway {0} does not match with "
                        "gateway {1} in existed network.").format(
-                       '10.0.0.5', '10.0.0.1')
+                           '10.0.0.5', '10.0.0.1')
         self.assertEqual({'Err': err_message}, decoded_json)
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_port')

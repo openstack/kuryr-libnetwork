@@ -187,10 +187,10 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data((True), (False))
     def test_create_network_and_subnet_pre_existing_add_tag_for_subnet(
-        self, use_tags, mock_tag, mock_show_extension,
-        mock_list_subnetpools, mock_list_networks,
-        mock_add_tag, mock_update_network,
-        mock_list_subnets):
+            self, use_tags, mock_tag, mock_show_extension,
+            mock_list_subnetpools, mock_list_networks,
+            mock_add_tag, mock_update_network,
+            mock_list_subnets):
         if use_tags:
             mock_tag.tag = use_tags
 

@@ -159,7 +159,7 @@ class TestVlanDriver(base.TestKuryrBase):
                                             fake_neutron_port)
         mock_trunk_remove_subports.assert_called_with(fake_neutron_trunk_id,
             {'sub_ports': [{
-                     'port_id': fake_neutron_port_id
+                'port_id': fake_neutron_port_id
             }]})
         mock_release_seg_id.assert_called_with(fake_neutron_port_id)
 

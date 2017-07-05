@@ -28,8 +28,9 @@ class TestDriver(base.TestKuryrBase):
     @mock.patch.object(driver, '_verify_port_driver_compliancy')
     @mock.patch.object(importutils, 'import_object')
     @mock.patch.object(driver, '_parse_port_driver_config')
-    def test_get_driver_instance(self, mock_parse_config, mock_import_object,
-        mock_verify_compliancy, mock_verify_compatibility):
+    def test_get_driver_instance(
+            self, mock_parse_config, mock_import_object,
+            mock_verify_compliancy, mock_verify_compatibility):
         module = 'kuryr_libnetwork.port_driver.drivers.veth'
         mock_parse_config.return_value = (module, 'veth', 'VethDriver')
         fake_driver = mock.Mock(spec=driver.Driver)

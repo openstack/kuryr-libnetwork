@@ -58,8 +58,9 @@ class TestNestedDriver(base.TestKuryrBase):
     @mock.patch.object(binding, 'port_bind')
     @mock.patch('kuryr_libnetwork.app.neutron.update_port')
     @mock.patch.object(nested.NestedDriver, '_get_port_from_host_iface')
-    def test_create_host_iface(self, mock_get_port_from_host,
-        mock_update_port, mock_port_bind, mock_conf):
+    def test_create_host_iface(
+            self, mock_get_port_from_host,
+            mock_update_port, mock_port_bind, mock_conf):
         mock_conf.binding.link_iface = 'eth0'
 
         fake_endpoint_id = lib_utils.get_hash()
@@ -109,9 +110,10 @@ class TestNestedDriver(base.TestKuryrBase):
         mock_get_port_from_host.assert_called_with('eth0')
         mock_port_bind.assert_called_with(fake_endpoint_id,
             fake_neutron_port, fake_subnets, fake_network, fake_vm_port)
-        mock_update_port.assert_called_with(fake_vm_port['id'],
+        mock_update_port.assert_called_with(
+            fake_vm_port['id'],
             {'port': {
-                     'allowed_address_pairs': updated_allowed_pairs
+                'allowed_address_pairs': updated_allowed_pairs
             }})
 
         self.assertEqual(response, fake_exec_response)
@@ -120,8 +122,9 @@ class TestNestedDriver(base.TestKuryrBase):
     @mock.patch.object(binding, 'port_unbind')
     @mock.patch('kuryr_libnetwork.app.neutron.update_port')
     @mock.patch.object(nested.NestedDriver, '_get_port_from_host_iface')
-    def test_delete_host_iface(self, mock_get_port_from_host,
-        mock_update_port, mock_port_unbind, mock_conf):
+    def test_delete_host_iface(
+            self, mock_get_port_from_host,
+            mock_update_port, mock_port_unbind, mock_conf):
         mock_conf.binding.link_iface = 'eth0'
 
         fake_endpoint_id = lib_utils.get_hash()
@@ -163,9 +166,10 @@ class TestNestedDriver(base.TestKuryrBase):
                                                    fake_neutron_port)
 
         mock_get_port_from_host.assert_called_with('eth0')
-        mock_update_port.assert_called_with(fake_vm_port['id'],
+        mock_update_port.assert_called_with(
+            fake_vm_port['id'],
             {'port': {
-                     'allowed_address_pairs': updated_allowed_pairs
+                'allowed_address_pairs': updated_allowed_pairs
             }})
         mock_port_unbind.assert_called_with(fake_endpoint_id,
                                             fake_neutron_port)

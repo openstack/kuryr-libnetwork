@@ -146,10 +146,12 @@ class NestedDriver(base.BaseNestedDriver):
     def _update_port_address_pairs(self, port_id, address_pairs):
         try:
             app.neutron.update_port(
-                    port_id,
-                    {'port': {
-                             'allowed_address_pairs': address_pairs
-                    }})
+                port_id,
+                {
+                    'port': {
+                        'allowed_address_pairs': address_pairs
+                    }
+                })
         except n_exceptions.NeutronClientException as ex:
             LOG.error("Error happened during updating Neutron "
                       "port %(port_id)s: %(ex)s", port_id, ex)

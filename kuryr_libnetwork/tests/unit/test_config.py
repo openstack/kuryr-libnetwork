@@ -73,8 +73,8 @@ class ConfigurationTest(base.TestKuryrBase):
             ext_alias = "subnet_allocation"
             err = n_exceptions.NotFound.status_code
             ext_not_found_ex = n_exceptions.NeutronClientException(
-                                                    status_code=err,
-                                                    message="")
+                status_code=err,
+                message="")
             mock_extension.side_effect = ext_not_found_ex
             ex = exceptions.MandatoryApiMissing
             self.assertRaises(ex, controllers.check_for_neutron_ext_support)
@@ -87,8 +87,8 @@ class ConfigurationTest(base.TestKuryrBase):
                                                    mock_extension):
         err = n_exceptions.NotFound.status_code
         ext_not_found_ex = n_exceptions.NeutronClientException(
-                                                    status_code=err,
-                                                    message="")
+            status_code=err,
+            message="")
         mock_extension.side_effect = ext_not_found_ex
         controllers.check_for_neutron_tag_support(ext_name)
         mock_extension.assert_called_once_with(ext_name)
@@ -101,8 +101,8 @@ class ConfigurationTest(base.TestKuryrBase):
             mock_extension):
         err = n_exceptions.NotFound.status_code
         ext_not_found_ex = n_exceptions.NeutronClientException(
-                                                    status_code=err,
-                                                    message="")
+            status_code=err,
+            message="")
         mock_extension.side_effect = ext_not_found_ex
         controllers.check_for_neutron_tag_support(ext_name)
         mock_extension.assert_called_once_with(ext_name)

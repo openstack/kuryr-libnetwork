@@ -68,7 +68,7 @@ def check_for_neutron_ext_support():
     except n_exceptions.NeutronClientException as e:
         if e.status_code == n_exceptions.NotFound.status_code:
             raise exceptions.MandatoryApiMissing(
-                            "Neutron extension with alias '{0}' not found"
+                "Neutron extension with alias '{0}' not found"
                             .format(MANDATORY_NEUTRON_EXTENSION))
 
 
@@ -160,9 +160,9 @@ def _get_subnets_by_interface_cidr(neutron_network_id,
         network_id=neutron_network_id, cidr=six.text_type(iface.network))
     if len(subnets) > 2:
         raise exceptions.DuplicatedResourceException(
-                "Multiple Neutron subnets exist for the network_id={0}"
-                "and cidr={1}"
-                .format(neutron_network_id, iface.network))
+            "Multiple Neutron subnets exist for the network_id={0}"
+            "and cidr={1}"
+            .format(neutron_network_id, iface.network))
     return subnets
 
 
@@ -554,8 +554,8 @@ def _create_kuryr_subnetpool(pool_cidr):
     pools = _get_subnetpools_by_attrs(name=pool_name)
     if len(pools):
         raise exceptions.KuryrException(
-               "Another pool with same cidr exist. ipam and network"
-               " options not used to pass pool name")
+            "Another pool with same cidr exist. ipam and network"
+            " options not used to pass pool name")
 
     cidr = ipaddress.ip_network(six.text_type(pool_cidr))
     new_subnetpool = {
@@ -821,8 +821,8 @@ def network_driver_create_network():
                 specified_network = neutron_name
             if not networks:
                 raise exceptions.KuryrException(
-                      ("Specified network id/name({0}) does not "
-                       "exist.").format(specified_network))
+                    ("Specified network id/name({0}) does not "
+                     "exist.").format(specified_network))
             network_id = networks[0]['id']
         except n_exceptions.NeutronClientException as ex:
             LOG.error("Error happened during listing "

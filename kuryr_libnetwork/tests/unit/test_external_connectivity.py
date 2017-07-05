@@ -207,7 +207,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             mock_list_security_groups.assert_called_with(
                 name=utils.get_sg_expose_name(fake_neutron_port_id))
             mock_delete_security_groups.assert_called_with(
-                            fake_neutron_sec_group_id)
+                fake_neutron_sec_group_id)
             mock_show_port.assert_called_with(fake_neutron_port_id)
             mock_update_port.assert_called_with(fake_neutron_port_id,
                             {'port': {'security_groups': sgs}})

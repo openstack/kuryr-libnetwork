@@ -15,7 +15,7 @@ IPV4_PATTERN_BASE = (u'((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\\.){3}'
                      u'(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])')
 IPV4_PATTERN = EPSILON_PATTERN + u'|^' + IPV4_PATTERN_BASE + u'$'
 CIDRV4_PATTERN = EPSILON_PATTERN + '|^(' + IPV4_PATTERN_BASE + \
-                 u'(/(1[0-2][0-8]|[1-9]?[0-9]))' + u')$'
+    u'(/(1[0-2][0-8]|[1-9]?[0-9]))' + u')$'
 
 IPV6_PATTERN_BASE = (u'('
                      u'([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|'
@@ -36,7 +36,7 @@ IPV6_PATTERN_BASE = (u'('
                      u'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))')
 IPV6_PATTERN = EPSILON_PATTERN + u'|^' + IPV6_PATTERN_BASE + u'$'
 CIDRV6_PATTERN = EPSILON_PATTERN + u'|^(' + IPV6_PATTERN_BASE + \
-                 u'(/(1[0-2][0-8]|[1-9]?[0-9]))' + u')$'
+    u'(/(1[0-2][0-8]|[1-9]?[0-9]))' + u')$'
 IPV4_OR_IPV6_PATTERN = IPV4_PATTERN + u'|^' + IPV6_PATTERN_BASE + u'$'
 CIDRV4_OR_CIDRV6_PATTERN = CIDRV4_PATTERN + u'|^' + CIDRV6_PATTERN + u'$'
 UUID_BASE = u'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
