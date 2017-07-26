@@ -13,19 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import docker
 import utils
 
 from rally.plugins.openstack import scenario
 
 
-class Kuryr(utils.KuryrScenario):
-    """Benchmark scenarios for Kuryr."""
+@scenario.configure(name="Kuryr.list_networks")
+class KuryrListNetworks(utils.KuryrScenario):
 
-    def __init__(self, context=None, admin_clients=None, clients=None):
-        super(Kuryr, self).__init__(context, admin_clients, clients)
-
-    @scenario.configure()
-    def list_networks(self, network_list_args=None):
+    def run(self, network_list_args=None):
         """List the networks.
 
         Measure the "docker network ls" command performance under kuryr.
@@ -38,10 +35,14 @@ class Kuryr(utils.KuryrScenario):
 
         :param network_list_args: dict: names, ids
         """
+        self.docker_client = docker.APIClient(base_url='tcp://0.0.0.0:2375')
         self._list_networks(network_list_args or {})
 
-    @scenario.configure()
-    def create_and_delete_networks_with_kuryr(self, network_create_args=None):
+
+@scenario.configure(name="Kuryr.create_and_delete_networks_with_kuryr")
+class KuryrCreateDeleteNetworksWithKuryr(utils.KuryrScenario):
+
+    def run(self, network_create_args=None):
         """Create and delete a network with kuryr.
 
         Measure the "docker network create" and "docker network rm" command
@@ -49,13 +50,16 @@ class Kuryr(utils.KuryrScenario):
 
         :param network_create_args: dict as options to create the network
         """
+        self.docker_client = docker.APIClient(base_url='tcp://0.0.0.0:2375')
         network = self._create_network(is_kuryr=True,
                        network_create_args=network_create_args or {})
         self._delete_network(network)
 
-    @scenario.configure()
-    def create_and_delete_networks_without_kuryr(self,
-                                                 network_create_args=None):
+
+@scenario.configure(name="Kuryr.create_and_delete_networks_without_kuryr")
+class KuryrCreateDeleteNetworksWithoutKuryr(utils.KuryrScenario):
+
+    def run(self, network_create_args=None):
         """Create and delete a network without kuryr.
 
         Measure the "docker network create" and "docker network rm" command
@@ -63,17 +67,22 @@ class Kuryr(utils.KuryrScenario):
 
         :param network_create_args: dict as options to create the network
         """
+        self.docker_client = docker.APIClient(base_url='tcp://0.0.0.0:2375')
         network = self._create_network(is_kuryr=False,
                        network_create_args=network_create_args or {})
         self._delete_network(network)
 
-    @scenario.configure()
-    def start_and_stop_containers(self, container_create_args=None):
+
+@scenario.configure(name="Kuryr.start_and_stop_containers")
+class KuryrStartStopContainers(utils.KuryrScenario):
+
+    def run(self, container_create_args=None):
         """Start and stop container on docker network.
 
         Measure the "docker run" , "docker stop", "docker rm"
         command performance.
         """
+        self.docker_client = docker.APIClient(base_url='tcp://0.0.0.0:2375')
         container_id = self._start_container(container_create_args or {})
         self._stop_container(container_id)
         # TODO(yedongcan) We will hit the Docker bug:

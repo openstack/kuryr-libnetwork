@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import docker
-
 from rally.common import logging
 from rally.plugins.openstack import scenario
 from rally.task import atomic
@@ -24,10 +22,6 @@ LOG = logging.getLogger(__name__)
 
 class KuryrScenario(scenario.OpenStackScenario):
     """Base class for Kuryr scenarios with basic atomic actions."""
-
-    def __init__(self, context=None, admin_clients=None, clients=None):
-        super(KuryrScenario, self).__init__(context, admin_clients, clients)
-        self.docker_client = docker.APIClient(base_url='tcp://0.0.0.0:2375')
 
     @atomic.action_timer("kuryr.list_networks")
     def _list_networks(self, network_list_args):
