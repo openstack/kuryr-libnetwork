@@ -116,11 +116,16 @@ COMMONS = {
             u'description': u'An IPv4 or IPv6 CIDR of the subnet.'
         },
         u'id': {
-            u'pattern': u'^([0-9a-f]{64})$',
+            u'oneOf': [
+                {u'pattern': u'^([0-9a-f]{64})$'},
+                {u'pattern': u'^([0-9a-z]{25})$'}],
             u'type': u'string',
-            u'description': u'256 bits ID value of Docker.',
-            u'example':
-            u'51c75a2515d47edecc3f720bb541e287224416fb66715eb7802011d6ffd499f1'
+            u'description': u'64 or 25 length ID value of Docker.',
+            u'example': [
+                u'51c75a2515d47edecc3f720bb541e287224416fb66715eb7802011d6ffd4'
+                u'99f1',
+                u'xqqzd9p112o4kvok38n3caxjm'
+            ]
         },
         u'ipv4': {
             u'pattern': IPV4_PATTERN,
