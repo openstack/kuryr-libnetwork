@@ -649,10 +649,9 @@ def network_driver_allocate_network():
     json_data = flask.request.get_json(force=True)
     LOG.debug("Received JSON data %s for "
               "/NetworkDriver.AllocateNetwork", json_data)
-    # Note(limao): This API will only called in docker swarm mode,
-    #              we do not have specific resource need to allocate
-    #              right now, so just return SUCCESS.
-    return flask.jsonify(const.SCHEMA['SUCCESS'])
+    # Note(limao): This API will only called in docker swarm mode
+    # The returned options are passed to CreateNetwork.
+    return flask.jsonify({'Options': json_data.get('Options')})
 
 
 @app.route('/NetworkDriver.FreeNetwork', methods=['POST'])

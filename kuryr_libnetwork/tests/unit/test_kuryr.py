@@ -2282,7 +2282,7 @@ class TestKuryr(base.TestKuryrBase):
                                      allocate_network_request))
         self.assertEqual(200, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+        self.assertEqual({'Options': {}}, decoded_json)
 
     def test_network_driver_free_network(self):
         docker_network_id = lib_utils.get_hash()
