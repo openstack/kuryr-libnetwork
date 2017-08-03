@@ -143,7 +143,7 @@ if is_service_enabled kuryr-libnetwork; then
             # Enable pluginv2
             sudo docker plugin enable kuryr/libnetwork2:latest
         else
-            run_process kuryr-libnetwork "$DEST/kuryr-libnetwork/scripts/run_server.py  --config-file $KURYR_CONFIG" "" "root"
+            run_process kuryr-libnetwork "$KURYR_BIN_DIR/kuryr-server --config-file $KURYR_CONFIG" "" "root"
         fi
 
         neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
