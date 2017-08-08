@@ -109,6 +109,10 @@ def create_net_tags(tag):
     return tags
 
 
+def existing_net_tag(netid):
+    return const.KURYR_EXISTING_NEUTRON_NET + ':' + netid[:12]
+
+
 def make_net_tags(tag):
     tags = create_net_tags(tag)
     return ','.join(map(str, tags))

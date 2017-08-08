@@ -829,7 +829,8 @@ def network_driver_create_network():
             raise
         if app.tag:
             _neutron_net_add_tags(network_id, container_net_id, tags=app.tag)
-            _neutron_net_add_tag(network_id, const.KURYR_EXISTING_NEUTRON_NET)
+            _neutron_net_add_tag(network_id,
+                                 utils.existing_net_tag(container_net_id))
         else:
             network = app.neutron.update_network(
                 neutron_uuid, {'network': {'name': neutron_network_name}})
@@ -903,7 +904,7 @@ def network_driver_delete_network():
                                                       tags=app.tag)
     if app.tag:
         existing_network_identifier = neutron_network_identifier + ','
-        existing_network_identifier += const.KURYR_EXISTING_NEUTRON_NET
+        existing_network_identifier += utils.existing_net_tag(container_net_id)
         try:
             existing_networks = _get_networks_by_identifier(
                 existing_network_identifier)
@@ -919,7 +920,7 @@ def network_driver_delete_network():
             neutron_net_id = existing_networks[0]['id']
             _neutron_net_remove_tags(neutron_net_id, container_net_id)
             _neutron_net_remove_tag(neutron_net_id,
-                                    const.KURYR_EXISTING_NEUTRON_NET)
+                                    utils.existing_net_tag(container_net_id))
             # Delete subnets created by kuryr
             filtered_subnets = _get_subnets_by_attrs(
                 network_id=neutron_net_id)

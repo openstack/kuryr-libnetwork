@@ -169,7 +169,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 mock_add_tag.assert_any_call('networks',
                     fake_neutron_net_id, tag)
             mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
-                const.KURYR_EXISTING_NEUTRON_NET)
+                utils.existing_net_tag(docker_network_id))
         else:
             mock_update_network.assert_called_with(
                 fake_neutron_net_id, {'network':
@@ -291,7 +291,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 mock_add_tag.assert_any_call(
                     'networks', fake_neutron_net_id, tag)
             mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
-                const.KURYR_EXISTING_NEUTRON_NET)
+                utils.existing_net_tag(docker_network_id))
             mock_add_tag.assert_any_call('subnets',
                                          subnet_v4_id,
                                          fake_kuryr_v4_subnetpool_id)
@@ -346,7 +346,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
         if mock_tag.tag:
             t = utils.make_net_tags(docker_network_id)
-            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+            te = t + ',' + utils.existing_net_tag(docker_network_id)
             tags = utils.create_net_tags(docker_network_id)
         else:
             fake_existing_subnets_response = {
@@ -386,7 +386,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 mock_remove_tag.assert_any_call('networks',
                     fake_neutron_net_id, tag)
             mock_remove_tag.assert_any_call('networks',
-                fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+                fake_neutron_net_id, utils.existing_net_tag(docker_network_id))
             mock_list_subnets.assert_called_with(
                 network_id=fake_neutron_net_id)
             mock_delete_subnet.assert_called_once_with(kuryr_subnet_v4_id)
@@ -430,7 +430,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
         if mock_tag.tag:
             t = utils.make_net_tags(docker_network_id)
-            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+            te = t + ',' + utils.existing_net_tag(docker_network_id)
             tags = utils.create_net_tags(docker_network_id)
         else:
             fake_existing_subnets_response = {
@@ -470,7 +470,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 mock_remove_tag.assert_any_call('networks',
                     fake_neutron_net_id, tag)
             mock_remove_tag.assert_any_call('networks',
-                fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+                fake_neutron_net_id, utils.existing_net_tag(docker_network_id))
             mock_list_subnets.assert_called_with(
                 network_id=fake_neutron_net_id)
         else:
@@ -515,7 +515,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
 
         if mock_tag.tag:
             t = utils.make_net_tags(docker_network_id)
-            te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+            te = t + ',' + utils.existing_net_tag(docker_network_id)
             tags = utils.create_net_tags(docker_network_id)
         else:
             fake_existing_subnets_response = {
@@ -555,7 +555,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                 mock_remove_tag.assert_any_call('networks',
                     fake_neutron_net_id, tag)
             mock_remove_tag.assert_any_call('networks',
-                fake_neutron_net_id, const.KURYR_EXISTING_NEUTRON_NET)
+                fake_neutron_net_id, utils.existing_net_tag(docker_network_id))
             mock_list_subnets.assert_called_with(
                 network_id=fake_neutron_net_id)
             mock_delete_subnet.assert_called_once_with(kuryr_subnet_v4_id)

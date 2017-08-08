@@ -200,7 +200,7 @@ class TestKuryrNetworkDeleteFailures(base.TestKuryrFailures):
         docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_network_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         t = utils.make_net_tags(docker_network_id)
-        te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+        te = t + ',' + utils.existing_net_tag(docker_network_id)
         subnet_v4_id = "9436e561-47bf-436a-b1f1-fe23a926e031"
         subnet_v6_id = "64dd4a98-3d7a-4bfd-acf4-91137a8d2f51"
 
@@ -277,7 +277,7 @@ class TestKuryrNetworkDeleteFailures(base.TestKuryrFailures):
         docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_network_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         t = utils.make_net_tags(docker_network_id)
-        te = t + ',' + const.KURYR_EXISTING_NEUTRON_NET
+        te = t + ',' + utils.existing_net_tag(docker_network_id)
         subnet_v4_id = "9436e561-47bf-436a-b1f1-fe23a926e031"
         subnet_v6_id = "64dd4a98-3d7a-4bfd-acf4-91137a8d2f51"
 
