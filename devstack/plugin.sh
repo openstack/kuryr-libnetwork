@@ -55,10 +55,10 @@ function configure_kuryr {
 
     create_kuryr_cache_dir
 
-    # Neutron API server & Neutron plugin
     if is_service_enabled kuryr-libnetwork; then
         configure_auth_token_middleware "$KURYR_CONFIG" kuryr \
         "$KURYR_AUTH_CACHE_DIR" neutron
+        iniset $KURYR_CONFIG DEFAULT capability_scope $KURYR_CAPABILITY_SCOPE
     fi
 
     if [[ "$ENABLE_PLUGINV2" == "True" ]]; then
