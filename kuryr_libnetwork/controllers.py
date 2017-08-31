@@ -39,7 +39,6 @@ from kuryr_libnetwork import utils
 
 LOG = log.getLogger(__name__)
 
-
 MANDATORY_NEUTRON_EXTENSION = "subnet_allocation"
 TAG_NEUTRON_EXTENSION = "tag"
 TAG_EXT_NEUTRON_EXTENSION = "tag-ext"
@@ -166,6 +165,19 @@ def _get_subnets_by_interface_cidr(neutron_network_id,
     return subnets
 
 
+def _get_subnet_by_name(subnet_name):
+    subnets_by_name = _get_subnets_by_attrs(name=subnet_name)
+    if not subnets_by_name:
+        raise exceptions.NoResourceException(
+            "The subnet doesn't exist for the name {0}"
+            .format(subnets_by_name))
+    elif len(subnets_by_name) > 1:
+        raise exceptions.DuplicatedResourceException(
+            "Multiple Neutron subnets exist for name {0}"
+            .format(subnet_name))
+    return subnets_by_name[0]['id']
+
+
 def _get_neutron_port_from_docker_endpoint(endpoint_id):
     port_name = utils.get_neutron_port_name(endpoint_id)
     filtered_ports = app.neutron.list_ports(name=port_name)
@@ -229,7 +241,7 @@ def _get_fixed_ips_by_interface_cidr(subnets, interface_cidrv4,
 
 
 def _create_or_update_port(neutron_network_id, endpoint_id,
-        interface_cidrv4, interface_cidrv6, interface_mac):
+                           interface_cidrv4, interface_cidrv6, interface_mac):
     subnets = []
     fixed_ips = []
     response_port = []
@@ -252,14 +264,14 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
             .format(interface_cidrv4, interface_cidrv6))
 
     _get_fixed_ips_by_interface_cidr(subnets, interface_cidrv4,
-        interface_cidrv6, fixed_ips)
+                                     interface_cidrv6, fixed_ips)
     filtered_ports = app.neutron.list_ports(fixed_ips=fixed_ips)
     num_port = len(filtered_ports.get('ports', []))
     if not num_port:
         fixed_ips = (
             lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
         response_port = _create_port(endpoint_id, neutron_network_id,
-            interface_mac, fixed_ips)
+                                     interface_mac, fixed_ips)
     elif num_port == 1:
         port = filtered_ports['ports'][0]
         response_port = app.driver.update_port(port, endpoint_id,
@@ -275,7 +287,7 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
         fixed_ips = (
             lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
         response_port = _create_port(endpoint_id, neutron_network_id,
-            interface_mac, fixed_ips)
+                                     interface_mac, fixed_ips)
     else:
         raise exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"
@@ -496,7 +508,7 @@ def _update_existing_port(existing_port, fixed_ip):
             raise exceptions.AddressInUseException(
                 "Requested ip address {0} already belongs to "
                 "a bound Neutron port: {1}".format(fixed_ip,
-                existing_port['id']))
+                                                   existing_port['id']))
 
     return existing_port
 
@@ -549,9 +561,13 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
     LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
 
 
-def _create_kuryr_subnetpool(pool_cidr):
+def _create_kuryr_subnetpool(pool_cidr, pool_tag):
     pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-    pools = _get_subnetpools_by_attrs(name=pool_name)
+    if pool_tag:
+        kwargs = {'tags': [pool_tag]}
+    else:
+        kwargs = {'name': pool_name}
+    pools = _get_subnetpools_by_attrs(**kwargs)
     if len(pools):
         raise exceptions.KuryrException(
             "Another pool with same cidr exist. ipam and network"
@@ -566,6 +582,8 @@ def _create_kuryr_subnetpool(pool_cidr):
     created_subnetpool_response = app.neutron.create_subnetpool(
         {'subnetpool': new_subnetpool})
     pool = created_subnetpool_response['subnetpool']
+    if pool_tag:
+        _neutron_subnetpool_add_tag(pool['id'], pool_tag)
     return pool
 
 
@@ -745,10 +763,22 @@ def network_driver_create_network():
     v4_pool_id = ''
     v6_pool_name = ''
     v6_pool_id = ''
+    v4_subnet_name = ''
+    v4_subnet_id = ''
+    v6_subnet_name = ''
+    v6_subnet_id = ''
     options = json_data.get('Options')
     if options:
         generic_options = options.get(const.NETWORK_GENERIC_OPTIONS)
         if generic_options:
+            v4_subnet_id = \
+                generic_options.get(const.NEUTRON_SUBNET_UUID_OPTION)
+            v4_subnet_name = \
+                generic_options.get(const.NEUTRON_SUBNET_NAME_OPTION)
+            v6_subnet_id = \
+                generic_options.get(const.NEUTRON_V6_SUBNET_UUID_OPTION)
+            v6_subnet_name = \
+                generic_options.get(const.NEUTRON_V6_SUBNET_NAME_OPTION)
             neutron_uuid = generic_options.get(const.NEUTRON_UUID_OPTION)
             neutron_name = generic_options.get(const.NEUTRON_NAME_OPTION)
             v4_pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
@@ -759,12 +789,16 @@ def network_driver_create_network():
             v6_pool_id = generic_options.get(
                 const.NEUTRON_V6_POOL_UUID_OPTION)
 
-    def _get_pool_id(pool_name, pool_cidr):
+    def _get_pool_id(pool_name, pool_cidr, pool_tags):
         pool_id = ''
+        kwargs = {}
+        if pool_tags:
+            kwargs['tags'] = pool_tags
         if not pool_name and pool_cidr:
             pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
         if pool_name:
-            pools = _get_subnetpools_by_attrs(name=pool_name)
+            kwargs['name'] = pool_name
+            pools = _get_subnetpools_by_attrs(**kwargs)
             if pools:
                 pool_id = pools[0]['id']
             else:
@@ -779,15 +813,21 @@ def network_driver_create_network():
             raise exceptions.KuryrException(
                 ("Specified pool id({0}) does not "
                  "exist.").format(pool_id))
-
+    if v4_subnet_name and not v4_subnet_id:
+        v4_subnet_id = _get_subnet_by_name(v4_subnet_name)
     if v4_pool_id:
         _verify_pool_id(v4_pool_id)
     else:
-        v4_pool_id = _get_pool_id(v4_pool_name, v4_pool_cidr)
+        v4_pool_tags = [v4_subnet_id] if v4_subnet_id else None
+        v4_pool_id = _get_pool_id(v4_pool_name, v4_pool_cidr, v4_pool_tags)
+
+    if v6_subnet_name and not v6_subnet_id:
+        v6_subnet_id = _get_subnet_by_name(v6_subnet_name)
     if v6_pool_id:
         _verify_pool_id(v6_pool_id)
     else:
-        v6_pool_id = _get_pool_id(v6_pool_name, v6_pool_cidr)
+        v6_pool_tags = [v6_subnet_id] if v6_subnet_id else None
+        v6_pool_id = _get_pool_id(v6_pool_name, v6_pool_cidr, v6_pool_tags)
 
     # let the user override the driver default
     if not neutron_uuid and not neutron_name:
@@ -1428,12 +1468,18 @@ def ipam_request_pool():
     subnet_cidr = ''
     pool_name = ''
     pool_id = ''
+    subnet_id = ''
+    subnet_name = ''
     options = json_data.get('Options')
     if options:
         if v6:
+            subnet_name = options.get(const.NEUTRON_V6_SUBNET_NAME_OPTION)
+            subnet_id = options.get(const.NEUTRON_V6_SUBNET_UUID_OPTION)
             pool_name = options.get(const.NEUTRON_V6_POOL_NAME_OPTION)
             pool_id = options.get(const.NEUTRON_V6_POOL_UUID_OPTION)
         else:
+            subnet_name = options.get(const.NEUTRON_SUBNET_NAME_OPTION)
+            subnet_id = options.get(const.NEUTRON_SUBNET_UUID_OPTION)
             pool_name = options.get(const.NEUTRON_POOL_NAME_OPTION)
             pool_id = options.get(const.NEUTRON_POOL_UUID_OPTION)
     if requested_pool:
@@ -1442,13 +1488,17 @@ def ipam_request_pool():
         else:
             cidr = ipaddress.ip_network(six.text_type(requested_pool))
         subnet_cidr = six.text_type(cidr)
-        subnets_by_cidr = _get_subnets_by_attrs(cidr=subnet_cidr)
-        if len(subnets_by_cidr):
-            LOG.warning("There is already existing subnet for the "
-                        "same cidr. Please check and specify pool name "
-                        "in Options.")
+        if not subnet_id and subnet_name:
+            subnet_id = _get_subnet_by_name(subnet_name)
+        elif not subnet_id and not subnet_name:
+            subnets_by_cidr = _get_subnets_by_attrs(cidr=subnet_cidr)
+            if len(subnets_by_cidr):
+                LOG.warning("There is already existing subnet for the "
+                            "same cidr. Please check and specify pool name "
+                            "in Options.")
         if not pool_name and not pool_id:
-            pool_id = _create_kuryr_subnetpool(subnet_cidr)['id']
+            pool_id = _create_kuryr_subnetpool(subnet_cidr,
+                                               subnet_id)['id']
         else:
             if pool_id:
                 existing_pools = _get_subnetpools_by_attrs(id=pool_id)
@@ -1457,7 +1507,7 @@ def ipam_request_pool():
             if not existing_pools:
                 raise exceptions.KuryrException(
                     ("Specified subnetpool id/name({0}) does not "
-                    "exist.").format(pool_id or pool_name))
+                     "exist.").format(pool_id or pool_name))
 
             pool_id = existing_pools[0]['id']
             if app.tag_ext:
@@ -1469,7 +1519,8 @@ def ipam_request_pool():
                 LOG.info("Using existing Neutron subnetpool %s successfully",
                          pool_id)
             else:
-                pool_id = _create_kuryr_subnetpool(subnet_cidr)['id']
+                pool_id = _create_kuryr_subnetpool(subnet_cidr,
+                                                   subnet_id)['id']
     else:
         if v6:
             default_pool_list = SUBNET_POOLS_V6
@@ -1613,8 +1664,9 @@ def ipam_request_address():
                                               lib_const.DEVICE_OWNER)
 
                 LOG.debug("created port %s", created_port)
-                allocated_address = (req_address or
-                    created_port['fixed_ips'][0]['ip_address'])
+                allocated_address = \
+                    (req_address or
+                     created_port['fixed_ips'][0]['ip_address'])
                 allocated_address = '{}/{}'.format(allocated_address,
                                                    subnet_cidr.prefixlen)
             except n_exceptions.NeutronClientException as ex:
@@ -1741,8 +1793,8 @@ def ipam_release_address():
         for port in all_ports['ports']:
             tags = port.get('tags', [])
             if ((tags and lib_const.DEVICE_OWNER in tags) or
-                (not tags and port['name'] ==
-                 utils.get_neutron_port_name(port['device_id']))):
+                    (not tags and port['name'] ==
+                        utils.get_neutron_port_name(port['device_id']))):
                 for tmp_subnet in subnets:
                     if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id']):
                         app.neutron.delete_port(port['id'])
