@@ -169,7 +169,8 @@ class TestKuryrBase(TestCase):
                        device_owner=None,
                        neutron_trunk_id=None,
                        tags=None,
-                       name=None):
+                       name=None,
+                       binding_profile=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2.html#createPort  # noqa
         if not name:
@@ -191,6 +192,9 @@ class TestKuryrBase(TestCase):
                 "tags": tags
             }
         }
+
+        if binding_profile is not None:
+            fake_port['port']['binding:profile'] = binding_profile
 
         if neutron_subnet_v4_id:
             fake_port['port']['fixed_ips'].append({

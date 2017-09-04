@@ -1462,10 +1462,11 @@ class TestKuryr(base.TestKuryrBase):
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.create_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app')
@@ -1570,7 +1571,8 @@ class TestKuryr(base.TestKuryrBase):
         expected = {'Interface': {}}
         self.assertEqual(expected, decoded_json)
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.create_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
@@ -1721,10 +1723,11 @@ class TestKuryr(base.TestKuryrBase):
         expected = {'Interface': {}}
         self.assertEqual(expected, decoded_json)
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.create_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app')
@@ -1905,7 +1908,8 @@ class TestKuryr(base.TestKuryrBase):
             self.assertEqual(fake_port_response['ports'][0]['status'],
                              decoded_json['Value']['status'])
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.delete_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.delete_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     def test_network_driver_delete_endpoint(self, mock_list_networks,
@@ -1954,7 +1958,7 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch(
-        'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+        'kuryr_libnetwork.controllers.DEFAULT_DRIVER.get_container_iface_name')
     def test_network_driver_join(self, mock_get_container_iface_name,
             mock_list_subnets, mock_list_ports, mock_list_networks,
             mock_get_veth_pair_names):
@@ -2026,7 +2030,8 @@ class TestKuryr(base.TestKuryrBase):
 
         decoded_json = jsonutils.loads(response.data)
         mock_list_networks.assert_any_call(tags=t)
-        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        mock_get_container_iface_name.assert_called_with(
+            fake_neutron_ports_response['ports'][0])
         mock_list_ports.assert_called_with(name=neutron_port_name)
         mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
 
@@ -2037,7 +2042,7 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch(
-        'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+        'kuryr_libnetwork.controllers.DEFAULT_DRIVER.get_container_iface_name')
     def test_network_driver_join_multiple_subnets(
             self, mock_get_container_iface_name,
             mock_list_subnets, mock_list_ports, mock_list_networks,
@@ -2143,7 +2148,8 @@ class TestKuryr(base.TestKuryrBase):
 
         decoded_json = jsonutils.loads(response.data)
         mock_list_networks.assert_any_call(tags=t)
-        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        mock_get_container_iface_name.assert_called_with(
+            fake_neutron_ports_response['ports'][0])
         mock_list_ports.assert_called_with(name=neutron_port_name)
         mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
 
@@ -2154,7 +2160,7 @@ class TestKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch(
-        'kuryr_libnetwork.controllers.app.driver.get_container_iface_name')
+        'kuryr_libnetwork.controllers.DEFAULT_DRIVER.get_container_iface_name')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data(True, False)
     def test_network_driver_join_with_static_route_return(self,
@@ -2254,7 +2260,8 @@ class TestKuryr(base.TestKuryrBase):
         else:
             mock_list_networks.assert_any_call(name=fake_docker_net_id)
 
-        mock_get_container_iface_name.assert_called_with(fake_neutron_port_id)
+        mock_get_container_iface_name.assert_called_with(
+            fake_neutron_ports_response['ports'][0])
         neutron_port_name = utils.get_neutron_port_name(
             fake_docker_endpoint_id)
         mock_list_ports.assert_called_with(name=neutron_port_name)

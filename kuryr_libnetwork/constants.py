@@ -53,3 +53,14 @@ NEUTRON_UUID_OPTION = 'neutron.net.uuid'
 REQUEST_ADDRESS_TYPE = 'RequestAddressType'
 KURYR_UNBOUND_PORT = 'kuryr-unbound-port'
 NEUTRON_UNBOUND_PORT = 'neutron-unbound-port'
+BINDING_PROFILE = 'binding:profile'
+
+# Define supported virtual NIC types.
+VNIC_TYPE_NORMAL = 'normal'
+VNIC_TYPE_DIRECT = 'direct'
+VNIC_TYPE_MACVTAP = 'macvtap'
+VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
+
+# Define list of virtual NIC types.
+VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
+                    VNIC_TYPE_DIRECT_PHYSICAL)

@@ -45,6 +45,17 @@ TAG_NEUTRON_EXTENSION = "tag"
 TAG_EXT_NEUTRON_EXTENSION = "tag-ext"
 SUBNET_POOLS_V4 = []
 SUBNET_POOLS_V6 = []
+DEFAULT_DRIVER = driver.get_driver_instance()
+try:
+    SRIOV_DRIVER = driver.get_driver_instance(name='sriov')
+except exceptions.KuryrException:
+    SRIOV_DRIVER = None
+VNIC_TYPES_DRIVERS_MAPPING = {
+    const.VNIC_TYPE_NORMAL: DEFAULT_DRIVER,
+    const.VNIC_TYPE_DIRECT: SRIOV_DRIVER,
+    const.VNIC_TYPE_MACVTAP: SRIOV_DRIVER,
+    const.VNIC_TYPE_DIRECT_PHYSICAL: SRIOV_DRIVER,
+}
 
 
 def get_neutron_client():
@@ -97,8 +108,18 @@ def load_default_subnet_pools():
 
 
 def load_port_driver():
-    app.driver = driver.get_driver_instance()
+    app.driver = DEFAULT_DRIVER
     LOG.debug("Using port driver '%s'", str(app.driver))
+
+
+def get_driver(port):
+    vnic_type = port.get('binding:vnic_type', const.VNIC_TYPE_NORMAL)
+    driver = VNIC_TYPES_DRIVERS_MAPPING.get(vnic_type)
+    if driver is None:
+        raise exceptions.KuryrException(
+            "No port driver available for VNIC type %s" % vnic_type)
+    else:
+        return driver
 
 
 def _cache_default_subnetpool_ids(app):
@@ -275,8 +296,9 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
                                      interface_mac, fixed_ips)
     elif num_port == 1:
         port = filtered_ports['ports'][0]
-        response_port = app.driver.update_port(port, endpoint_id,
-                                               interface_mac)
+        port_driver = get_driver(port)
+        response_port = port_driver.update_port(port, endpoint_id,
+                                                interface_mac)
     # For the container boot from dual-net, request_address will
     # create two ports(v4 and v6 address), we should only allow one
     # for port bind.
@@ -1113,7 +1135,8 @@ def network_driver_create_endpoint():
             neutron_network_id, endpoint_id, interface_cidrv4,
             interface_cidrv6, interface_mac)
         try:
-            (stdout, stderr) = app.driver.create_host_iface(
+            port_driver = get_driver(neutron_port)
+            (stdout, stderr) = port_driver.create_host_iface(
                 endpoint_id, neutron_port, subnets, filtered_networks[0])
             LOG.debug(stdout)
             if stderr:
@@ -1148,6 +1171,10 @@ def network_driver_create_endpoint():
 
         if not interface_mac:
             response_interface['MacAddress'] = neutron_port['mac_address']
+
+        vnic_type = neutron_port.get('binding:vnic_type')
+        if vnic_type in const.VNIC_TYPES_SRIOV:
+            response_interface.pop('MacAddress', None)
 
         if not (interface_cidrv4 or interface_cidrv6):
             if 'ip_address' in neutron_port:
@@ -1233,7 +1260,8 @@ def network_driver_delete_endpoint():
         neutron_port = filtered_ports[0]
 
         try:
-            stdout, stderr = app.driver.delete_host_iface(
+            port_driver = get_driver(neutron_port)
+            stdout, stderr = port_driver.delete_host_iface(
                 endpoint_id, neutron_port)
             LOG.debug(stdout)
             if stderr:
@@ -1325,7 +1353,8 @@ def network_driver_join():
                 "Multiple Kuryr subnets exist for the network_id={0} "
                 .format(neutron_network_id))
 
-        iface_name = app.driver.get_container_iface_name(neutron_port['id'])
+        port_driver = get_driver(neutron_port)
+        iface_name = port_driver.get_container_iface_name(neutron_port)
 
         join_response = {
             "InterfaceName": {

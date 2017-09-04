@@ -99,10 +99,10 @@ class Driver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_container_iface_name(self, neutron_port_id):
+    def get_container_iface_name(self, neutron_port):
         """Returns interface name of a container in the default namespace.
 
-        :param neutron_port_id: The ID of a neutron port as string
+        :param neutron_port: The neutron port
         :returns: interface name as string
         """
         raise NotImplementedError()
@@ -150,13 +150,20 @@ class Driver(object):
         return self.__class__.__name__
 
 
-def get_driver_instance():
+def get_driver_instance(name=None):
     """Instantiate a driver instance accordingly to the file configuration.
 
     :returns: a Driver instance
     :raises: exceptions.KuryrException
     """
-    module, name, classname = _parse_port_driver_config()
+    if name:
+        module, name, classname = _parse_port_driver_config(name)
+    else:
+        module, name, classname = _parse_port_driver_config()
+
+    if (module not in config.CONF.enabled_port_drivers and
+            name not in config.CONF.enabled_port_drivers):
+        raise exceptions.KuryrException("No port driver available")
 
     # TODO(apuimedo): switch to the openstack/stevedore plugin system
     try:
@@ -171,13 +178,14 @@ def get_driver_instance():
     return driver
 
 
-def _parse_port_driver_config():
+def _parse_port_driver_config(config_value=None):
     """Read the port driver related config value and parse it.
 
     :returns: the provided full module path as per config file, the name of the
              driver/module and the class name of the Driver class inside it
     """
-    config_value = config.CONF.port_driver
+    if config_value is None:
+        config_value = config.CONF.default_port_driver
     config_tokens = config_value.rsplit('.', 1)
     if len(config_tokens) == 1:  # not a path, just a name
         name = config_tokens[0]
@@ -203,21 +211,23 @@ def _verify_port_driver_compliancy(driver, port_driver_name):
 
 
 def _verify_binding_driver_compatibility(driver, port_driver_name):
-    tokens = config.CONF.binding.default_driver.rsplit('.', 1)
-    binding_driver_name = tokens[0] if len(tokens) == 1 else tokens[1]
-    binding_driver_name.lower()
+    binding_drivers_names = []
+    for binding_driver in config.CONF.binding.enabled_drivers:
+        tokens = binding_driver.rsplit('.', 1)
+        binding_driver_name = tokens[0] if len(tokens) == 1 else tokens[1]
+        binding_drivers_names.append(binding_driver_name.lower())
 
     # TODO(mchiappe): find a clean way to test the binding driver
     # is also loadable before we start
     supported_bindings = driver.get_supported_bindings()
 
-    if binding_driver_name not in supported_bindings:
+    if not set(binding_drivers_names) & set(supported_bindings):
         raise exceptions.KuryrException("Configuration file error: "
             "port driver '{0}' is not compatible with binding driver '{1}'"
-            .format(port_driver_name, binding_driver_name))
+            .format(port_driver_name, binding_drivers_names))
 
     # Temporarily ban IPVLAN, to be removed in the future
-    if binding_driver_name == 'ipvlan':
+    if 'ipvlan' in binding_drivers_names:
         raise exceptions.KuryrException("Configuration file error: "
             "binding driver '{0}' is currently not supported with '{1}' "
-            "port driver".format(binding_driver_name, port_driver_name))
+            "port driver".format(binding_drivers_names, port_driver_name))

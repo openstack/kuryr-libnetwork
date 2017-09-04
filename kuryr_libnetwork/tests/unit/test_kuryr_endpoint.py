@@ -121,8 +121,9 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         self.assertEqual({'Err': GivenException.message}, decoded_json)
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.create_host_iface')
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.create_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
@@ -249,7 +250,8 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
                                  data=jsonutils.dumps(data))
         return response
 
-    @mock.patch('kuryr_libnetwork.controllers.app.driver.delete_host_iface')
+    @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
+                '.delete_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     @ddt.data(k_exceptions.VethDeletionFailure,
