@@ -2,8 +2,8 @@
 Team and repository tags
 ========================
 
-.. image:: http://governance.openstack.org/badges/kuryr-libnetwork.svg
-    :target: http://governance.openstack.org/reference/tags/index.html
+.. image:: https://governance.openstack.org/tc/badges/kuryr-libnetwork.svg
+    :target: https://governance.openstack.org/tc/reference/tags/index.html
 
 .. Change things from this point on
 
@@ -29,7 +29,7 @@ K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 
 
 * Free software: Apache license
-* Documentation: http://docs.openstack.org/developer/kuryr-libnetwork
+* Documentation: https://docs.openstack.org/kuryr-libnetwork/latest/
 * Source: http://git.openstack.org/cgit/openstack/kuryr-libnetwork
 * Bugs: http://bugs.launchpad.net/kuryr-libnetwork
 

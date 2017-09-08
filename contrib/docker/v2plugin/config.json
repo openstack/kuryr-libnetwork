@@ -1,6 +1,6 @@
 {
     "Description": "kuryr-libnetwork plugin for Docker",
-    "Documentation": "http://docs.openstack.org/developer/kuryr-libnetwork",
+    "Documentation": "https://docs.openstack.org/kuryr-libnetwork/latest/",
     "Entrypoint": ["/opt/kuryr-libnetwork/contrib/docker/run_kuryr.sh"],
     "Interface" : {
         "Types": ["docker.networkdriver/1.0", "docker.ipamdriver/1.0"],

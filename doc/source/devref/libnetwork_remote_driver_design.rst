@@ -51,7 +51,7 @@ Neutron resource Id's and Docker Id's (UUID's)
 
 4. libnetwork makes API calls against Kuryr
 
-5. Kuryr receives the requests and calls Neutron APIs with `Neutron client <http://docs.openstack.org/developer/python-neutronclient/>`_
+5. Kuryr receives the requests and calls Neutron APIs with `Neutron client <https://docs.openstack.org/python-neutronclient/latest/>`_
 
 6. Kuryr receives the responses from Neutron and compose the responses for
    libnetwork
@@ -366,7 +366,7 @@ Libnetwork User Workflow (with Kuryr as remote network driver) - Host Networking
 Mapping between the CNM and the Neutron's Networking Model
 ----------------------------------------------------------
 
-Kuryr communicates with Neutron via `Neutron client <http://docs.openstack.org/developer/python-neutronclient/>`_
+Kuryr communicates with Neutron via `Neutron client <https://docs.openstack.org/python-neutronclient/latest/>`_
 and bridges between libnetwork and Neutron by translating their networking models.
 The following table depicts the current mapping between libnetwork and Neutron models:
 
