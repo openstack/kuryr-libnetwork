@@ -46,6 +46,7 @@ ChangeLog
 !/.gitreview
 !/.mailmap
 !/.pylintrc
+!/.stestr.conf
 !/.testr.conf
 
 contrib/vagrant/.vagrant
