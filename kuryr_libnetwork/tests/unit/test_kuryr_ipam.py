@@ -109,7 +109,7 @@ class TestKuryrIpam(base.TestKuryrBase):
 
         self.assertEqual(200, response.status_code)
         mock_list_subnetpools.assert_called_with(
-            tags=[str(neutron_subnet_v4_id)])
+            name=pool_name, tags=[str(neutron_subnet_v4_id)])
         mock_create_subnetpool.assert_called_with(
             {'subnetpool': new_subnetpool})
         mock_add_tag.assert_called_once_with(
@@ -184,7 +184,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         self.assertEqual(200, response.status_code)
         mock_list_subnets.assert_called_with(name=neutron_subnet_v4_name)
         mock_list_subnetpools.assert_called_with(
-            tags=[str(neutron_subnet_v4_id)])
+            name=pool_name, tags=[str(neutron_subnet_v4_id)])
         mock_create_subnetpool.assert_called_with(
             {'subnetpool': new_subnetpool})
         mock_add_tag.assert_called_once_with(
