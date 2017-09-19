@@ -487,7 +487,7 @@ def _get_cidr_from_subnetpool(**kwargs):
             .format(kwargs))
 
 
-def _update_existing_port(existing_port, fixed_ip):
+def _update_existing_port(existing_port, fixed_ip, mac_address):
     host = existing_port.get('binding:host_id')
     vif_type = existing_port.get('binding:vif_type')
     if not host and vif_type == 'unbound':
@@ -496,6 +496,8 @@ def _update_existing_port(existing_port, fixed_ip):
             'admin_state_up': True,
             'binding:host_id': lib_utils.get_hostname(),
         }
+        if mac_address:
+            updated_port['mac_address'] = mac_address
         updated_port_resp = app.neutron.update_port(
             existing_port['id'],
             {'port': updated_port})
@@ -771,14 +773,14 @@ def network_driver_create_network():
     if options:
         generic_options = options.get(const.NETWORK_GENERIC_OPTIONS)
         if generic_options:
-            v4_subnet_id = \
-                generic_options.get(const.NEUTRON_SUBNET_UUID_OPTION)
-            v4_subnet_name = \
-                generic_options.get(const.NEUTRON_SUBNET_NAME_OPTION)
-            v6_subnet_id = \
-                generic_options.get(const.NEUTRON_V6_SUBNET_UUID_OPTION)
-            v6_subnet_name = \
-                generic_options.get(const.NEUTRON_V6_SUBNET_NAME_OPTION)
+            v4_subnet_id = generic_options.get(
+                const.NEUTRON_SUBNET_UUID_OPTION)
+            v4_subnet_name = generic_options.get(
+                const.NEUTRON_SUBNET_NAME_OPTION)
+            v6_subnet_id = generic_options.get(
+                const.NEUTRON_V6_SUBNET_UUID_OPTION)
+            v6_subnet_name = generic_options.get(
+                const.NEUTRON_V6_SUBNET_NAME_OPTION)
             neutron_uuid = generic_options.get(const.NEUTRON_UUID_OPTION)
             neutron_name = generic_options.get(const.NEUTRON_NAME_OPTION)
             v4_pool_name = generic_options.get(const.NEUTRON_POOL_NAME_OPTION)
@@ -1408,7 +1410,7 @@ def ipam_get_capabilities():
       https://github.com/docker/libnetwork/blob/master/docs/ipam.md#getcapabilities  # noqa
     """
     LOG.debug("Received /IpamDriver.GetCapabilities")
-    capabilities = {'RequiresMACAddress': False}
+    capabilities = {'RequiresMACAddress': True}
     return flask.jsonify(capabilities)
 
 
@@ -1565,12 +1567,14 @@ def ipam_request_address():
     jsonschema.validate(json_data, schemata.REQUEST_ADDRESS_SCHEMA)
     pool_id = json_data['PoolID']
     req_address = json_data['Address']
+    req_mac_address = ''
     is_gateway = False
     allocated_address = ''
     subnet = {}
     # Check if the port is gateway
     options = json_data.get('Options')
     if options:
+        req_mac_address = options.get(const.DOCKER_MAC_ADDRESS_OPTION)
         request_address_type = options.get(const.REQUEST_ADDRESS_TYPE)
         if request_address_type == const.NETWORK_GATEWAY_OPTIONS:
             is_gateway = True
@@ -1632,23 +1636,29 @@ def ipam_request_address():
                     'admin_state_up': True,
                     'network_id': neutron_network_id,
                 }
+                if req_mac_address:
+                    port['mac_address'] = req_mac_address
                 fixed_ips = port['fixed_ips'] = []
                 fixed_ip = {'subnet_id': subnet['id']}
-                num_ports = 0
+                filtered_ports = []
                 if req_address:
                     fixed_ip['ip_address'] = req_address
                     fixed_ip_existing = [('subnet_id=%s' % subnet['id'])]
                     fixed_ip_existing.append('ip_address='
                                              '%s' % str(req_address))
                     filtered_ports = app.neutron.list_ports(
-                        fixed_ips=fixed_ip_existing)
-                    num_ports = len(filtered_ports.get('ports', []))
+                        fixed_ips=fixed_ip_existing).get('ports', [])
+                if not filtered_ports:
+                    filtered_ports = app.neutron.list_ports(
+                        mac_address=req_mac_address).get('ports', [])
+
+                num_ports = len(filtered_ports)
                 fixed_ips.append(fixed_ip)
 
                 if num_ports:
-                    existing_port = filtered_ports['ports'][0]
-                    created_port = _update_existing_port(existing_port,
-                                                         fixed_ip)
+                    existing_port = filtered_ports[0]
+                    created_port = _update_existing_port(
+                        existing_port, fixed_ip, req_mac_address)
                     # REVISIT(yedongcan) For tag-ext extension not
                     # supported, the Neutron existing port still can not
                     # be deleted in ipam_release_address.
@@ -1664,9 +1674,11 @@ def ipam_request_address():
                                               lib_const.DEVICE_OWNER)
 
                 LOG.debug("created port %s", created_port)
-                allocated_address = \
-                    (req_address or
-                     created_port['fixed_ips'][0]['ip_address'])
+                fixed_ips = created_port['fixed_ips']
+                fixed_ips = [ip for ip in fixed_ips
+                             if ip['subnet_id'] == subnet['id']]
+                allocated_address = (req_address or
+                                     fixed_ips[0]['ip_address'])
                 allocated_address = '{}/{}'.format(allocated_address,
                                                    subnet_cidr.prefixlen)
             except n_exceptions.NeutronClientException as ex:
