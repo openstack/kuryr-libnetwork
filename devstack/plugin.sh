@@ -67,6 +67,7 @@ function configure_kuryr {
     else
         iniset -sudo ${KURYR_CONFIG} DEFAULT bindir "$binding_path/libexec/kuryr"
     fi
+    iniset -sudo ${KURYR_CONFIG} DEFAULT debug $ENABLE_DEBUG_LOG_LEVEL
 }
 
 
