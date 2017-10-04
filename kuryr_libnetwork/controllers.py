@@ -563,10 +563,10 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
 
 def _create_kuryr_subnetpool(pool_cidr, pool_tag):
     pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
+
+    kwargs = {'name': pool_name}
     if pool_tag:
-        kwargs = {'tags': [pool_tag]}
-    else:
-        kwargs = {'name': pool_name}
+        kwargs['tags'] = [pool_tag]
     pools = _get_subnetpools_by_attrs(**kwargs)
     if len(pools):
         raise exceptions.KuryrException(
