@@ -21,6 +21,13 @@ Design and Developer Docs
 
    devref/index
 
+Installation Guide
+==================
+.. toctree::
+   :maxdepth: 1
+
+   install/index
+
 Indices and tables
 ==================
 
