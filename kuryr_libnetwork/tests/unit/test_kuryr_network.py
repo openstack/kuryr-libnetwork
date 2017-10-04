@@ -71,6 +71,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             network_request['IPv6Data'][0]['Pool'])
         kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
             fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
+        fake_v4_pool_attrs = {'name': fake_v4_pool_name}
+        fake_v6_pool_attrs = {'name': fake_v6_pool_name}
         mock_list_subnetpools.side_effect = [
             {'subnetpools': kuryr_v4_subnetpools['subnetpools']},
             {'subnetpools': kuryr_v6_subnetpools['subnetpools']}
@@ -86,8 +88,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         response = self._invoke_create_request(network_request)
         self.assertEqual(401, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        mock_list_subnetpools.assert_any_call(name=fake_v4_pool_name)
-        mock_list_subnetpools.assert_any_call(name=fake_v6_pool_name)
+        mock_list_subnetpools.assert_any_call(**fake_v4_pool_attrs)
+        mock_list_subnetpools.assert_any_call(**fake_v6_pool_attrs)
         mock_create_network.assert_called_with(fake_request)
         self.assertIn('Err', decoded_json)
         self.assertEqual(
@@ -127,6 +129,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
             network_request['IPv6Data'][0]['Pool'])
         kuryr_v6_subnetpools = self._get_fake_v6_subnetpools(
             fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
+        fake_v4_pool_attrs = {'name': fake_v4_pool_name}
+        fake_v6_pool_attrs = {'name': fake_v6_pool_name}
         mock_list_subnetpools.side_effect = [
             {'subnetpools': kuryr_v4_subnetpools['subnetpools']},
             {'subnetpools': kuryr_v6_subnetpools['subnetpools']}
@@ -136,8 +140,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         response = self._invoke_create_request(network_request)
         self.assertEqual(401, response.status_code)
         decoded_json = jsonutils.loads(response.data)
-        mock_list_subnetpools.assert_any_call(name=fake_v4_pool_name)
-        mock_list_subnetpools.assert_any_call(name=fake_v6_pool_name)
+        mock_list_subnetpools.assert_any_call(**fake_v4_pool_attrs)
+        mock_list_subnetpools.assert_any_call(**fake_v6_pool_attrs)
         mock_get_default_network_id.assert_called()
         self.assertIn('Err', decoded_json)
         self.assertEqual(
@@ -240,8 +244,10 @@ class TestKuryrNetworkDeleteFailures(base.TestKuryrFailures):
             self.assertEqual(const.SCHEMA['SUCCESS'], decoded_json)
         else:
             self.assertEqual(GivenException.status_code, response.status_code)
-            mock_list_subnetpools.assert_any_call(name='kuryr6')
-            mock_list_subnetpools.assert_any_call(name='kuryr')
+            fake_v4_pool_attrs = {'name': 'kuryr'}
+            fake_v6_pool_attrs = {'name': 'kuryr6'}
+            mock_list_subnetpools.assert_any_call(**fake_v6_pool_attrs)
+            mock_list_subnetpools.assert_any_call(**fake_v4_pool_attrs)
             mock_delete_subnet.assert_any_call(subnet_v4_id)
             mock_delete_subnet.assert_any_call(subnet_v6_id)
             mock_delete_network.assert_called_with(fake_neutron_network_id)
@@ -311,8 +317,10 @@ class TestKuryrNetworkDeleteFailures(base.TestKuryrFailures):
         mock_list_networks.assert_any_call(tags=te)
         mock_list_subnets.assert_called_with(
             network_id=fake_neutron_network_id)
-        mock_list_subnetpools.assert_any_call(name='kuryr6')
-        mock_list_subnetpools.assert_any_call(name='kuryr')
+        fake_v4_pool_attrs = {'name': 'kuryr'}
+        fake_v6_pool_attrs = {'name': 'kuryr6'}
+        mock_list_subnetpools.assert_any_call(**fake_v6_pool_attrs)
+        mock_list_subnetpools.assert_any_call(**fake_v4_pool_attrs)
         mock_delete_subnet.assert_called_with(subnet_v4_id)
 
         decoded_json = jsonutils.loads(response.data)
