@@ -1,0 +1,105 @@
+- job:
+    name: kuryr-libnetwork-fullstack-base
+    parent: legacy-dsvm-base
+    vars:
+      use_python3: 0
+      use_src: 0
+    run: playbooks/kuryr-libnetwork-fullstack-base/run
+    post-run: playbooks/kuryr-libnetwork-fullstack-base/post
+    timeout: 7800
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/devstack-plugin-container
+      - openstack/kuryr
+      - openstack/kuryr-libnetwork
+
+- job:
+    name: kuryr-libnetwork-rally-base
+    parent: legacy-dsvm-base
+    run: playbooks/kuryr-libnetwork-rally-base/run
+    post-run: playbooks/kuryr-libnetwork-rally-base/post
+    timeout: 7800
+    vars:
+      use_src: 0
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/devstack-plugin-container
+      - openstack/kuryr
+      - openstack/kuryr-libnetwork
+      - openstack/rally
+    voting: false
+
+- job:
+    name: kuryr-libnetwork-install
+    parent: legacy-dsvm-base
+    run: playbooks/kuryr-libnetwork-install/run
+    post-run: playbooks/kuryr-libnetwork-install/post
+    timeout: 7800
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/devstack-plugin-container
+      - openstack/kuryr
+      - openstack/kuryr-libnetwork
+    voting: false
+
+- job:
+    name: kuryr-libnetwork-install-multinode
+    parent: legacy-dsvm-base-multinode
+    run: playbooks/kuryr-libnetwork-install-multinode/run
+    post-run: playbooks/kuryr-libnetwork-install-multinode/post
+    timeout: 7800
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/devstack-plugin-container
+      - openstack/kuryr
+      - openstack/kuryr-libnetwork
+    nodeset: legacy-ubuntu-xenial-2-node
+
+- job:
+    name: kuryr-libnetwork-fullstack
+    parent: kuryr-libnetwork-fullstack-base
+
+- job:
+    name: kuryr-libnetwork-fullstack-py35
+    parent: kuryr-libnetwork-fullstack-base
+    vars:
+      use_python3: 1
+
+- job:
+    name: kuryr-libnetwork-kuryr_lib-src-fullstack
+    parent: kuryr-libnetwork-fullstack-base
+    vars:
+      use_src: 1
+    branches: master
+    voting: false
+
+- job:
+    name: kuryr-libnetwork-rally
+    parent: kuryr-libnetwork-rally-base
+
+- job:
+    name: kuryr-libnetwork-kuryr_lib-src-rally
+    parent: kuryr-libnetwork-rally-base
+    vars:
+      use_src: 1
+    branches: master
+    voting: false
+
+- project:
+    name: openstack/kuryr-libnetwork
+    check:
+      jobs:
+        - kuryr-libnetwork-install
+        - kuryr-libnetwork-kuryr_lib-src-fullstack
+        - kuryr-libnetwork-fullstack
+        - kuryr-libnetwork-kuryr_lib-src-rally
+        - kuryr-libnetwork-fullstack-py35
+        - kuryr-libnetwork-rally
+    gate:
+      jobs:
+        - kuryr-libnetwork-kuryr_lib-src-fullstack
+        - kuryr-libnetwork-fullstack
+        - kuryr-libnetwork-fullstack-py35
+    experimental:
+      jobs:
+        - kuryr-libnetwork-install-multinode
