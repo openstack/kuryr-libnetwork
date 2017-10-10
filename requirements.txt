@@ -4,15 +4,15 @@
 
 Babel!=2.4.0,>=2.3.4 # BSD
 Flask!=0.11,<1.0,>=0.10 # BSD
-ipaddress>=1.0.7;python_version<'3.3' # PSF
-jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
+ipaddress>=1.0.16;python_version<'3.3' # PSF
+jsonschema<3.0.0,>=2.6.0 # MIT
 kuryr-lib>=0.5.0 # Apache-2.0
-neutron-lib>=1.9.0 # Apache-2.0
+neutron-lib>=1.10.0 # Apache-2.0
 os-client-config>=1.28.0 # Apache-2.0
-oslo.concurrency>=3.8.0 # Apache-2.0
-oslo.config!=4.3.0,!=4.4.0,>=4.0.0 # Apache-2.0
+oslo.concurrency>=3.20.0 # Apache-2.0
+oslo.config>=4.6.0 # Apache-2.0
 oslo.log>=3.30.0 # Apache-2.0
-oslo.utils>=3.20.0 # Apache-2.0
+oslo.utils>=3.28.0 # Apache-2.0
 pbr!=2.1.0,>=2.0.0 # Apache-2.0
 python-neutronclient>=6.3.0 # Apache-2.0
 six>=1.9.0 # MIT
