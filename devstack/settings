@@ -28,4 +28,8 @@ GITREPO["kuryr"]=${KURYR_REPO:-${GIT_BASE}/openstack/kuryr.git}
 GITBRANCH["kuryr"]=${KURYR_BRANCH:-master}
 GITDIR["kuryr"]=$DEST/kuryr
 
-enable_service kuryr-libnetwork etcd3 docker-engine
+enable_service kuryr-libnetwork docker-engine
+
+if [[ ${HOST_IP} == ${SERVICE_HOST} ]]; then
+    enable_service etcd3
+fi
