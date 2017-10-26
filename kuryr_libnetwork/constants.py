@@ -33,6 +33,7 @@ NEUTRON_ID_LH_OPTION = 'kuryr.net.uuid.lh'
 NEUTRON_ID_UH_OPTION = 'kuryr.net.uuid.uh'
 
 DOCKER_EXPOSED_PORTS_OPTION = 'com.docker.network.endpoint.exposedports'
+DOCKER_MAC_ADDRESS_OPTION = 'com.docker.network.endpoint.macaddress'
 KURYR_EXISTING_NEUTRON_NET = 'kuryr.net.existing'
 KURYR_EXISTING_NEUTRON_SUBNETPOOL = 'kuryr.subnetpool.existing'
 KURYR_EXISTING_NEUTRON_PORT = 'kuryr.port.existing'
