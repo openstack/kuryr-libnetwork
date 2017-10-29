@@ -203,7 +203,7 @@ def _verify_port_driver_compliancy(driver, port_driver_name):
 
 
 def _verify_binding_driver_compatibility(driver, port_driver_name):
-    tokens = config.CONF.binding.driver.rsplit('.', 1)
+    tokens = config.CONF.binding.default_driver.rsplit('.', 1)
     binding_driver_name = tokens[0] if len(tokens) == 1 else tokens[1]
     binding_driver_name.lower()
 

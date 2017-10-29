@@ -60,7 +60,7 @@ class TestDriver(base.TestKuryrBase):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility(self, mock_conf):
-        mock_conf.binding.driver = 'veth'
+        mock_conf.binding.default_driver = 'veth'
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('veth',)
 
@@ -93,7 +93,7 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_compatible(self, m_conf):
-        m_conf.binding.driver = 'macvlan'
+        m_conf.binding.default_driver = 'macvlan'
         message = "Configuration file error: port driver 'veth' is not " \
                   "compatible with binding driver 'macvlan'"
 
@@ -104,7 +104,7 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_supported(self, m_conf):
-        m_conf.binding.driver = 'ipvlan'
+        m_conf.binding.default_driver = 'ipvlan'
         message = "Configuration file error: binding driver 'ipvlan' is " \
                   "currently not supported with 'nested' port driver"
 
