@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log
 from oslo_utils import excutils
+from oslo_utils import strutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
@@ -563,7 +564,7 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
     LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
 
 
-def _create_kuryr_subnetpool(pool_cidr, pool_tag):
+def _create_kuryr_subnetpool(pool_cidr, pool_tag, shared):
     pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
 
     kwargs = {'name': pool_name}
@@ -579,7 +580,9 @@ def _create_kuryr_subnetpool(pool_cidr, pool_tag):
     new_subnetpool = {
         'name': pool_name,
         'default_prefixlen': cidr.prefixlen,
-        'prefixes': [pool_cidr]}
+        'prefixes': [pool_cidr],
+        'shared': shared
+    }
     LOG.info("Creating subnetpool with the given pool CIDR")
     created_subnetpool_response = app.neutron.create_subnetpool(
         {'subnetpool': new_subnetpool})
@@ -769,6 +772,7 @@ def network_driver_create_network():
     v4_subnet_id = ''
     v6_subnet_name = ''
     v6_subnet_id = ''
+    shared = False
     options = json_data.get('Options')
     if options:
         generic_options = options.get(const.NETWORK_GENERIC_OPTIONS)
@@ -790,6 +794,8 @@ def network_driver_create_network():
                 const.NEUTRON_POOL_UUID_OPTION)
             v6_pool_id = generic_options.get(
                 const.NEUTRON_V6_POOL_UUID_OPTION)
+            shared = strutils.bool_from_string(generic_options.get(
+                const.NEUTRON_SHARED_OPTION, 'False'))
 
     def _get_pool_id(pool_name, pool_cidr, pool_tags):
         pool_id = ''
@@ -843,7 +849,8 @@ def network_driver_create_network():
     if not neutron_uuid and not neutron_name:
         network = app.neutron.create_network(
             {'network': {'name': neutron_network_name,
-                         "admin_state_up": True}})
+                         "admin_state_up": True,
+                         'shared': shared}})
         network_id = network['network']['id']
         _neutron_net_add_tags(network['network']['id'], container_net_id,
                               tags=app.tag)
@@ -865,6 +872,7 @@ def network_driver_create_network():
                     ("Specified network id/name({0}) does not "
                      "exist.").format(specified_network))
             network_id = networks[0]['id']
+            network_shared = networks[0]['shared']
         except n_exceptions.NeutronClientException as ex:
             LOG.error("Error happened during listing "
                       "Neutron networks: %s", ex)
@@ -880,6 +888,19 @@ def network_driver_create_network():
                      "%(neutron_network_name)s successfully: %(network)s",
                      {'neutron_network_name': neutron_network_name,
                       'network': network})
+        if network_shared != shared:
+            # NOTE(kiennt): Use generic KuryrException to unblock
+            #               patch 516228 for merging. Will change
+            #               it to ConflictOption exception in the
+            #               follow-up.
+            raise exceptions.KuryrException(
+                'Network %(network_id)s had option '
+                'shared=%(network_shared)s, conflict with the given option '
+                'shared=%(shared)s', {
+                    'network_id': network_id,
+                    'network_shared': network_shared,
+                    'shared': shared
+                })
         LOG.info("Using existing network %s "
                  "successfully", specified_network)
 
@@ -1472,8 +1493,11 @@ def ipam_request_pool():
     pool_id = ''
     subnet_id = ''
     subnet_name = ''
+    shared = False
     options = json_data.get('Options')
     if options:
+        shared = strutils.bool_from_string(options.get(
+            const.NEUTRON_SHARED_OPTION, 'False'))
         if v6:
             subnet_name = options.get(const.NEUTRON_V6_SUBNET_NAME_OPTION)
             subnet_id = options.get(const.NEUTRON_V6_SUBNET_UUID_OPTION)
@@ -1500,7 +1524,8 @@ def ipam_request_pool():
                             "in Options.")
         if not pool_name and not pool_id:
             pool_id = _create_kuryr_subnetpool(subnet_cidr,
-                                               subnet_id)['id']
+                                               subnet_id,
+                                               shared)['id']
         else:
             if pool_id:
                 existing_pools = _get_subnetpools_by_attrs(id=pool_id)
@@ -1518,11 +1543,22 @@ def ipam_request_pool():
             prefixes = existing_pools[0]['prefixes']
             pool_cidr = ipaddress.ip_network(six.text_type(prefixes[0]))
             if pool_cidr == cidr:
+                if shared != existing_pools[0]['shared']:
+                    # NOTE(kiennt): Use generic KuryrException to unblock
+                    #               patch 516228 for merging. Will change
+                    #               it to ConflictOption exception in the
+                    #               follow-up.
+                    raise exceptions.KuryrException(
+                        'There is already existing subnet pool '
+                        'with %(cidr)s but with shared = %(shared)s',
+                        {'cidr': cidr,
+                         'shared': existing_pools[0]['shared']})
                 LOG.info("Using existing Neutron subnetpool %s successfully",
                          pool_id)
             else:
                 pool_id = _create_kuryr_subnetpool(subnet_cidr,
-                                                   subnet_id)['id']
+                                                   subnet_id,
+                                                   shared)['id']
     else:
         if v6:
             default_pool_list = SUBNET_POOLS_V6

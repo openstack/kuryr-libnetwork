@@ -115,7 +115,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
@@ -241,7 +242,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
@@ -379,7 +381,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
@@ -821,7 +824,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
@@ -986,7 +990,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
@@ -1147,7 +1152,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_create_network_request = {
                 "network": {
                     "name": utils.make_net_name(docker_network_id),
-                    "admin_state_up": True
+                    "admin_state_up": True,
+                    "shared": False
                 }
             }
             # The following fake response is retrieved from the Neutron doc:

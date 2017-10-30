@@ -50,7 +50,8 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': 16,
-            'prefixes': ['10.0.0.0/16']}
+            'prefixes': ['10.0.0.0/16'],
+            'shared': False}
 
         fake_subnet = {"subnets": []}
         mock_list_subnets.return_value = fake_subnet

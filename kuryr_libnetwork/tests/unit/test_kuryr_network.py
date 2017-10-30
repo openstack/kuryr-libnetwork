@@ -81,7 +81,8 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         fake_request = {
             "network": {
                 "name": utils.make_net_name(docker_network_id),
-                "admin_state_up": True
+                "admin_state_up": True,
+                "shared": False
             }
         }
         mock_create_network.side_effect = exceptions.Unauthorized
