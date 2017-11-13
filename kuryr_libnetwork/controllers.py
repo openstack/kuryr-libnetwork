@@ -1140,6 +1140,8 @@ def network_driver_create_endpoint():
                 _process_interface_address(
                     fixed_ip, subnets_dict_by_id, response_interface)
 
+        LOG.debug("Response JSON data %s for /NetworkDriver.CreateEndpoint",
+                  {'Interface': response_interface})
         return flask.jsonify({'Interface': response_interface})
 
 
@@ -1168,6 +1170,8 @@ def network_driver_endpoint_operational_info():
     response_port_status = (
         _get_neutron_port_status_from_docker_endpoint(endpoint_id))
 
+    LOG.debug("Response JSON data %s for /NetworkDriver.EndpointOperInfo",
+              {'Value': response_port_status})
     return flask.jsonify({'Value': response_port_status})
 
 
@@ -1333,6 +1337,8 @@ def network_driver_join():
                 }
                 join_response['StaticRoutes'].append(static_route)
 
+        LOG.debug("Response JSON data %s for /NetworkDriver.Join",
+                  join_response)
         return flask.jsonify(join_response)
 
 
@@ -1534,6 +1540,8 @@ def ipam_request_pool():
 
     req_pool_res = {'PoolID': pool_id,
                     'Pool': subnet_cidr}
+    LOG.debug("Response JSON data %s for /IpamDriver.RequestPool",
+              req_pool_res)
     return flask.jsonify(req_pool_res)
 
 
@@ -1694,6 +1702,8 @@ def ipam_request_address():
             allocated_address = '{}/{}'.format(req_address,
                                                subnet_cidr.prefixlen)
 
+    LOG.debug("Response JSON data %s for /IpamDriver.RequestAddress",
+              {'Address': allocated_address})
     return flask.jsonify({'Address': allocated_address})
 
 
