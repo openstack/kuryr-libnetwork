@@ -889,11 +889,7 @@ def network_driver_create_network():
                      {'neutron_network_name': neutron_network_name,
                       'network': network})
         if network_shared != shared:
-            # NOTE(kiennt): Use generic KuryrException to unblock
-            #               patch 516228 for merging. Will change
-            #               it to ConflictOption exception in the
-            #               follow-up.
-            raise exceptions.KuryrException(
+            raise exceptions.ConflictConfigOption(
                 'Network %(network_id)s had option '
                 'shared=%(network_shared)s, conflict with the given option '
                 'shared=%(shared)s', {
@@ -1544,11 +1540,7 @@ def ipam_request_pool():
             pool_cidr = ipaddress.ip_network(six.text_type(prefixes[0]))
             if pool_cidr == cidr:
                 if shared != existing_pools[0]['shared']:
-                    # NOTE(kiennt): Use generic KuryrException to unblock
-                    #               patch 516228 for merging. Will change
-                    #               it to ConflictOption exception in the
-                    #               follow-up.
-                    raise exceptions.KuryrException(
+                    raise exceptions.ConflictConfigOption(
                         'There is already existing subnet pool '
                         'with %(cidr)s but with shared = %(shared)s',
                         {'cidr': cidr,
