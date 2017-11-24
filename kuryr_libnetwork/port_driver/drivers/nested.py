@@ -102,7 +102,7 @@ class NestedDriver(base.BaseNestedDriver):
         Endpoint to the allowed_address_pairs list of the Neutron port
         associated to the underlying host interface.
 
-        :param endpoint_id:  the ID of the Docker container as string
+        :param endpoint_id:  the ID of the endpoint as string
         :param neutron_port: a port dictionary returned from
                              python-neutronclient
         :returns: the tuple of stdout and stderr returned

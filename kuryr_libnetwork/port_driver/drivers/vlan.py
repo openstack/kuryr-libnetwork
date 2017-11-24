@@ -112,7 +112,7 @@ class VlanDriver(base.BaseNestedDriver):
         This driver will also remove the subport attached to the trunk port
         and will release its segmentation id
 
-        :param endpoint_id:  the ID of the Docker container as string
+        :param endpoint_id:  the ID of the endpoint as string
         :param neutron_port: a port dictionary returned from
                              python-neutronclient
         :returns: the tuple of stdout and stderr returned

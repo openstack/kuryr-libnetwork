@@ -69,7 +69,7 @@ class VethDriver(driver.Driver):
         from its vitual bridge and deleted by delegating to the selected
         kuryr-lib driver.
 
-        :param endpoint_id:  the ID of the Docker container as string
+        :param endpoint_id:  the ID of the endpoint as string
         :param neutron_port: a port dictionary returned from
                python-neutronclient
         :returns: the tuple of stdout and stderr returned by
