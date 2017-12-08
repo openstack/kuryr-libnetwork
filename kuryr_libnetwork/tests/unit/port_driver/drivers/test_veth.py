@@ -110,7 +110,6 @@ class TestVethDriver(base.TestKuryrBase):
             'port': {
                 'name': fake_port_name,
                 'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': fake_endpoint_id,
                 'binding:host_id': lib_utils.get_hostname(),
                 'mac_address': fake_mac_address2
             }
@@ -143,8 +142,45 @@ class TestVethDriver(base.TestKuryrBase):
             'port': {
                 'name': fake_port_name,
                 'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': fake_endpoint_id,
                 'binding:host_id': lib_utils.get_hostname()
+            }
+        }
+        mock_update_port.assert_called_with(fake_neutron_port_id,
+                                            expected_update_port)
+
+    @mock.patch('kuryr_libnetwork.app.neutron.update_port')
+    @mock.patch.object(libnet_utils, 'get_neutron_port_name')
+    def test_update_port_with_device_id(self, mock_get_port_name,
+                                        mock_update_port):
+        fake_endpoint_id = lib_utils.get_hash()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_mac_address1 = 'fa:16:3e:20:57:c3'
+        fake_mac_address2 = 'fa:16:3e:20:57:c4'
+        fake_neutron_port = self._get_fake_port(
+            fake_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
+            fake_mac_address1)['port']
+        fake_neutron_port.pop('device_id')
+        fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
+        mock_get_port_name.return_value = fake_port_name
+
+        veth_driver = veth.VethDriver()
+        veth_driver.update_port(fake_neutron_port, fake_endpoint_id,
+                                fake_mac_address2)
+
+        mock_get_port_name.assert_called_with(fake_endpoint_id)
+        expected_update_port = {
+            'port': {
+                'name': fake_port_name,
+                'device_owner': lib_const.DEVICE_OWNER,
+                'binding:host_id': lib_utils.get_hostname(),
+                'device_id': fake_endpoint_id,
+                'mac_address': fake_mac_address2
             }
         }
         mock_update_port.assert_called_with(fake_neutron_port_id,

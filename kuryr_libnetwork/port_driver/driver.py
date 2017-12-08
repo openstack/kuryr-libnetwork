@@ -133,9 +133,10 @@ class Driver(object):
             updated_port = {
                 'name': port['name'],
                 'device_owner': lib_const.DEVICE_OWNER,
-                'device_id': endpoint_id,
                 'binding:host_id': lib_utils.get_hostname(),
             }
+            if not port.get('device_id'):
+                updated_port['device_id'] = endpoint_id
             if interface_mac:
                 updated_port['mac_address'] = interface_mac
             response_port = app.neutron.update_port(port['id'],
