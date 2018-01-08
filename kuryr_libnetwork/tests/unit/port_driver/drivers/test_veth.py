@@ -77,7 +77,10 @@ class TestVethDriver(base.TestKuryrBase):
     def test_get_container_iface_name(self, mock_get_veth_pair_names):
         veth_driver = veth.VethDriver()
         fake_neutron_port_id = uuidutils.generate_uuid()
-        response = veth_driver.get_container_iface_name(fake_neutron_port_id)
+        fake_neutron_port = self._get_fake_port(
+            uuidutils.generate_uuid(), uuidutils.generate_uuid(),
+            fake_neutron_port_id)['port']
+        response = veth_driver.get_container_iface_name(fake_neutron_port)
         mock_get_veth_pair_names.assert_called_with(fake_neutron_port_id)
         self.assertEqual(response, "fake_container_ifname")
 

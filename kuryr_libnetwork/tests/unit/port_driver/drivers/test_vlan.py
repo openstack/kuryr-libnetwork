@@ -177,7 +177,10 @@ class TestVlanDriver(base.TestKuryrBase):
         mock_vlan_check.return_value = None
         vlan_driver = vlan.VlanDriver()
         fake_neutron_port_id = uuidutils.generate_uuid()
-        response = vlan_driver.get_container_iface_name(fake_neutron_port_id)
+        fake_neutron_port = self._get_fake_port(
+            uuidutils.generate_uuid(), uuidutils.generate_uuid(),
+            fake_neutron_port_id)['port']
+        response = vlan_driver.get_container_iface_name(fake_neutron_port)
         mock_get_pair_names.assert_called_with(fake_neutron_port_id)
         self.assertEqual(response, "fake_container_name")
 

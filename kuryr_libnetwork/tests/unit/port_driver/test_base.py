@@ -29,7 +29,7 @@ class TestBaseDriver(d_base.BaseNestedDriver):
     def delete_host_iface(self, endpoint_id, neutron_port):
         pass
 
-    def get_container_iface_name(self, neutron_port_id):
+    def get_container_iface_name(self, neutron_port):
         pass
 
     def get_supported_bindings(self):

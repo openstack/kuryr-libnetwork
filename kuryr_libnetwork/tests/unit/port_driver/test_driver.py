@@ -46,7 +46,7 @@ class TestDriver(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.config.CONF')
     @ddt.data('kuryr_libnetwork.port_driver.drivers.veth', 'veth')
     def test__parse_port_driver_config(self, port_driver_value, mock_conf):
-        mock_conf.port_driver = port_driver_value
+        mock_conf.default_port_driver = port_driver_value
 
         module, name, classname = driver._parse_port_driver_config()
         self.assertEqual(module, 'kuryr_libnetwork.port_driver.drivers.veth')
@@ -60,11 +60,22 @@ class TestDriver(base.TestKuryrBase):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility(self, mock_conf):
-        mock_conf.binding.default_driver = 'veth'
+        mock_conf.binding.enabled_drivers = ['veth']
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('veth',)
 
         ret = driver._verify_binding_driver_compatibility(fake_driver, 'veth')
+        fake_driver.get_supported_bindings.assert_called_once()
+        self.assertIsNone(ret)
+
+    @mock.patch('kuryr_libnetwork.config.CONF')
+    def test__verify_binding_driver_compatibility_multi_drivers(
+            self, mock_conf):
+        mock_conf.binding.enabled_drivers = ['veth', 'sriov']
+        fake_driver = mock.Mock(spec=driver.Driver)
+        fake_driver.get_supported_bindings.return_value = ('sriov',)
+
+        ret = driver._verify_binding_driver_compatibility(fake_driver, 'sriov')
         fake_driver.get_supported_bindings.assert_called_once()
         self.assertIsNone(ret)
 
@@ -74,7 +85,7 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__parse_port_driver_config_empty(self, mock_conf):
-        mock_conf.port_driver = ''
+        mock_conf.default_port_driver = ''
 
         self.assertRaisesRegex(exceptions.KuryrException,
             "No port driver provided", driver._parse_port_driver_config)
@@ -93,9 +104,21 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_compatible(self, m_conf):
-        m_conf.binding.default_driver = 'macvlan'
+        m_conf.binding.enabled_drivers = ['macvlan']
         message = "Configuration file error: port driver 'veth' is not " \
-                  "compatible with binding driver 'macvlan'"
+                  "compatible with binding driver '\['macvlan'\]'"
+
+        fake_driver = mock.Mock(spec=driver.Driver)
+        fake_driver.get_supported_bindings.return_value = ('veth',)
+        self.assertRaisesRegex(exceptions.KuryrException, message,
+            driver._verify_binding_driver_compatibility, fake_driver, 'veth')
+
+    @mock.patch('kuryr_libnetwork.config.CONF')
+    def test__verify_binding_driver_compatibility_not_compatible_multi_drivers(
+            self, m_conf):
+        m_conf.binding.enabled_drivers = ['macvlan', 'sriov']
+        message = "Configuration file error: port driver 'veth' is not " \
+                  "compatible with binding driver '\['macvlan'\, 'sriov']'"
 
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('veth',)
@@ -104,8 +127,8 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
 
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_supported(self, m_conf):
-        m_conf.binding.default_driver = 'ipvlan'
-        message = "Configuration file error: binding driver 'ipvlan' is " \
+        m_conf.binding.enabled_drivers = ['ipvlan']
+        message = "Configuration file error: binding driver '\['ipvlan'\]' is " \
                   "currently not supported with 'nested' port driver"
 
         fake_driver = mock.Mock(spec=driver.Driver)
