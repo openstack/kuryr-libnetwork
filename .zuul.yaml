@@ -86,7 +86,6 @@
     voting: false
 
 - project:
-    name: openstack/kuryr-libnetwork
     check:
       jobs:
         - kuryr-libnetwork-install
