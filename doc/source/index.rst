@@ -13,6 +13,7 @@ Contents:
 
    readme
    config-sriov.rst
+   fullstack-test
 
 Design and Developer Docs
 ==========================

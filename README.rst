@@ -7,9 +7,9 @@ Team and repository tags
 
 .. Change things from this point on
 
-===============================
+================
 kuryr-libnetwork
-===============================
+================
 
 .. image:: https://raw.githubusercontent.com/openstack/kuryr/master/doc/images/kuryr_logo.png
     :alt: Kuryr mascot
@@ -414,21 +414,6 @@ Known IPv6 network limitations
 Due to the `Docker --ipv6 tag bug <https://github.com/docker/docker/issues/28055>`_ version
 1.12 and 1.13 have problem to create network only with IPv6.
 
-
-To test it with tox::
-
-    $ tox
-
-You can also run specific test cases using the ``-e`` flag, e.g., to only run
-the *fullstack* test case::
-
-    $ tox -e fullstack
-
-Also you can run *fullstack* test using credentials from openrc config file,
-this requires you source openrc file in your DevStack or production environment.
-In DevStack, you can using command "source openrc admin" in your devstack directory.
-For production environment, please refer "Create OpenStack client environment scripts"
-in OpenStack install guide.
 
 Generating Documentation
 ------------------------
