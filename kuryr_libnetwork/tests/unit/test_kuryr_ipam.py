@@ -1562,7 +1562,10 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_subnets.assert_called_with(
             subnetpool_id=fake_kuryr_subnetpool_id)
         mock_list_ports.assert_called()
-        mock_update_port.assert_called()
+        expect_updated_port = {'name': '', 'device_owner': '',
+                               'device_id': '', 'binding:host_id': ''}
+        mock_update_port.assert_called_with(fake_port['port']['id'],
+                                            {'port': expect_updated_port})
         mock_delete_port.assert_not_called()
         mock_remove_tag.assert_called_with('ports',
                                            fake_port['port']['id'],

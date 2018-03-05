@@ -118,8 +118,7 @@ def get_driver(port):
     if driver is None:
         raise exceptions.KuryrException(
             "No port driver available for VNIC type %s" % vnic_type)
-    else:
-        return driver
+    return driver
 
 
 def _cache_default_subnetpool_ids(app):
@@ -1879,7 +1878,9 @@ def ipam_release_address():
                         app.neutron.delete_port(port['id'])
             elif tags and const.KURYR_EXISTING_NEUTRON_PORT in tags:
                 updated_port = {'name': '', 'device_owner': '',
-                                'device_id': '', 'binding:host_id': ''}
+                                'binding:host_id': ''}
+                if port['name'].startswith(port['device_id']):
+                    updated_port["device_id"] = ''
                 app.neutron.update_port(port['id'], {'port': updated_port})
                 _neutron_port_remove_tag(port['id'],
                                          const.KURYR_EXISTING_NEUTRON_PORT)
