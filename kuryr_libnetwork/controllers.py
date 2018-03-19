@@ -43,6 +43,7 @@ LOG = log.getLogger(__name__)
 MANDATORY_NEUTRON_EXTENSION = "subnet_allocation"
 TAG_NEUTRON_EXTENSION = "tag"
 TAG_EXT_NEUTRON_EXTENSION = "tag-ext"
+TAG_STANDARD_NEUTRON_EXTENSION = 'standard-attr-tag'
 SUBNET_POOLS_V4 = []
 SUBNET_POOLS_V6 = []
 DEFAULT_DRIVER = driver.get_driver_instance()
@@ -83,20 +84,36 @@ def check_for_neutron_ext_support():
                             .format(MANDATORY_NEUTRON_EXTENSION))
 
 
-def check_for_neutron_tag_support(ext_name):
-    """Validates tag and tag-ext extension support availability in Neutron."""
-    if ext_name == TAG_EXT_NEUTRON_EXTENSION:
-        ext_rename = "tag_ext"
-    else:
-        ext_rename = ext_name
-    setattr(app, ext_rename, True)
+def check_for_neutron_tag_support():
+    """Validates tagging extensions availability in Neutron.
+
+    Checks if either tag, tag-ext or standard-attr-tag is available and sets
+    ``app`` properties accordingly.
+    """
+
+    app.tag_ext = True
+    app.tag = True
+
+    # Check for modern extension first.
     try:
-        app.neutron.show_extension(ext_name)
-    except n_exceptions.NeutronClientException as e:
-        setattr(app, ext_rename, False)
-        if e.status_code == n_exceptions.NotFound.status_code:
-            LOG.warning("Neutron extension %s not supported. "
-                        "Continue without using them.", ext_name)
+        app.neutron.show_extension(TAG_STANDARD_NEUTRON_EXTENSION)
+    except n_exceptions.NeutronClientException:
+        pass
+    else:
+        # Okay, this means we have functionality of both tag and tag_ext,
+        # we're good to go!
+        return
+
+    # Fallback to legacy extensions.
+    for ext in (TAG_NEUTRON_EXTENSION, TAG_EXT_NEUTRON_EXTENSION):
+        try:
+            app.neutron.show_extension(ext)
+        except n_exceptions.NeutronClientException as e:
+            ext_param = ext.replace('-', '_')  # identifiers cannot have '-'
+            setattr(app, ext_param, False)
+            if e.status_code == n_exceptions.NotFound.status_code:
+                LOG.warning("Neutron extension %s not supported. "
+                            "Continue without using them.", ext)
 
 
 def load_default_subnet_pools():

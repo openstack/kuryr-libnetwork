@@ -60,10 +60,7 @@ class ConfigurationTest(base.TestKuryrBase):
         kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
         mock_neutron_client.assert_called_once()
         mock_check_neutron_ext_support.assert_called_once()
-        mock_check_for_neutron_tag_support.assert_any_call(
-            controllers.TAG_NEUTRON_EXTENSION)
-        mock_check_for_neutron_tag_support.assert_any_call(
-            controllers.TAG_EXT_NEUTRON_EXTENSION)
+        mock_check_for_neutron_tag_support.assert_called_once_with()
         mock_run.assert_called_once_with(kuryr_uri.hostname, 23750,
             ssl_context=None)
 
@@ -81,28 +78,34 @@ class ConfigurationTest(base.TestKuryrBase):
             mock_extension.assert_called_once_with(ext_alias)
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
-    @ddt.data('tag', 'tag-ext')
-    def test_check_for_neutron_tag_support_with_ex(self,
-                                                   ext_name,
-                                                   mock_extension):
-        err = n_exceptions.NotFound.status_code
-        ext_not_found_ex = n_exceptions.NeutronClientException(
-            status_code=err,
-            message="")
-        mock_extension.side_effect = ext_not_found_ex
-        controllers.check_for_neutron_tag_support(ext_name)
-        mock_extension.assert_called_once_with(ext_name)
+    def test_check_for_neutron_tag_support_with_modern_ext(self,
+                                                           mock_extension):
+        controllers.check_for_neutron_tag_support()
+        mock_extension.assert_called_once_with('standard-attr-tag')
+        self.assertTrue(controllers.app.tag)
+        self.assertTrue(controllers.app.tag_ext)
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_extension')
-    @ddt.data('fake_ext')
-    def test_check_for_neutron_tag_support_wrong_ext_name_with_ex(
-            self,
-            ext_name,
-            mock_extension):
+    @ddt.data({'tag': True, 'tag-ext': True},
+              {'tag': True, 'tag-ext': False},
+              {'tag': False, 'tag-ext': True},
+              {'tag': False, 'tag-ext': False})
+    def test_check_for_neutron_tag_support_with_legacy_ext(self, ext_matrix,
+                                                           mock_extension):
         err = n_exceptions.NotFound.status_code
         ext_not_found_ex = n_exceptions.NeutronClientException(
             status_code=err,
             message="")
-        mock_extension.side_effect = ext_not_found_ex
-        controllers.check_for_neutron_tag_support(ext_name)
-        mock_extension.assert_called_once_with(ext_name)
+
+        def mock_fn(ext):
+            if not ext_matrix.get(ext, False):
+                raise ext_not_found_ex
+
+        mock_extension.side_effect = mock_fn
+        controllers.check_for_neutron_tag_support()
+        mock_extension.assert_any_call('standard-attr-tag')
+        mock_extension.assert_any_call('tag')
+        mock_extension.assert_any_call('tag-ext')
+
+        self.assertEqual(controllers.app.tag, ext_matrix['tag'])
+        self.assertEqual(controllers.app.tag_ext, ext_matrix['tag-ext'])
