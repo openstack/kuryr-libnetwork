@@ -88,6 +88,7 @@
 - project:
     check:
       jobs:
+        - openstack-tox-lower-constraints
         - kuryr-libnetwork-install
         - kuryr-libnetwork-kuryr_lib-src-fullstack
         - kuryr-libnetwork-fullstack
@@ -96,6 +97,7 @@
         - kuryr-libnetwork-rally
     gate:
       jobs:
+        - openstack-tox-lower-constraints
         - kuryr-libnetwork-kuryr_lib-src-fullstack
         - kuryr-libnetwork-fullstack
         - kuryr-libnetwork-fullstack-py35
