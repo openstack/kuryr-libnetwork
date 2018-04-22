@@ -59,6 +59,7 @@ function configure_kuryr {
         configure_auth_token_middleware "$KURYR_CONFIG" kuryr \
         "$KURYR_AUTH_CACHE_DIR" neutron
         iniset $KURYR_CONFIG DEFAULT capability_scope $KURYR_CAPABILITY_SCOPE
+        iniset $KURYR_CONFIG DEFAULT process_external_connectivity $KURYR_PROCESS_EXTERNAL_CONNECTIVITY
     fi
 
     if [[ "$ENABLE_PLUGINV2" == "True" ]]; then

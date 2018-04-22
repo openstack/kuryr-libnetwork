@@ -52,6 +52,9 @@ core_opts = [
     cfg.ListOpt('enabled_port_drivers',
                 default=['kuryr_libnetwork.port_driver.drivers.veth'],
                 help=_('Available port drivers')),
+    cfg.BoolOpt('process_external_connectivity',
+                default=True,
+                help=_('Do processing external connectivity')),
     cfg.StrOpt('ssl_cert_file',
                default='/var/lib/kuryr/certs/cert.pem',
                help=_('This option allows setting absolute path'

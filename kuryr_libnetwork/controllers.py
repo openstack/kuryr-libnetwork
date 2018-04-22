@@ -1437,6 +1437,9 @@ def network_driver_program_external_connectivity():
     json_data = flask.request.get_json(force=True)
     LOG.debug("Received JSON data %s for"
               " /NetworkDriver.ProgramExternalConnectivity", json_data)
+    if not cfg.CONF.process_external_connectivity:
+        return flask.jsonify(const.SCHEMA['SUCCESS'])
+
     # TODO(banix): Add support for exposed ports
     port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
     if port:
@@ -1459,6 +1462,9 @@ def network_driver_revoke_external_connectivity():
     json_data = flask.request.get_json(force=True)
     LOG.debug("Received JSON data %s for"
               " /NetworkDriver.RevokeExternalConnectivity", json_data)
+    if not cfg.CONF.process_external_connectivity:
+        return flask.jsonify(const.SCHEMA['SUCCESS'])
+
     # TODO(banix): Add support for removal of exposed ports
     port = _get_neutron_port_from_docker_endpoint(json_data['EndpointID'])
     if port:
