@@ -21,6 +21,7 @@ from oslo_utils import uuidutils
 
 from kuryr.lib import constants as lib_const
 from kuryr.lib import utils as lib_utils
+from kuryr_libnetwork import config
 from kuryr_libnetwork import constants
 from kuryr_libnetwork.tests.unit import base
 from kuryr_libnetwork import utils
@@ -55,6 +56,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             num_ports, mock_list_ports, mock_create_security_group,
             mock_create_security_group_rule, mock_show_port,
             mock_update_port):
+        config.CONF.set_override('process_external_connectivity', True)
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
@@ -145,6 +147,51 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
     @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.create_security_group_rule')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.create_security_group')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @ddt.data((False, 1), (True, 1), (False, 2), (True, 2))
+    @ddt.unpack
+    def test_network_driver_program_external_connectivity_disabled(
+            self, existing_sg,
+            num_ports, mock_list_ports, mock_create_security_group,
+            mock_create_security_group_rule, mock_show_port,
+            mock_update_port):
+        config.CONF.set_override('process_external_connectivity', False)
+        fake_docker_net_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+
+        port_opt = []
+        for i in range(num_ports):
+            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_TCP})
+            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_UDP})
+        port_opt.append({u'Port': SINGLE_PORT, u'Proto': PROTOCOL_UDP})
+        options = {'com.docker.network.endpoint.exposedports':
+                   port_opt,
+                   'com.docker.network.portmap':
+                   []}
+        data = {
+            'NetworkID': fake_docker_net_id,
+            'EndpointID': fake_docker_endpoint_id,
+            'Options': options,
+        }
+        response = self.app.post('/NetworkDriver.ProgramExternalConnectivity',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(data))
+
+        self.assertEqual(200, response.status_code)
+        mock_update_port.assert_not_called()
+        mock_show_port.assert_not_called()
+        mock_create_security_group_rule.assert_not_called()
+        mock_create_security_group.assert_not_called()
+        mock_list_ports.assert_not_called()
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch(
         'kuryr_libnetwork.controllers.app.neutron.delete_security_group')
     @mock.patch(
         'kuryr_libnetwork.controllers.app.neutron.list_security_groups')
@@ -155,6 +202,7 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             removing_sg, mock_list_ports, mock_list_security_groups,
             mock_delete_security_groups, mock_show_port,
             mock_update_port):
+        config.CONF.set_override('process_external_connectivity', True)
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
@@ -217,5 +265,40 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
             mock_delete_security_groups.assert_not_called()
             mock_show_port.assert_not_called()
             mock_update_port.assert_not_called()
+        decoded_json = jsonutils.loads(response.data)
+        self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
+
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.show_port')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.delete_security_group')
+    @mock.patch(
+        'kuryr_libnetwork.controllers.app.neutron.list_security_groups')
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
+    @ddt.data((False, False), (False, True), (True, False), (True, True))
+    @ddt.unpack
+    def test_network_driver_revoke_external_connectivity_disabled(
+            self, existing_sg,
+            removing_sg, mock_list_ports, mock_list_security_groups,
+            mock_delete_security_groups, mock_show_port,
+            mock_update_port):
+        config.CONF.set_override('process_external_connectivity', False)
+        fake_docker_net_id = lib_utils.get_hash()
+        fake_docker_endpoint_id = lib_utils.get_hash()
+
+        data = {
+            'NetworkID': fake_docker_net_id,
+            'EndpointID': fake_docker_endpoint_id,
+        }
+        response = self.app.post('/NetworkDriver.RevokeExternalConnectivity',
+                                 content_type='application/json',
+                                 data=jsonutils.dumps(data))
+
+        self.assertEqual(200, response.status_code)
+        mock_list_ports.assert_not_called()
+        mock_list_security_groups.assert_not_called()
+        mock_delete_security_groups.assert_not_called()
+        mock_show_port.assert_not_called()
+        mock_update_port.assert_not_called()
         decoded_json = jsonutils.loads(response.data)
         self.assertEqual(constants.SCHEMA['SUCCESS'], decoded_json)
