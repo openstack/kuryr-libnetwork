@@ -72,7 +72,7 @@ Install and configure components
 
         [neutron]
         ...
-        auth_uri = http://controller:5000
+        www_authenticate_uri = http://controller:5000
         auth_url = http://controller:35357
         username = kuryr
         user_domain_name = default
