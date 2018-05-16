@@ -16,7 +16,7 @@
 import docker
 import utils
 
-from rally.plugins.openstack import scenario
+from rally_openstack import scenario
 
 
 @scenario.configure(name="Kuryr.list_networks")
