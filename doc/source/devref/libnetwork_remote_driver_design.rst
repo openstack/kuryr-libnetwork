@@ -140,7 +140,7 @@ Libnetwork User Workflow (with Kuryr as remote network driver) - Host Networking
         {
             "Address": "",
             "PoolID": "941f790073c3a2c70099ea527ee3a6205e037e84749f2c6e8a5287d9c62fd376",
-            "Options": {},
+            "Options": {"com.docker.network.endpoint.macaddress": "08:22:e0:a8:7d:db"},
         }
 
    The IPAM driver Kuryr sends a port creation request to neutron and returns the following response with neutron provided ip address::
@@ -158,7 +158,7 @@ Libnetwork User Workflow (with Kuryr as remote network driver) - Host Networking
             "NetworkID": "286eddb51ebca09339cb17aaec05e48ffe60659ced6f3fc41b020b0eb506d364",
             "Interface": {
                 "AddressIPv6": "",
-                "MacAddress": "",
+                "MacAddress": "08:22:e0:a8:7d:db",
                 "Address": "10.0.0.2/24"
             },
             "Options": {
@@ -185,7 +185,7 @@ Libnetwork User Workflow (with Kuryr as remote network driver) - Host Networking
    (https://github.com/docker/libnetwork/blob/master/docs/remote.md#create-endpoint)::
 
         {
-            "Interface": {"MacAddress": "08:22:e0:a8:7d:db"}
+            "Interface": {"MacAddress": ""}
         }
 
 
