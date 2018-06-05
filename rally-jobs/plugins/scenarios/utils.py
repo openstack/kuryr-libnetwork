@@ -14,8 +14,8 @@
 #    under the License.
 
 from rally.common import logging
-from rally.plugins.openstack import scenario
 from rally.task import atomic
+from rally_openstack import scenario
 
 LOG = logging.getLogger(__name__)
 

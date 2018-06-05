@@ -15,18 +15,22 @@
 
 - job:
     name: kuryr-libnetwork-rally-base
-    parent: legacy-dsvm-base
-    run: playbooks/kuryr-libnetwork-rally-base/run.yaml
-    post-run: playbooks/kuryr-libnetwork-rally-base/post.yaml
+    parent: rally-task-at-devstack
     timeout: 7800
     vars:
       use_src: 0
+      devstack_plugins:
+        rally-openstack: https://git.openstack.org/openstack/rally-openstack
+        kuryr-libnetwork: http://git.openstack.org/openstack/kuryr-libnetwork
+        devstack-plugin-container: https://github.com/openstack/devstack-plugin-container
+      devstack_local_config:
+        KURYR_CONFIG_DIR: "/etc/kuryr-libnetwork"
+      rally_task: rally-jobs/kuryr-libnetwork.yaml
     required-projects:
-      - openstack-infra/devstack-gate
-      - openstack/devstack-plugin-container
+      - openstack/rally-openstack
       - openstack/kuryr
       - openstack/kuryr-libnetwork
-      - openstack/rally
+      - openstack/devstack-plugin-container
     voting: false
 
 - job:
