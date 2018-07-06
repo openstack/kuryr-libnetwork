@@ -419,7 +419,7 @@ Generating Documentation
 ------------------------
 
 
-We use `Sphinx <https://pypi.python.org/pypi/Sphinx>`_ to maintain the
+We use `Sphinx <https://pypi.org/project/Sphinx>`_ to maintain the
 documentation. You can install Sphinx using pip::
 
     $ pip install -U Sphinx
