@@ -159,6 +159,10 @@ if is_service_enabled kuryr-libnetwork; then
             stop_process kuryr-libnetwork
         fi
     fi
+
+    if [[ "$1" == "clean" ]]; then
+        sudo rm -rf $KURYR_CONFIG_DIR
+    fi
 fi
 
 # Restore xtrace
