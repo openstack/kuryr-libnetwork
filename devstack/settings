@@ -25,7 +25,7 @@ KURYR_DOCKER_ENGINE_PORT=${KURYR_DOCKER_ENGINE_PORT:-2375}
 DOCKER_CLUSTER_STORE=${DOCKER_CLUSTER_STORE:-etcd://$SERVICE_HOST:$ETCD_PORT}
 
 GITREPO["kuryr"]=${KURYR_REPO:-${GIT_BASE}/openstack/kuryr.git}
-GITBRANCH["kuryr"]=${KURYR_BRANCH:-master}
+GITBRANCH["kuryr"]=${KURYR_BRANCH:-$TARGET_BRANCH}
 GITDIR["kuryr"]=$DEST/kuryr
 
 enable_service kuryr-libnetwork docker-engine
