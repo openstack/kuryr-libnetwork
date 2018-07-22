@@ -482,3 +482,156 @@ class IpamTest(kuryr_base.KuryrBaseTest):
         self.neutron_client.delete_subnet(
             neutron_v6_subnet['subnets'][0]['id'])
         self.neutron_client.delete_network(neutron_network['network']['id'])
+
+    def test_container_ipam_release_address_with_existing_port_same_ip(self):
+        ipv4_address = "10.15.0.10"
+
+        # pre-created the first Neutron network and subnet and port
+        neutron_net_name = lib_utils.get_random_string(8)
+        neutron_network = self.neutron_client.create_network(
+            {'network': {'name': neutron_net_name,
+                         "admin_state_up": True}})
+        neutron_subnet_name = lib_utils.get_random_string(8)
+        subnet_param = [{
+            'name': neutron_subnet_name,
+            'network_id': neutron_network['network']['id'],
+            'ip_version': 4,
+            'cidr': "10.15.0.0/24",
+        }]
+        neutron_subnet = self.neutron_client.create_subnet(
+            {'subnets': subnet_param})
+        existing_neutron_port = self.neutron_client.create_port(
+            {'port': {'network_id': neutron_network['network']['id'],
+                      'fixed_ips': [{'ip_address': ipv4_address}]}})
+        fake_ipam = {
+            "Driver": "kuryr",
+            "Options": {
+                'neutron.subnet.name': neutron_subnet_name
+            },
+            "Config": [
+                {
+                    "Subnet": "10.15.0.0/24",
+                    "Gateway": "10.15.0.1"
+                }
+            ]
+        }
+        # Create docker network using existing Neutron network
+        options = {'neutron.net.name': neutron_net_name,
+                   'neutron.subnet.name': neutron_subnet_name}
+        container_net_name = lib_utils.get_random_string(8)
+        container_net = self.docker_client.create_network(
+            name=container_net_name,
+            driver='kuryr',
+            options=options,
+            ipam=fake_ipam)
+        container_net_id = container_net.get('Id')
+
+        # pre-created the second Neutron network and subnet and port
+        neutron_net_name2 = lib_utils.get_random_string(8)
+        neutron_network2 = self.neutron_client.create_network(
+            {'network': {'name': neutron_net_name2,
+                         "admin_state_up": True}})
+        neutron_subnet_name2 = lib_utils.get_random_string(8)
+        subnet_param2 = [{
+            'name': neutron_subnet_name2,
+            'network_id': neutron_network2['network']['id'],
+            'ip_version': 4,
+            'cidr': "10.15.0.0/24",
+        }]
+        neutron_subnet2 = self.neutron_client.create_subnet(
+            {'subnets': subnet_param2})
+        existing_neutron_port2 = self.neutron_client.create_port(
+            {'port': {'network_id': neutron_network2['network']['id'],
+                      'fixed_ips': [{'ip_address': ipv4_address}]}})
+        fake_ipam2 = {
+            "Driver": "kuryr",
+            "Options": {
+                'neutron.subnet.name': neutron_subnet_name2
+            },
+            "Config": [
+                {
+                    "Subnet": "10.15.0.0/24",
+                    "Gateway": "10.15.0.1"
+                }
+            ]
+        }
+        # Create docker network using existing Neutron network
+        options = {'neutron.net.name': neutron_net_name2,
+                   'neutron.subnet.name': neutron_subnet_name2}
+        container_net_name2 = lib_utils.get_random_string(8)
+        container_net2 = self.docker_client.create_network(
+            name=container_net_name2,
+            driver='kuryr',
+            options=options,
+            ipam=fake_ipam2)
+        container_net_id2 = container_net2.get('Id')
+
+        # Boot the first container, and connect to the first docker network.
+        endpoint_config = self.docker_client.create_endpoint_config(
+            ipv4_address=ipv4_address)
+        network_config = self.docker_client.create_networking_config({
+            container_net_id: endpoint_config})
+        container_name = lib_utils.get_random_string(8)
+        container = self.docker_client.create_container(
+            image='kuryr/busybox',
+            command='/bin/sleep 600',
+            hostname='kuryr_test_container',
+            name=container_name,
+            networking_config=network_config)
+        container_id = container.get('Id')
+        self.docker_client.start(container=container_id)
+
+        # Boot the second container, and connect to the second docker network.
+        endpoint_config = self.docker_client.create_endpoint_config(
+            ipv4_address=ipv4_address)
+        network_config = self.docker_client.create_networking_config({
+            container_net_id2: endpoint_config})
+        container_name2 = lib_utils.get_random_string(8)
+        container2 = self.docker_client.create_container(
+            image='kuryr/busybox',
+            command='/bin/sleep 600',
+            hostname='kuryr_test_container2',
+            name=container_name2,
+            networking_config=network_config)
+        container_id2 = container2.get('Id')
+        self.docker_client.start(container=container_id2)
+
+        # Assert both existing neutron ports active
+        for port_id in (existing_neutron_port['port']['id'],
+                        existing_neutron_port2['port']['id']):
+            utils.wait_for_port_active(
+                self.neutron_client, port_id, 60)
+            neutron_port = self.neutron_client.show_port(port_id)
+            self.assertEqual('ACTIVE', neutron_port['port']['status'])
+
+        # Disconnect the first container from network and
+        # assert the first neutron port is down and the second is still active
+        self.docker_client.disconnect_container_from_network(container_id,
+                                                             container_net_id)
+        existing_neutron_port = self.neutron_client.show_port(
+            existing_neutron_port['port']['id'])
+        self.assertEqual('DOWN', existing_neutron_port['port']['status'])
+        existing_neutron_port2 = self.neutron_client.show_port(
+            existing_neutron_port2['port']['id'])
+        self.assertEqual('ACTIVE', existing_neutron_port2['port']['status'])
+
+        # Disconnect the second container from network and
+        # assert both neutron ports are down.
+        self.docker_client.disconnect_container_from_network(container_id2,
+                                                             container_net_id2)
+        for port_id in (existing_neutron_port['port']['id'],
+                        existing_neutron_port2['port']['id']):
+            neutron_port = self.neutron_client.show_port(port_id)
+            self.assertEqual('DOWN', neutron_port['port']['status'])
+
+        # Cleanup resources
+        self.docker_client.stop(container=container_id)
+        self.docker_client.stop(container=container_id2)
+        self.docker_client.remove_network(container_net_id)
+        self.docker_client.remove_network(container_net_id2)
+        self.neutron_client.delete_port(existing_neutron_port['port']['id'])
+        self.neutron_client.delete_port(existing_neutron_port2['port']['id'])
+        self.neutron_client.delete_subnet(neutron_subnet['subnets'][0]['id'])
+        self.neutron_client.delete_subnet(neutron_subnet2['subnets'][0]['id'])
+        self.neutron_client.delete_network(neutron_network['network']['id'])
+        self.neutron_client.delete_network(neutron_network2['network']['id'])

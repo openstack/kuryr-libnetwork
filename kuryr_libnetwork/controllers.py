@@ -18,7 +18,6 @@ from itertools import groupby
 import jsonschema
 from operator import itemgetter
 import six
-import time
 
 from neutronclient.common import exceptions as n_exceptions
 from oslo_concurrency import processutils
@@ -403,27 +402,6 @@ def _get_networks_by_identifier(identifier):
     if app.tag:
         return _get_networks_by_attrs(tags=identifier)
     return _get_networks_by_attrs(name=identifier)
-
-
-def _port_active(neutron_port_id, vif_plug_timeout):
-    port_active = False
-    tries = 0
-    while True:
-        try:
-            port = app.neutron.show_port(neutron_port_id)
-        except n_exceptions.NeutronClientException as ex:
-            LOG.error('Could not get the port %s to check '
-                      'its status', ex)
-        else:
-            if port['port']['status'] == lib_const.PORT_STATUS_ACTIVE:
-                port_active = True
-        if port_active or (vif_plug_timeout > 0 and tries >= vif_plug_timeout):
-            break
-        LOG.debug('Waiting for port %s to become ACTIVE', neutron_port_id)
-        tries += 1
-        time.sleep(1)
-
-    return port_active
 
 
 def _program_expose_ports(options, port_id):
@@ -1175,8 +1153,8 @@ def network_driver_create_endpoint():
                 LOG.error('Failed to set up the interface: %s', ex)
 
         if app.vif_plug_is_fatal:
-            port_active = _port_active(neutron_port['id'],
-                                       app.vif_plug_timeout)
+            port_active = utils.wait_for_port_active(
+                app.neutron, neutron_port['id'], app.vif_plug_timeout)
             if not port_active:
                 neutron_port_name = neutron_port['name']
                 raise exceptions.InactiveResourceException(

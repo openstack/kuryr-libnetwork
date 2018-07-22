@@ -12,6 +12,7 @@
 
 import os
 import sys
+import time
 import traceback
 
 import flask
@@ -22,6 +23,7 @@ from oslo_concurrency import processutils
 from oslo_log import log
 from werkzeug import exceptions as w_exceptions
 
+from kuryr.lib import constants as lib_const
 from kuryr.lib import exceptions
 from kuryr.lib import utils as lib_utils
 from kuryr_libnetwork import constants as const
@@ -126,3 +128,25 @@ def make_net_name(netid, tags=True):
 
 def make_subnet_name(pool_cidr):
     return const.SUBNET_NAME_PREFIX + pool_cidr
+
+
+def wait_for_port_active(neutron_client, neutron_port_id, vif_plug_timeout):
+    port_active = False
+    tries = 0
+    while True:
+        try:
+            port = neutron_client.show_port(neutron_port_id)
+        except n_exceptions.NeutronClientException as ex:
+            LOG.error('Could not get the port %s to check '
+                      'its status', ex)
+        else:
+            if port['port']['status'] == lib_const.PORT_STATUS_ACTIVE:
+                port_active = True
+        if port_active or (vif_plug_timeout > 0 and
+                           tries >= vif_plug_timeout):
+            break
+        LOG.debug('Waiting for port %s to become ACTIVE', neutron_port_id)
+        tries += 1
+        time.sleep(1)
+
+    return port_active
