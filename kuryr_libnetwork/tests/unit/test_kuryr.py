@@ -603,7 +603,7 @@ class TestKuryr(base.TestKuryrBase):
         for tag in tags:
             mock_add_tag.assert_any_call('networks',
                 fake_neutron_net_id, tag)
-        mock_add_tag.assert_called_with('networks', fake_neutron_net_id,
+        mock_add_tag.assert_any_call('networks', fake_neutron_net_id,
             utils.existing_net_tag(docker_network_id))
         mock_create_subnet.assert_any_call(fake_v4_subnet_request)
         mock_create_subnet.assert_any_call(fake_v6_subnet_request)

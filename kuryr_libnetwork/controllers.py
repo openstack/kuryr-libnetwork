@@ -598,7 +598,10 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
     if gateway:
         new_kuryr_subnet[0]['gateway_ip'] = gateway
 
-    app.neutron.create_subnet({'subnets': new_kuryr_subnet})
+    subnets = app.neutron.create_subnet({'subnets': new_kuryr_subnet})
+    if app.tag_ext:
+        for subnet in subnets['subnets']:
+            _neutron_subnet_add_tag(subnet['id'], pool_id)
     LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
 
 
@@ -1885,6 +1888,10 @@ def ipam_release_address():
     if not len(subnets):
         LOG.info("Subnet already deleted.")
         return flask.jsonify(const.SCHEMA['SUCCESS'])
+    if app.tag_ext:
+        subnets = [subnet
+                   for subnet in subnets
+                   if pool_id in subnet.get('tags') or []]
 
     iface = ipaddress.ip_interface(six.text_type(rel_address))
     rel_ip_address = six.text_type(iface.ip)
@@ -1904,9 +1911,12 @@ def ipam_release_address():
                                 'binding:host_id': ''}
                 if port['name'].startswith(port['device_id']):
                     updated_port["device_id"] = ''
-                app.neutron.update_port(port['id'], {'port': updated_port})
-                _neutron_port_remove_tag(port['id'],
-                                         const.KURYR_EXISTING_NEUTRON_PORT)
+                for subnet in subnets:
+                    if (port['fixed_ips'][0]['subnet_id'] == subnet['id']):
+                        app.neutron.update_port(
+                            port['id'], {'port': updated_port})
+                        _neutron_port_remove_tag(
+                            port['id'], const.KURYR_EXISTING_NEUTRON_PORT)
     except n_exceptions.NeutronClientException as ex:
         LOG.error("Error happened while fetching "
                   "and deleting port, %s", ex)
