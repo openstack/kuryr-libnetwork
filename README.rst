@@ -64,13 +64,6 @@ Features
 
     This feature is implemented by using Neutron security groups.
 
-Limitations
-~~~~~~~~~~~
-
-* Docker 1.12 with SwarmKit (the new Swarm) does not support remote
-  drivers. Therefore, it cannot be used with Kuryr. This limitation is
-  to be removed in Docker 1.13.
-
 Getting it running with a service container
 -------------------------------------------
 
@@ -169,8 +162,8 @@ Getting it from source
     $ cd kuryr-libnetwork
 
 
-Prerequisites
-~~~~~~~~~~~~~
+Install prerequisites
+~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
@@ -444,6 +437,10 @@ website::
 
 Limitations
 -----------
+
+Docker 1.12 with SwarmKit (the new Swarm) does not support remote
+drivers. Therefore, it cannot be used with Kuryr. This limitation is
+to be removed in Docker 1.13.
 
 To create Docker networks with subnets having same/overlapping cidr, it is
 expected to pre-create Neutron subnetpool and pass the pool name for each
