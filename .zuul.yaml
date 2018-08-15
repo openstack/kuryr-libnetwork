@@ -12,6 +12,9 @@
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
+    irrelevant-files:
+      - ^.*\.rst$
+      - ^doc/.*$
 
 - job:
     name: kuryr-libnetwork-rally-base
