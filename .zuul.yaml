@@ -24,7 +24,7 @@
         kuryr-libnetwork: http://git.openstack.org/openstack/kuryr-libnetwork
         devstack-plugin-container: https://github.com/openstack/devstack-plugin-container
       devstack_local_config:
-        KURYR_CONFIG_DIR: "/etc/kuryr-libnetwork"
+        KURYR_CONFIG_DIR: /etc/kuryr-libnetwork
       rally_task: rally-jobs/kuryr-libnetwork.yaml
     required-projects:
       - openstack/rally-openstack
@@ -90,6 +90,12 @@
     voting: false
 
 - project:
+    templates:
+      - openstack-python-jobs
+      - openstack-python35-jobs
+      - release-notes-jobs
+      - publish-openstack-sphinx-docs
+      - check-requirements
     check:
       jobs:
         - openstack-tox-lower-constraints
@@ -99,6 +105,9 @@
         - kuryr-libnetwork-kuryr_lib-src-rally
         - kuryr-libnetwork-fullstack-py35
         - kuryr-libnetwork-rally
+        - openstack-tox-cover:
+            voting: false
+
     gate:
       jobs:
         - openstack-tox-lower-constraints
