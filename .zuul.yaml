@@ -86,6 +86,12 @@
     voting: false
 
 - project:
+    templates:
+      - openstack-python-jobs
+      - openstack-python35-jobs
+      - release-notes-jobs
+      - publish-openstack-sphinx-docs
+      - check-requirements
     name: openstack/kuryr-libnetwork
     check:
       jobs:
@@ -95,6 +101,9 @@
         - kuryr-libnetwork-kuryr_lib-src-rally
         - kuryr-libnetwork-fullstack-py35
         - kuryr-libnetwork-rally
+        - openstack-tox-cover:
+            voting: false
+
     gate:
       jobs:
         - kuryr-libnetwork-kuryr_lib-src-fullstack
