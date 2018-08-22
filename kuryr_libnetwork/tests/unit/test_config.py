@@ -47,16 +47,15 @@ class ConfigurationTest(base.TestKuryrBase):
         self.assertEqual('kuryr_libnetwork.port_driver.drivers.veth',
                          config.CONF.port_driver)
 
-    @mock.patch.object(sys, 'argv', return_value='[]')
     @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_tag_support')
     @mock.patch('kuryr_libnetwork.controllers.check_for_neutron_ext_support')
     @mock.patch('kuryr_libnetwork.controllers.neutron_client')
     @mock.patch('kuryr_libnetwork.app.run')
     def test_start(self, mock_run, mock_neutron_client,
                    mock_check_neutron_ext_support,
-                   mock_check_for_neutron_tag_support,
-                   mock_sys_argv):
-        start()
+                   mock_check_for_neutron_tag_support):
+        with mock.patch.object(sys, 'argv', ['prog']):
+            start()
         kuryr_uri = parse.urlparse(config.CONF.kuryr_uri)
         mock_neutron_client.assert_called_once()
         mock_check_neutron_ext_support.assert_called_once()
