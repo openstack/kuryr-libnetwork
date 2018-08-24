@@ -178,9 +178,9 @@ class IpamTest(kuryr_base.KuryrBaseTest):
             "Options": {},
             "Config": [
                 {
-                    "Subnet": "10.15.0.0/16",
-                    "IPRange": "10.15.0.0/24",
-                    "Gateway": "10.15.0.1"
+                    "Subnet": "10.13.0.0/16",
+                    "IPRange": "10.13.0.0/24",
+                    "Gateway": "10.13.0.1"
                 }
             ]
         }
