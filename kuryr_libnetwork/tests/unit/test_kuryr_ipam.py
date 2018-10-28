@@ -800,7 +800,9 @@ class TestKuryrIpam(base.TestKuryrBase):
             subnetpool_id=fake_kuryr_subnetpool_id)
         mock_list_ports.assert_has_calls([
             mock.call(fixed_ips=fixed_ip_existing),
-            mock.call(mac_address=fake_mac_address)])
+            mock.call(
+                mac_address=fake_mac_address,
+                fixed_ips='subnet_id=%s' % fake_v4_subnet['subnet']['id'])])
         mock_create_port.assert_called_with({'port': port_request})
         if mock_app.tag_ext:
             mock_port_add_tag.assert_called()
@@ -1030,8 +1032,10 @@ class TestKuryrIpam(base.TestKuryrBase):
             mock.call(subnetpool_id=fake_kuryr_subnetpool_id),
             mock.call(subnetpool_id=fake_kuryr_subnetpool_v6_id)])
         mock_list_ports.assert_has_calls([
-            mock.call(mac_address=requested_mac_address),
-            mock.call(mac_address=requested_mac_address)])
+            mock.call(mac_address=requested_mac_address,
+                      fixed_ips='subnet_id=%s' % subnet_v4_id),
+            mock.call(mac_address=requested_mac_address,
+                      fixed_ips='subnet_id=%s' % subnet_v6_id)])
         mock_update_port.assert_called_with(fake_neutron_port_id,
             {'port': update_port})
         if mock_app.tag_ext:
