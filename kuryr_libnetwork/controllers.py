@@ -317,15 +317,28 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
     # For the container boot from dual-net, request_address will
     # create two ports(v4 and v6 address), we should only allow one
     # for port bind.
+    # There are two cases:
+    # 1. User specifies an existing port with v4 address only.
+    #    In this case, Kuryr creates the v6 port in ipam_request_address.
+    #    We will bind the v4 port and remove the v6 port.
+    # 2. Users doesn't specify a port. In this case Kuryr creates
+    #    the v4 and v6 ports in ipam_request_address and
+    #    we will delete both ports then re-create a dual-port.
     elif num_port == 2:
+        response_port = None
         for port in filtered_ports.get('ports', []):
             port_name = port.get('name')
             if str(port_name).startswith(const.KURYR_UNBOUND_PORT):
                 app.neutron.delete_port(port['id'])
-        fixed_ips = (
-            lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
-        response_port = _create_port(endpoint_id, neutron_network_id,
-                                     interface_mac, fixed_ips)
+            else:
+                port_driver = get_driver(port)
+                response_port = port_driver.update_port(port, endpoint_id,
+                                                        interface_mac)
+        if not response_port:
+            fixed_ips = (
+                lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
+            response_port = _create_port(endpoint_id, neutron_network_id,
+                                         interface_mac, fixed_ips)
     else:
         raise exceptions.DuplicatedResourceException(
             "Multiple ports exist for the cidrs {0} and {1}"
