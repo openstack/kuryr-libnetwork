@@ -668,7 +668,6 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'mac_address': fake_mac_address,
         }
         fixed_ips = port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': subnet_v4_id}
@@ -776,7 +775,6 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'mac_address': fake_mac_address,
         }
         fixed_ips = port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': subnet_v4_id,
@@ -1106,7 +1104,6 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'mac_address': fake_mac_address,
         }
         port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': neutron_subnet_v4_id}
@@ -1264,7 +1261,6 @@ class TestKuryrIpam(base.TestKuryrBase):
             'name': const.KURYR_UNBOUND_PORT,
             'admin_state_up': True,
             'network_id': neutron_network_id,
-            'mac_address': fake_mac_address,
         }
         port_request['fixed_ips'] = []
         fixed_ip = {'subnet_id': neutron_subnet_v4_id}
