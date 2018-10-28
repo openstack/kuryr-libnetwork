@@ -1704,8 +1704,6 @@ def ipam_request_address():
                     'admin_state_up': True,
                     'network_id': neutron_network_id,
                 }
-                if req_mac_address:
-                    port['mac_address'] = req_mac_address
                 fixed_ips = port['fixed_ips'] = []
                 fixed_ip = {'subnet_id': subnet['id']}
                 filtered_ports = []
