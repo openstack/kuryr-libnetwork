@@ -148,7 +148,7 @@ if is_service_enabled kuryr-libnetwork; then
             run_process kuryr-libnetwork "$KURYR_BIN_DIR/kuryr-server --config-file $KURYR_CONFIG" "" "root"
         fi
 
-        neutron subnetpool-create --default-prefixlen $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
+        openstack subnet pool create --default-prefix-length $KURYR_POOL_PREFIX_LEN --pool-prefix $KURYR_POOL_PREFIX kuryr
 
     fi
 
