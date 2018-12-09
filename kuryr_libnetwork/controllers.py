@@ -524,7 +524,6 @@ def _update_existing_port(existing_port, fixed_ip, mac_address):
         updated_port = {
             'name': const.NEUTRON_UNBOUND_PORT,
             'admin_state_up': True,
-            'binding:host_id': lib_utils.get_hostname(),
         }
         if mac_address:
             updated_port['mac_address'] = mac_address
