@@ -879,7 +879,6 @@ class TestKuryrIpam(base.TestKuryrBase):
         update_port = {
             'name': const.NEUTRON_UNBOUND_PORT,
             'admin_state_up': True,
-            'binding:host_id': lib_utils.get_hostname(),
             'mac_address': requested_mac_address,
         }
         mock_update_port.return_value = fake_port
@@ -995,7 +994,6 @@ class TestKuryrIpam(base.TestKuryrBase):
         update_port = {
             'name': const.NEUTRON_UNBOUND_PORT,
             'admin_state_up': True,
-            'binding:host_id': lib_utils.get_hostname(),
             'mac_address': requested_mac_address,
         }
         mock_update_port.return_value = fake_port
