@@ -134,6 +134,7 @@ class Driver(object):
                 'name': port['name'],
                 'device_owner': lib_const.DEVICE_OWNER,
                 'binding:host_id': lib_utils.get_hostname(),
+                'admin_state_up': True,
             }
             if not port.get('device_id'):
                 updated_port['device_id'] = endpoint_id

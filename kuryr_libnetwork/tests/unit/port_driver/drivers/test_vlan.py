@@ -303,7 +303,8 @@ class TestVlanDriver(base.TestKuryrBase):
                     'name': fake_port_name,
                     'device_owner': lib_const.DEVICE_OWNER,
                     'binding:host_id': lib_utils.get_hostname(),
-                    'mac_address': fake_neutron_mac_address2
+                    'mac_address': fake_neutron_mac_address2,
+                    'admin_state_up': True,
                 }})
 
 

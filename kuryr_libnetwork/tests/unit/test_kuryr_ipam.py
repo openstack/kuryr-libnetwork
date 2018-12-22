@@ -811,14 +811,13 @@ class TestKuryrIpam(base.TestKuryrBase):
 
     @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data((False), (True))
     def test_ipam_driver_request_specific_address_existing_port(self,
             use_tag_ext, mock_app, mock_list_subnets, mock_list_ports,
-            mock_update_port, mock_create_port, mock_port_add_tag):
+            mock_create_port, mock_port_add_tag):
         mock_app.tag_ext = use_tag_ext
         # faking list_subnets
         neutron_network_id = uuidutils.generate_uuid()
@@ -876,13 +875,6 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_ports.side_effect = [
             fake_ports_response, fake_ports_response_2]
 
-        update_port = {
-            'name': const.NEUTRON_UNBOUND_PORT,
-            'admin_state_up': True,
-            'mac_address': requested_mac_address,
-        }
-        mock_update_port.return_value = fake_port
-
         # Testing container ip allocation
         fake_request = {
             'PoolID': fake_kuryr_subnetpool_id,
@@ -917,8 +909,6 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_ports.assert_has_calls([
             mock.call(fixed_ips=fixed_ip_existing),
             mock.call(fixed_ips=fixed_ipv6_existing)])
-        mock_update_port.assert_called_with(fake_neutron_port_id,
-            {'port': update_port})
         if mock_app.tag_ext:
             self.assertEqual(2, mock_port_add_tag.call_count)
         else:
@@ -926,14 +916,13 @@ class TestKuryrIpam(base.TestKuryrBase):
 
     @mock.patch('kuryr_libnetwork.controllers._neutron_port_add_tag')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.create_port')
-    @mock.patch('kuryr_libnetwork.controllers.app.neutron.update_port')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnets')
     @mock.patch('kuryr_libnetwork.controllers.app')
     @ddt.data((False), (True))
     def test_ipam_driver_request_specific_mac_address_existing_port(self,
             use_tag_ext, mock_app, mock_list_subnets, mock_list_ports,
-            mock_update_port, mock_create_port, mock_port_add_tag):
+            mock_create_port, mock_port_add_tag):
         mock_app.tag_ext = use_tag_ext
         # faking list_subnets
         neutron_network_id = uuidutils.generate_uuid()
@@ -991,13 +980,6 @@ class TestKuryrIpam(base.TestKuryrBase):
         mock_list_ports.side_effect = [
             fake_ports_response, fake_ports_response_2]
 
-        update_port = {
-            'name': const.NEUTRON_UNBOUND_PORT,
-            'admin_state_up': True,
-            'mac_address': requested_mac_address,
-        }
-        mock_update_port.return_value = fake_port
-
         # Testing container ip allocation
         fake_request = {
             'PoolID': fake_kuryr_subnetpool_id,
@@ -1034,8 +1016,6 @@ class TestKuryrIpam(base.TestKuryrBase):
                       fixed_ips='subnet_id=%s' % subnet_v4_id),
             mock.call(mac_address=requested_mac_address,
                       fixed_ips='subnet_id=%s' % subnet_v6_id)])
-        mock_update_port.assert_called_with(fake_neutron_port_id,
-            {'port': update_port})
         if mock_app.tag_ext:
             self.assertEqual(2, mock_port_add_tag.call_count)
         else:

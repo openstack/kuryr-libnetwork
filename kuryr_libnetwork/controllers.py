@@ -517,33 +517,6 @@ def _get_cidr_from_subnetpool(**kwargs):
             .format(kwargs))
 
 
-def _update_existing_port(existing_port, fixed_ip, mac_address):
-    host = existing_port.get('binding:host_id')
-    vif_type = existing_port.get('binding:vif_type')
-    if not host and vif_type == 'unbound':
-        updated_port = {
-            'name': const.NEUTRON_UNBOUND_PORT,
-            'admin_state_up': True,
-        }
-        if mac_address:
-            updated_port['mac_address'] = mac_address
-        updated_port_resp = app.neutron.update_port(
-            existing_port['id'],
-            {'port': updated_port})
-        existing_port = updated_port_resp['port']
-    else:
-        port_name = existing_port.get('name', '')
-        if (str(port_name) != const.NEUTRON_UNBOUND_PORT or
-                len(existing_port['fixed_ips']) <= 1 or
-                host != lib_utils.get_hostname()):
-            raise exceptions.AddressInUseException(
-                "Requested ip address {0} already belongs to "
-                "a bound Neutron port: {1}".format(fixed_ip,
-                                                   existing_port['id']))
-
-    return existing_port
-
-
 def revoke_expose_ports(port_id):
     sgs = app.neutron.list_security_groups(
         name=utils.get_sg_expose_name(port_id))
@@ -1735,9 +1708,7 @@ def ipam_request_address():
                 fixed_ips.append(fixed_ip)
 
                 if num_ports:
-                    existing_port = filtered_ports[0]
-                    created_port = _update_existing_port(
-                        existing_port, fixed_ip, req_mac_address)
+                    created_port = filtered_ports[0]
                     # REVISIT(yedongcan) For tag-ext extension not
                     # supported, the Neutron existing port still can not
                     # be deleted in ipam_release_address.
