@@ -104,6 +104,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:
@@ -231,6 +232,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:
@@ -370,6 +372,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:
@@ -535,7 +538,8 @@ class TestKuryr(base.TestKuryrBase):
                 "segments": [],
                 "shared": False,
                 "id": fake_neutron_net_id,
-                "name": fake_neutron_net_name
+                "name": fake_neutron_net_name,
+                "tags": [],
             }]
         }
         tags = utils.create_net_tags(docker_network_id)
@@ -670,6 +674,7 @@ class TestKuryr(base.TestKuryrBase):
                 "segments": [],
                 "shared": False,
                 "id": fake_neutron_net_id,
+                "tags": [],
             }]
         }
 
@@ -813,6 +818,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:
@@ -979,6 +985,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:
@@ -1141,6 +1148,7 @@ class TestKuryr(base.TestKuryrBase):
             "segments": [],
             "shared": False,
             "id": fake_neutron_net_id,
+            "tags": [],
         }
 
         if driver_value:

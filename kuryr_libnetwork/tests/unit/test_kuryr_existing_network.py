@@ -39,7 +39,8 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
                     "router:external": False,
                     "segments": [],
                     "shared": False,
-                    "id": fake_neutron_net_id
+                    "id": fake_neutron_net_id,
+                    "tags": [],
                 }
             ]
         }
@@ -247,6 +248,7 @@ class TestKuryrNetworkPreExisting(base.TestKuryrBase):
             docker_endpoint_id="fake_id",
             subnet_v4_id=subnet_v4_id,
             subnetpool_id=fake_kuryr_v4_subnetpool_id,
+            tag_subnetpool_id=False,
             cidr=fake_cidr_v4)
         fake_v6_subnet = self._get_fake_v6_subnet(
             fake_neutron_net_id,

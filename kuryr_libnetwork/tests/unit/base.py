@@ -101,9 +101,11 @@ class TestKuryrBase(TestCase):
 
     @staticmethod
     def _get_fake_v6_subnetpools(subnetpool_id, prefixes=['fe80::/64'],
-                                 name="kuryr6"):
+                                 name="kuryr6", tags=None):
         # The following fake response is retrieved from the Neutron doc:
         #   http://developer.openstack.org/api-ref-networking-v2-ext.html#listSubnetPools  # noqa
+        if tags is None:
+            tags = []
         v6_subnetpools = {
             "subnetpools": [{
                 "min_prefixlen": "64",
@@ -116,7 +118,8 @@ class TestKuryrBase(TestCase):
                 "tenant_id": "9fadcee8aa7c40cdb2114fff7d569c08",
                 "prefixes": prefixes,
                 "ip_version": 6,
-                "shared": False
+                "shared": False,
+                "tags": tags,
             }]
         }
 
@@ -233,7 +236,7 @@ class TestKuryrBase(TestCase):
     @staticmethod
     def _get_fake_v4_subnet(neutron_network_id, docker_endpoint_id=None,
                             subnet_v4_id=None, subnetpool_id=None,
-                            cidr='192.168.1.0/24',
+                            cidr='192.168.1.0/24', tag_subnetpool_id=True,
                             name=None, host_routes=None, tags=None):
         if host_routes is None:
             host_routes = []
@@ -266,16 +269,19 @@ class TestKuryrBase(TestCase):
         }
         if subnetpool_id:
             fake_v4_subnet['subnet'].update(subnetpool_id=subnetpool_id)
-            fake_v4_subnet['subnet'].get('tags').append(subnetpool_id)
+            if tag_subnetpool_id:
+                fake_v4_subnet['subnet'].get('tags').append(subnetpool_id)
 
         return fake_v4_subnet
 
     @staticmethod
     def _get_fake_v6_subnet(docker_network_id, docker_endpoint_id=None,
                             subnet_v6_id=None, subnetpool_id=None,
-                            cidr='fe80::/64', name=None):
+                            cidr='fe80::/64', name=None, tags=None):
         if not name:
             name = str('-'.join([docker_endpoint_id, 'fe80::']))
+        if not tags:
+            tags = []
         gateway_ip = netaddr.IPNetwork(cidr).network + 1
         start_ip = gateway_ip + 1
         end_ip = netaddr.IPNetwork(cidr).broadcast - 1
@@ -292,7 +298,8 @@ class TestKuryrBase(TestCase):
                 "ip_version": 6,
                 "cidr": cidr,
                 "id": subnet_v6_id,
-                "enable_dhcp": True
+                "enable_dhcp": True,
+                "tags": tags,
             }
         }
         if subnetpool_id:

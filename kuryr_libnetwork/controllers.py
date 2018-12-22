@@ -347,15 +347,15 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
     return response_port, subnets
 
 
-def _neutron_net_add_tag(netid, tag):
-    _neutron_add_tag('networks', netid, tag)
+def _neutron_net_add_tag(net, tag):
+    _neutron_add_tag('networks', net, tag)
 
 
-def _neutron_net_add_tags(netid, tag, tags=True):
+def _neutron_net_add_tags(net, tag, tags=True):
     if tags:
         tags = utils.create_net_tags(tag)
         for tag in tags:
-            _neutron_net_add_tag(netid, tag)
+            _neutron_net_add_tag(net, tag)
 
 
 def _neutron_net_remove_tag(netid, tag):
@@ -368,37 +368,38 @@ def _neutron_net_remove_tags(netid, tag):
         _neutron_net_remove_tag(netid, tag)
 
 
-def _neutron_subnetpool_add_tag(poolid, tag):
-    _neutron_add_tag('subnetpools', poolid, tag)
+def _neutron_subnetpool_add_tag(pool, tag):
+    _neutron_add_tag('subnetpools', pool, tag)
 
 
 def _neutron_subnetpool_remove_tag(poolid, tag):
     _neutron_remove_tag('subnetpools', poolid, tag)
 
 
-def _neutron_subnet_add_tag(subnetid, tag):
-    _neutron_add_tag('subnets', subnetid, tag)
+def _neutron_subnet_add_tag(subnet, tag):
+    _neutron_add_tag('subnets', subnet, tag)
 
 
 def _neutron_subnet_remove_tag(subnetid, tag):
     _neutron_remove_tag('subnets', subnetid, tag)
 
 
-def _neutron_port_add_tag(portid, tag):
-    _neutron_add_tag('ports', portid, tag)
+def _neutron_port_add_tag(port, tag):
+    _neutron_add_tag('ports', port, tag)
 
 
 def _neutron_port_remove_tag(portid, tag):
     _neutron_remove_tag('ports', portid, tag)
 
 
-def _neutron_add_tag(resource_type, resource_id, tag):
-    try:
-        app.neutron.add_tag(resource_type, resource_id, tag)
-    except n_exceptions.NotFound:
-        LOG.warning("Neutron tags extension for given "
-                    "resource type is not supported, "
-                    "cannot add tag to %s.", resource_type)
+def _neutron_add_tag(resource_type, resource, tag):
+    if tag not in resource['tags']:
+        try:
+            app.neutron.add_tag(resource_type, resource['id'], tag)
+        except n_exceptions.NotFound:
+            LOG.warning("Neutron tags extension for given "
+                        "resource type is not supported, "
+                        "cannot add tag to %s.", resource_type)
 
 
 def _neutron_remove_tag(resource_type, resource_id, tag):
@@ -564,7 +565,7 @@ def _create_kuryr_subnet(pool_cidr, subnet_cidr, pool_id, network_id, gateway):
     subnets = app.neutron.create_subnet({'subnets': new_kuryr_subnet})
     if app.tag_ext:
         for subnet in subnets['subnets']:
-            _neutron_subnet_add_tag(subnet['id'], pool_id)
+            _neutron_subnet_add_tag(subnet, pool_id)
     LOG.debug("Created kuryr subnet %s", new_kuryr_subnet)
 
 
@@ -592,7 +593,7 @@ def _create_kuryr_subnetpool(pool_cidr, pool_tag, shared):
         {'subnetpool': new_subnetpool})
     pool = created_subnetpool_response['subnetpool']
     if pool_tag:
-        _neutron_subnetpool_add_tag(pool['id'], pool_tag)
+        _neutron_subnetpool_add_tag(pool, pool_tag)
     return pool
 
 
@@ -854,9 +855,9 @@ def network_driver_create_network():
         network = app.neutron.create_network(
             {'network': {'name': neutron_network_name,
                          "admin_state_up": True,
-                         'shared': shared}})
-        network_id = network['network']['id']
-        _neutron_net_add_tags(network['network']['id'], container_net_id,
+                         'shared': shared}})['network']
+        network_id = network['id']
+        _neutron_net_add_tags(network, container_net_id,
                               tags=app.tag)
 
         LOG.info("Created a new network with name "
@@ -875,15 +876,16 @@ def network_driver_create_network():
                 raise exceptions.KuryrException(
                     ("Specified network id/name({0}) does not "
                      "exist.").format(specified_network))
-            network_id = networks[0]['id']
+            network = networks[0]
+            network_id = network['id']
             network_shared = networks[0]['shared']
         except n_exceptions.NeutronClientException as ex:
             LOG.error("Error happened during listing "
                       "Neutron networks: %s", ex)
             raise
         if app.tag:
-            _neutron_net_add_tags(network_id, container_net_id, tags=app.tag)
-            _neutron_net_add_tag(network_id,
+            _neutron_net_add_tags(network, container_net_id, tags=app.tag)
+            _neutron_net_add_tag(network,
                                  utils.existing_net_tag(container_net_id))
         else:
             network = app.neutron.update_network(
@@ -924,7 +926,7 @@ def network_driver_create_network():
 
     def _add_tag_for_existing_subnet(subnet, pool_id):
         if len(subnet) == 1:
-            _neutron_subnet_add_tag(subnet[0]['id'], pool_id)
+            _neutron_subnet_add_tag(subnet[0], pool_id)
 
     # This will add a subnetpool_id(created by kuryr) tag
     # for existing Neutron subnets.
@@ -1558,7 +1560,7 @@ def ipam_request_pool():
             pool_id = existing_pools[0]['id']
             if app.tag_ext:
                 _neutron_subnetpool_add_tag(
-                    pool_id, const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
+                    existing_pools[0], const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
             prefixes = existing_pools[0]['prefixes']
             pool_cidr = ipaddress.ip_network(six.text_type(prefixes[0]))
             if pool_cidr == cidr:
@@ -1714,13 +1716,13 @@ def ipam_request_address():
                     # be deleted in ipam_release_address.
                     if app.tag_ext:
                         _neutron_port_add_tag(
-                            created_port['id'],
+                            created_port,
                             const.KURYR_EXISTING_NEUTRON_PORT)
                 else:
                     created_port_resp = app.neutron.create_port({'port': port})
                     created_port = created_port_resp['port']
                     if app.tag_ext:
-                        _neutron_port_add_tag(created_port['id'],
+                        _neutron_port_add_tag(created_port,
                                               lib_const.DEVICE_OWNER)
 
                 LOG.debug("created port %s", created_port)
