@@ -1481,10 +1481,11 @@ class TestKuryr(base.TestKuryrBase):
     @ddt.data(
         (False), (True))
     def test_network_driver_create_endpoint(self, vif_plug_is_fatal,
-            mock_vif, mock_list_subnets, mock_list_ports,
+            mock_app, mock_list_subnets, mock_list_ports,
             mock_update_port, mock_show_port, mock_list_networks,
             mock_create_host_iface):
-        mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.tag = True
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
@@ -1525,7 +1526,8 @@ class TestKuryr(base.TestKuryrBase):
         fake_port_response = self._get_fake_port(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_port_id, lib_const.PORT_STATUS_ACTIVE,
-            subnet_v4_id)
+            subnet_v4_id,
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
         fake_ports_response = {
             "ports": [
                 fake_port_response['port']
@@ -1545,7 +1547,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_ports_response_2 = self._get_fake_port(
                 fake_docker_endpoint_id, fake_neutron_net_id,
                 fake_port_id, lib_const.PORT_STATUS_ACTIVE,
-                subnet_v4_id)
+                subnet_v4_id,
+                tags=utils.create_port_tags(fake_docker_endpoint_id))
             mock_show_port.return_value = fake_neutron_ports_response_2
 
         data = {
@@ -1568,7 +1571,8 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
         mock_update_port.assert_called_with(fake_port_response['port'],
                                             fake_docker_endpoint_id,
-                                            'fa:16:3e:20:57:c3')
+                                            'fa:16:3e:20:57:c3',
+                                            tags=True)
         mock_list_networks.assert_any_call(tags=t)
         mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_updated_port, [fake_v4_subnet['subnet']],
@@ -1744,10 +1748,11 @@ class TestKuryr(base.TestKuryrBase):
         (False), (True))
     def test_network_driver_create_v4_endpoint_in_dual_net(
             self, vif_plug_is_fatal,
-            mock_vif, mock_list_subnets, mock_list_ports, mock_delete_port,
+            mock_app, mock_list_subnets, mock_list_ports, mock_delete_port,
             mock_update_port, mock_show_port, mock_list_networks,
             mock_create_host_iface):
-        mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.tag = True
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
@@ -1799,19 +1804,22 @@ class TestKuryr(base.TestKuryrBase):
         fake_new_port_response = self._get_fake_port(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_v4_port_id, lib_const.PORT_STATUS_ACTIVE,
-            subnet_v4_id, neutron_mac_address=fake_mac_address)
+            subnet_v4_id, neutron_mac_address=fake_mac_address,
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
 
         fake_v4_port_response = self._get_fake_port(
             "fake-name1", fake_neutron_net_id,
             fake_v4_port_id, lib_const.PORT_STATUS_DOWN,
-            subnet_v4_id)
+            subnet_v4_id,
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
 
         fake_v6_port_id = uuidutils.generate_uuid()
         fake_v6_port_response = self._get_fake_port(
             "fake-name2", fake_neutron_net_id,
             fake_v6_port_id, lib_const.PORT_STATUS_DOWN,
             subnet_v6_id, name=constants.KURYR_UNBOUND_PORT,
-            neutron_mac_address="fa:16:3e:20:57:c4")
+            neutron_mac_address="fa:16:3e:20:57:c4",
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
 
         fake_ports_response = {
             "ports": [
@@ -1832,7 +1840,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_ports_response_2 = self._get_fake_port(
                 fake_docker_endpoint_id, fake_neutron_net_id,
                 fake_v4_port_id, lib_const.PORT_STATUS_ACTIVE,
-                subnet_v4_id, subnet_v6_id)
+                subnet_v4_id, subnet_v6_id,
+                tags=utils.create_port_tags(fake_docker_endpoint_id))
             mock_show_port.return_value = fake_neutron_ports_response_2
 
         data = {
@@ -1855,7 +1864,7 @@ class TestKuryr(base.TestKuryrBase):
         mock_delete_port.assert_any_call(fake_v6_port_id)
         mock_update_port.assert_called_with(
             fake_v4_port_response['port'], fake_docker_endpoint_id,
-            fake_mac_address)
+            fake_mac_address, tags=True)
         mock_list_networks.assert_any_call(tags=t)
         mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_new_port_response['port'], fake_neutron_subnets,
@@ -1877,10 +1886,11 @@ class TestKuryr(base.TestKuryrBase):
     @ddt.data(
         (False), (True))
     def test_network_driver_create_endpoint_with_no_mac_address(self,
-            vif_plug_is_fatal, mock_vif, mock_list_subnets, mock_list_ports,
+            vif_plug_is_fatal, mock_app, mock_list_subnets, mock_list_ports,
             mock_update_port, mock_show_port, mock_list_networks,
             mock_create_host_iface):
-        mock_vif.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.vif_plug_is_fatal = vif_plug_is_fatal
+        mock_app.tag = True
         fake_docker_network_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
         fake_neutron_net_id = uuidutils.generate_uuid()
@@ -1936,7 +1946,8 @@ class TestKuryr(base.TestKuryrBase):
         fake_port_response = self._get_fake_port(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_port_id, lib_const.PORT_STATUS_ACTIVE,
-            subnet_v4_id, subnet_v6_id, neutron_mac_address=fake_mac_address)
+            subnet_v4_id, subnet_v6_id, neutron_mac_address=fake_mac_address,
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
         fake_ports_response = {
             "ports": [
                 fake_port_response['port']
@@ -1958,7 +1969,8 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_ports_response_2 = self._get_fake_port(
                 fake_docker_endpoint_id, fake_neutron_net_id,
                 fake_port_id, lib_const.PORT_STATUS_ACTIVE,
-                subnet_v4_id, subnet_v6_id)
+                subnet_v4_id, subnet_v6_id,
+                tags=utils.create_port_tags(fake_docker_endpoint_id))
             mock_show_port.return_value = fake_neutron_ports_response_2
 
         data = {
@@ -1981,7 +1993,8 @@ class TestKuryr(base.TestKuryrBase):
             network_id=fake_neutron_net_id, cidr='fe80::/64')
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
         mock_update_port.assert_called_with(fake_port_response['port'],
-                                            fake_docker_endpoint_id, '')
+                                            fake_docker_endpoint_id, '',
+                                            tags=True)
         mock_list_networks.assert_any_call(tags=t)
         mock_create_host_iface.assert_called_with(fake_docker_endpoint_id,
                                                   fake_updated_port,
@@ -2012,8 +2025,8 @@ class TestKuryr(base.TestKuryrBase):
             decoded_json = jsonutils.loads(response.data)
             self.assertEqual(200, response.status_code)
 
-            port_name = utils.get_neutron_port_name(docker_endpoint_id)
-            mock_list_ports.assert_called_once_with(name=port_name)
+            port_tags = utils.make_port_tags(docker_endpoint_id)
+            mock_list_ports.assert_called_once_with(tags=port_tags)
 
             self.assertEqual({}, decoded_json['Value'])
 
@@ -2045,18 +2058,19 @@ class TestKuryr(base.TestKuryrBase):
             decoded_json = jsonutils.loads(response.data)
             self.assertEqual(200, response.status_code)
 
-            port_name = utils.get_neutron_port_name(docker_endpoint_id)
-            mock_list_ports.assert_called_once_with(name=port_name)
+            port_tags = utils.make_port_tags(docker_endpoint_id)
+            mock_list_ports.assert_called_once_with(tags=port_tags)
 
             self.assertEqual(fake_port_response['ports'][0]['status'],
                              decoded_json['Value']['status'])
 
+    @mock.patch('kuryr_libnetwork.controllers.app.neutron.remove_tag')
     @mock.patch('kuryr_libnetwork.controllers.DEFAULT_DRIVER'
                 '.delete_host_iface')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_ports')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_networks')
     def test_network_driver_delete_endpoint(self, mock_list_networks,
-            mock_list_ports, mock_delete_host_iface):
+            mock_list_ports, mock_delete_host_iface, mock_remove_tag):
         fake_docker_net_id = lib_utils.get_hash()
         fake_docker_endpoint_id = lib_utils.get_hash()
 
@@ -2069,12 +2083,12 @@ class TestKuryr(base.TestKuryrBase):
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
-            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            tags=utils.make_port_tags(fake_docker_endpoint_id))
         fake_neutron_port = fake_neutron_ports_response['ports'][0]
 
         t = utils.make_net_tags(fake_docker_net_id)
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
+        port_tags = utils.make_port_tags(fake_docker_endpoint_id)
         mock_list_networks.return_value = self._get_fake_list_network(
             fake_neutron_net_id)
         mock_list_ports.return_value = fake_neutron_ports_response
@@ -2090,7 +2104,7 @@ class TestKuryr(base.TestKuryrBase):
 
         self.assertEqual(200, response.status_code)
         mock_list_networks.assert_called_with(tags=t)
-        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_ports.assert_called_with(tags=port_tags)
         mock_delete_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_neutron_port)
         decoded_json = jsonutils.loads(response.data)
@@ -2123,8 +2137,7 @@ class TestKuryr(base.TestKuryrBase):
                     fake_neutron_net_id)
         mock_list_networks.side_effect = mock_network
         fake_neutron_port_id = uuidutils.generate_uuid()
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
+        port_tags = utils.make_port_tags(fake_docker_endpoint_id)
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
         fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
         fake_neutron_ports_response = self._get_fake_ports(
@@ -2175,7 +2188,7 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_networks.assert_any_call(tags=t)
         mock_get_container_iface_name.assert_called_with(
             fake_neutron_ports_response['ports'][0])
-        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_ports.assert_called_with(tags=port_tags)
         mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
 
         self.assertEqual(expected_response, decoded_json)
@@ -2211,8 +2224,7 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_networks.side_effect = mock_network
         fake_neutron_port_id = uuidutils.generate_uuid()
         fake_neutron_subnetpool_id = uuidutils.generate_uuid()
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
+        port_tags = utils.make_port_tags(fake_docker_endpoint_id)
         fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
         fake_neutron_v4_subnet_id_2 = uuidutils.generate_uuid()
         fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
@@ -2293,7 +2305,7 @@ class TestKuryr(base.TestKuryrBase):
         mock_list_networks.assert_any_call(tags=t)
         mock_get_container_iface_name.assert_called_with(
             fake_neutron_ports_response['ports'][0])
-        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_ports.assert_called_with(tags=port_tags)
         mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
 
         self.assertEqual(expected_response, decoded_json)
@@ -2405,9 +2417,12 @@ class TestKuryr(base.TestKuryrBase):
 
         mock_get_container_iface_name.assert_called_with(
             fake_neutron_ports_response['ports'][0])
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
-        mock_list_ports.assert_called_with(name=neutron_port_name)
+        if mock_app.tag:
+            port_tags = utils.make_port_tags(fake_docker_endpoint_id)
+            mock_list_ports.assert_called_with(tags=port_tags)
+        else:
+            port_name = utils.get_neutron_port_name(fake_docker_endpoint_id)
+            mock_list_ports.assert_called_once_with(name=port_name)
         mock_list_subnets.assert_called_with(network_id=fake_neutron_net_id)
         self.assertEqual(expected_response, decoded_json)
 

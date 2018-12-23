@@ -115,7 +115,7 @@ class Driver(object):
         """
         raise NotImplementedError()
 
-    def update_port(self, port, endpoint_id, interface_mac):
+    def update_port(self, port, endpoint_id, interface_mac, tags=True):
         """Updates port information and performs extra driver-specific actions.
 
         It returns the updated port dictionary after the required actions
@@ -128,14 +128,16 @@ class Driver(object):
         :returns: the updated Neutron port id dictionary as returned by
                   python-neutronclient
         """
-        port['name'] = libnet_utils.get_neutron_port_name(endpoint_id)
         try:
             updated_port = {
-                'name': port['name'],
                 'device_owner': lib_const.DEVICE_OWNER,
                 'binding:host_id': lib_utils.get_hostname(),
                 'admin_state_up': True,
             }
+            if not tags:
+                # rename the port if tagging is not supported
+                updated_port['name'] = libnet_utils.get_neutron_port_name(
+                    endpoint_id)
             if not port.get('device_id'):
                 updated_port['device_id'] = endpoint_id
             if interface_mac:

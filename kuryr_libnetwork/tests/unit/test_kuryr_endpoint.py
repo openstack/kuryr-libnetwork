@@ -180,7 +180,8 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         fake_port_response = self._get_fake_port(
             fake_docker_endpoint_id, fake_neutron_network_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
-            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id)
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            tags=utils.create_port_tags(fake_docker_endpoint_id))
         fake_ports_response = {
             "ports": [
                 fake_port_response['port']
@@ -215,7 +216,8 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         mock_list_ports.assert_called_with(fixed_ips=fake_fixed_ips)
         mock_update_port.assert_called_with(fake_port_response['port'],
                                             fake_docker_endpoint_id,
-                                            "fa:16:3e:20:57:c3")
+                                            "fa:16:3e:20:57:c3",
+                                            tags=True)
         mock_create_host_iface.assert_called_with(
             fake_docker_endpoint_id, fake_updated_port, fake_neutron_subnets,
             fake_neutron_network['networks'][0])
@@ -270,8 +272,7 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
         t = utils.make_net_tags(fake_docker_network_id)
         mock_list_networks.return_value = self._get_fake_list_network(
             fake_neutron_network_id)
-        neutron_port_name = utils.get_neutron_port_name(
-            fake_docker_endpoint_id)
+        port_tags = utils.make_port_tags(fake_docker_endpoint_id)
         fake_neutron_ports_response = self._get_fake_ports(
             fake_docker_endpoint_id, fake_neutron_network_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
@@ -291,7 +292,7 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
         self.assertEqual(
             w_exceptions.InternalServerError.code, response.status_code)
         mock_list_networks.assert_called_with(tags=t)
-        mock_list_ports.assert_called_with(name=neutron_port_name)
+        mock_list_ports.assert_called_with(tags=port_tags)
         mock_delete_host_iface.assert_called_with(fake_docker_endpoint_id,
             fake_neutron_port)
         decoded_json = jsonutils.loads(response.data)

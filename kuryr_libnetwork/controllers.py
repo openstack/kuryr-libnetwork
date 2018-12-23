@@ -225,8 +225,8 @@ def _get_neutron_port_from_docker_endpoint(endpoint_id):
 
 def _get_neutron_port_status_from_docker_endpoint(endpoint_id):
     response_port_status = {}
-    port_name = utils.get_neutron_port_name(endpoint_id)
-    filtered_ports = _get_ports_by_attrs(name=port_name)
+    neutron_port_identifier = _make_port_identifier(endpoint_id)
+    filtered_ports = _get_ports_by_identifier(neutron_port_identifier)
     if filtered_ports:
         response_port_status['status'] = filtered_ports[0]['status']
     return response_port_status
@@ -313,7 +313,9 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
         port = filtered_ports['ports'][0]
         port_driver = get_driver(port)
         response_port = port_driver.update_port(port, endpoint_id,
-                                                interface_mac)
+                                                interface_mac,
+                                                tags=app.tag)
+        _neutron_port_add_tags(port, endpoint_id)
     # For the container boot from dual-net, request_address will
     # create two ports(v4 and v6 address), we should only allow one
     # for port bind.
@@ -333,7 +335,9 @@ def _create_or_update_port(neutron_network_id, endpoint_id,
             else:
                 port_driver = get_driver(port)
                 response_port = port_driver.update_port(port, endpoint_id,
-                                                        interface_mac)
+                                                        interface_mac,
+                                                        tags=app.tag)
+                _neutron_port_add_tags(port, endpoint_id)
         if not response_port:
             fixed_ips = (
                 lib_utils.get_dict_format_fixed_ips_from_kv_format(fixed_ips))
@@ -388,8 +392,22 @@ def _neutron_port_add_tag(port, tag):
     _neutron_add_tag('ports', port, tag)
 
 
+def _neutron_port_add_tags(port, tag):
+    if app.tag:
+        tags = utils.create_port_tags(tag)
+        for tag in tags:
+            _neutron_port_add_tag(port, tag)
+
+
 def _neutron_port_remove_tag(port, tag):
     _neutron_remove_tag('ports', port, tag)
+
+
+def _neutron_port_remove_tags(port, tag):
+    if app.tag:
+        tags = utils.create_port_tags(tag)
+        for tag in tags:
+            _neutron_port_remove_tag(port, tag)
 
 
 def _neutron_add_tag(resource_type, resource, tag):
@@ -417,6 +435,18 @@ def _get_networks_by_identifier(identifier):
     if app.tag:
         return _get_networks_by_attrs(tags=identifier)
     return _get_networks_by_attrs(name=identifier)
+
+
+def _make_port_identifier(endpoint_id):
+    if app.tag:
+        return utils.make_port_tags(endpoint_id)
+    return utils.get_neutron_port_name(endpoint_id)
+
+
+def _get_ports_by_identifier(identifier):
+    if app.tag:
+        return _get_ports_by_attrs(tags=identifier)
+    return _get_ports_by_attrs(name=identifier)
 
 
 def _program_expose_ports(options, port_id):
@@ -1237,12 +1267,12 @@ def network_driver_delete_endpoint():
             .format(neutron_network_identifier)
         })
     else:
-        neutron_port_name = utils.get_neutron_port_name(endpoint_id)
-        filtered_ports = _get_ports_by_attrs(name=neutron_port_name)
+        neutron_port_identifier = _make_port_identifier(endpoint_id)
+        filtered_ports = _get_ports_by_identifier(neutron_port_identifier)
         if not filtered_ports:
             raise exceptions.NoResourceException(
-                "The port doesn't exist for the name {0}"
-                .format(neutron_port_name))
+                "The port doesn't exist for the identifier {0}"
+                .format(neutron_port_identifier))
         neutron_port = filtered_ports[0]
 
         try:
@@ -1263,6 +1293,8 @@ def network_driver_delete_endpoint():
                 n_exceptions.NeutronClientException) as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error('Error while removing the interface: %s', ex)
+
+        _neutron_port_remove_tags(neutron_port, endpoint_id)
 
     return flask.jsonify(const.SCHEMA['SUCCESS'])
 
@@ -1321,12 +1353,12 @@ def network_driver_join():
     else:
         neutron_network_id = filtered_networks[0]['id']
 
-        neutron_port_name = utils.get_neutron_port_name(endpoint_id)
-        filtered_ports = _get_ports_by_attrs(name=neutron_port_name)
+        neutron_port_identifier = _make_port_identifier(endpoint_id)
+        filtered_ports = _get_ports_by_identifier(neutron_port_identifier)
         if not filtered_ports:
             raise exceptions.NoResourceException(
-                "The port doesn't exist for the name {0}"
-                .format(neutron_port_name))
+                "The port doesn't exist for the identifier {0}"
+                .format(neutron_port_identifier))
         neutron_port = filtered_ports[0]
         all_subnets = _get_subnets_by_attrs(network_id=neutron_network_id)
         kuryr_subnets = []
@@ -1871,7 +1903,7 @@ def ipam_release_address():
                     if (port['fixed_ips'][0]['subnet_id'] == tmp_subnet['id']):
                         app.neutron.delete_port(port['id'])
             elif tags and const.KURYR_EXISTING_NEUTRON_PORT in tags:
-                updated_port = {'name': '', 'device_owner': '',
+                updated_port = {'device_owner': '',
                                 'binding:host_id': ''}
                 if port['name'].startswith(port['device_id']):
                     updated_port["device_id"] = ''

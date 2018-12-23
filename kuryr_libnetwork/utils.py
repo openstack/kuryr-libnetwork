@@ -130,6 +130,20 @@ def make_subnet_name(pool_cidr):
     return const.SUBNET_NAME_PREFIX + pool_cidr
 
 
+def create_port_tags(tag):
+    tags = []
+    tags.append(const.NEUTRON_ID_LH_OPTION + ':' + tag[:32])
+    if len(tag) > 32:
+        tags.append(const.NEUTRON_ID_UH_OPTION + ':' + tag[32:64])
+
+    return tags
+
+
+def make_port_tags(tag):
+    tags = create_port_tags(tag)
+    return ','.join(map(str, tags))
+
+
 def wait_for_port_active(neutron_client, neutron_port_id, vif_plug_timeout):
     port_active = False
     tries = 0

@@ -218,12 +218,14 @@ class TestKuryrBase(TestCase):
                         fake_neutron_port_id, neutron_port_status,
                         fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id,
                         neutron_subnet_v4_address="192.168.1.2",
-                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4"):
+                        neutron_subnet_v6_address="fe80::f816:3eff:fe20:57c4",
+                        tags=None):
         fake_port = cls._get_fake_port(
             docker_endpoint_id, neutron_network_id,
             fake_neutron_port_id, neutron_port_status,
             fake_neutron_subnet_v4_id, fake_neutron_subnet_v6_id,
-            neutron_subnet_v4_address, neutron_subnet_v6_address)
+            neutron_subnet_v4_address, neutron_subnet_v6_address,
+            tags=tags)
         fake_port = fake_port['port']
         fake_ports = {
             'ports': [

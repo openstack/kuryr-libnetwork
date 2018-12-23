@@ -300,7 +300,6 @@ class TestVlanDriver(base.TestKuryrBase):
 
         mock_update_port.assert_called_with(fake_neutron_port_id,
                 {'port': {
-                    'name': fake_port_name,
                     'device_owner': lib_const.DEVICE_OWNER,
                     'binding:host_id': lib_utils.get_hostname(),
                     'mac_address': fake_neutron_mac_address2,

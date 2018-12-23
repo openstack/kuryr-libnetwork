@@ -111,7 +111,6 @@ class TestVethDriver(base.TestKuryrBase):
         mock_get_port_name.assert_called_with(fake_endpoint_id)
         expected_update_port = {
             'port': {
-                'name': fake_port_name,
                 'device_owner': lib_const.DEVICE_OWNER,
                 'binding:host_id': lib_utils.get_hostname(),
                 'mac_address': fake_mac_address2,
@@ -144,7 +143,6 @@ class TestVethDriver(base.TestKuryrBase):
         mock_get_port_name.assert_called_with(fake_endpoint_id)
         expected_update_port = {
             'port': {
-                'name': fake_port_name,
                 'device_owner': lib_const.DEVICE_OWNER,
                 'binding:host_id': lib_utils.get_hostname(),
                 'admin_state_up': True,
@@ -181,7 +179,6 @@ class TestVethDriver(base.TestKuryrBase):
         mock_get_port_name.assert_called_with(fake_endpoint_id)
         expected_update_port = {
             'port': {
-                'name': fake_port_name,
                 'device_owner': lib_const.DEVICE_OWNER,
                 'binding:host_id': lib_utils.get_hostname(),
                 'device_id': fake_endpoint_id,
