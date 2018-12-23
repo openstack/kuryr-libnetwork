@@ -358,38 +358,38 @@ def _neutron_net_add_tags(net, tag, tags=True):
             _neutron_net_add_tag(net, tag)
 
 
-def _neutron_net_remove_tag(netid, tag):
-    _neutron_remove_tag('networks', netid, tag)
+def _neutron_net_remove_tag(net, tag):
+    _neutron_remove_tag('networks', net, tag)
 
 
-def _neutron_net_remove_tags(netid, tag):
+def _neutron_net_remove_tags(net, tag):
     tags = utils.create_net_tags(tag)
     for tag in tags:
-        _neutron_net_remove_tag(netid, tag)
+        _neutron_net_remove_tag(net, tag)
 
 
 def _neutron_subnetpool_add_tag(pool, tag):
     _neutron_add_tag('subnetpools', pool, tag)
 
 
-def _neutron_subnetpool_remove_tag(poolid, tag):
-    _neutron_remove_tag('subnetpools', poolid, tag)
+def _neutron_subnetpool_remove_tag(pool, tag):
+    _neutron_remove_tag('subnetpools', pool, tag)
 
 
 def _neutron_subnet_add_tag(subnet, tag):
     _neutron_add_tag('subnets', subnet, tag)
 
 
-def _neutron_subnet_remove_tag(subnetid, tag):
-    _neutron_remove_tag('subnets', subnetid, tag)
+def _neutron_subnet_remove_tag(subnet, tag):
+    _neutron_remove_tag('subnets', subnet, tag)
 
 
 def _neutron_port_add_tag(port, tag):
     _neutron_add_tag('ports', port, tag)
 
 
-def _neutron_port_remove_tag(portid, tag):
-    _neutron_remove_tag('ports', portid, tag)
+def _neutron_port_remove_tag(port, tag):
+    _neutron_remove_tag('ports', port, tag)
 
 
 def _neutron_add_tag(resource_type, resource, tag):
@@ -402,8 +402,9 @@ def _neutron_add_tag(resource_type, resource, tag):
                         "cannot add tag to %s.", resource_type)
 
 
-def _neutron_remove_tag(resource_type, resource_id, tag):
-    app.neutron.remove_tag(resource_type, resource_id, tag)
+def _neutron_remove_tag(resource_type, resource, tag):
+    if tag in resource['tags']:
+        app.neutron.remove_tag(resource_type, resource['id'], tag)
 
 
 def _make_net_identifier(network_id, tags=True):
@@ -982,9 +983,10 @@ def network_driver_delete_network():
             LOG.warning("Network is a pre existing Neutron "
                         "network, not deleting in Neutron. "
                         "removing tags: %s", existing_network_identifier)
-            neutron_net_id = existing_networks[0]['id']
-            _neutron_net_remove_tags(neutron_net_id, container_net_id)
-            _neutron_net_remove_tag(neutron_net_id,
+            neutron_net = existing_networks[0]
+            neutron_net_id = neutron_net['id']
+            _neutron_net_remove_tags(neutron_net, container_net_id)
+            _neutron_net_remove_tag(neutron_net,
                                     utils.existing_net_tag(container_net_id))
             # Delete subnets created by kuryr
             filtered_subnets = _get_subnets_by_attrs(
@@ -1783,7 +1785,7 @@ def ipam_release_pool():
             cidr=six.text_type(subnet_cidr))
         for tmp_subnet in subnets_by_cidr:
             if pool_id in tmp_subnet.get('tags', []):
-                _neutron_subnet_remove_tag(tmp_subnet['id'], pool_id)
+                _neutron_subnet_remove_tag(tmp_subnet, pool_id)
                 break
 
     pools = _get_subnetpools_by_attrs(id=pool_id)
@@ -1793,7 +1795,7 @@ def ipam_release_pool():
             tags = pools[0].get('tags', [])
             if const.KURYR_EXISTING_NEUTRON_SUBNETPOOL in tags:
                 _neutron_subnetpool_remove_tag(
-                    pool_id, const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
+                    pools[0], const.KURYR_EXISTING_NEUTRON_SUBNETPOOL)
                 LOG.debug('Skip the cleanup since this is an existing Neutron '
                           'subnetpool.')
                 return flask.jsonify(const.SCHEMA['SUCCESS'])
@@ -1878,7 +1880,7 @@ def ipam_release_address():
                         app.neutron.update_port(
                             port['id'], {'port': updated_port})
                         _neutron_port_remove_tag(
-                            port['id'], const.KURYR_EXISTING_NEUTRON_PORT)
+                            port, const.KURYR_EXISTING_NEUTRON_PORT)
     except n_exceptions.NeutronClientException as ex:
         LOG.error("Error happened while fetching "
                   "and deleting port, %s", ex)
