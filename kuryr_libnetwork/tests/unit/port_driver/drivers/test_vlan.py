@@ -270,7 +270,8 @@ class TestVlanDriver(base.TestKuryrBase):
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
             '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
-            fake_neutron_mac_address1)['port']
+            fake_neutron_mac_address1,
+            binding_host='', admin_state_up=False)['port']
         fake_vm_port = self._get_fake_port(
             fake_endpoint_id, fake_neutron_net_id,
             fake_vm_port_id, lib_const.PORT_STATUS_ACTIVE,

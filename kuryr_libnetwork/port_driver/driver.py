@@ -129,26 +129,29 @@ class Driver(object):
                   python-neutronclient
         """
         try:
-            updated_port = {
-                'device_owner': lib_const.DEVICE_OWNER,
-                'binding:host_id': lib_utils.get_hostname(),
-                'admin_state_up': True,
-            }
+            updated_port = {}
+            hostname = lib_utils.get_hostname()
+            if port['binding:host_id'] != hostname:
+                updated_port['binding:host_id'] = hostname
+                updated_port['device_owner'] = lib_const.DEVICE_OWNER
+            if port['admin_state_up'] is not True:
+                updated_port['admin_state_up'] = True
             if not tags:
                 # rename the port if tagging is not supported
                 updated_port['name'] = libnet_utils.get_neutron_port_name(
                     endpoint_id)
             if not port.get('device_id'):
                 updated_port['device_id'] = endpoint_id
-            if interface_mac:
+            if interface_mac and port['mac_address'] != interface_mac:
                 updated_port['mac_address'] = interface_mac
-            response_port = app.neutron.update_port(port['id'],
-                                                    {'port': updated_port})
+            if updated_port:
+                port = app.neutron.update_port(port['id'],
+                                               {'port': updated_port})['port']
         except n_exceptions.NeutronClientException as ex:
             LOG.error("Error happened during updating a "
                       "Neutron port: %s", ex)
             raise
-        return response_port['port']
+        return port
 
     def __str__(self):
         return self.__class__.__name__

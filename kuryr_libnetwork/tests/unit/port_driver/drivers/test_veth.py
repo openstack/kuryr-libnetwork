@@ -100,7 +100,8 @@ class TestVethDriver(base.TestKuryrBase):
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
             '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
-            fake_mac_address1)['port']
+            fake_mac_address1,
+            admin_state_up=False, binding_host='')['port']
         fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
         mock_get_port_name.return_value = fake_port_name
 
@@ -133,7 +134,8 @@ class TestVethDriver(base.TestKuryrBase):
             fake_endpoint_id, fake_neutron_net_id,
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
-            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9')['port']
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
+            admin_state_up=False, binding_host='')['port']
         fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
         mock_get_port_name.return_value = fake_port_name
 
@@ -167,7 +169,8 @@ class TestVethDriver(base.TestKuryrBase):
             fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
             fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
             '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
-            fake_mac_address1)['port']
+            fake_mac_address1,
+            admin_state_up=False, binding_host='')['port']
         fake_neutron_port.pop('device_id')
         fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
         mock_get_port_name.return_value = fake_port_name
@@ -188,3 +191,27 @@ class TestVethDriver(base.TestKuryrBase):
         }
         mock_update_port.assert_called_with(fake_neutron_port_id,
                                             expected_update_port)
+
+    @mock.patch('kuryr_libnetwork.app.neutron.update_port')
+    @mock.patch.object(libnet_utils, 'get_neutron_port_name')
+    def test_update_port_with_no_changes(self, mock_get_port_name,
+                                         mock_update_port):
+        fake_endpoint_id = lib_utils.get_hash()
+        fake_neutron_port_id = uuidutils.generate_uuid()
+        fake_neutron_net_id = uuidutils.generate_uuid()
+        fake_neutron_v4_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_v6_subnet_id = uuidutils.generate_uuid()
+        fake_neutron_port = self._get_fake_port(
+            fake_endpoint_id, fake_neutron_net_id,
+            fake_neutron_port_id, lib_const.PORT_STATUS_ACTIVE,
+            fake_neutron_v4_subnet_id, fake_neutron_v6_subnet_id,
+            '192.168.1.3', 'fe80::f816:3eff:fe1c:36a9',
+            binding_host=lib_utils.get_hostname())['port']
+        fake_port_name = '-'.join([fake_endpoint_id, lib_utils.PORT_POSTFIX])
+        mock_get_port_name.return_value = fake_port_name
+
+        veth_driver = veth.VethDriver()
+        veth_driver.update_port(fake_neutron_port, fake_endpoint_id, '')
+
+        mock_get_port_name.assert_called_with(fake_endpoint_id)
+        mock_update_port.assert_not_called()
