@@ -1731,6 +1731,7 @@ def ipam_request_address():
                         fixed_ips=fixed_ip_existing).get('ports', [])
                 if not filtered_ports:
                     filtered_ports = app.neutron.list_ports(
+                        fixed_ips='subnet_id=%s' % subnet['id'],
                         mac_address=req_mac_address).get('ports', [])
 
                 num_ports = len(filtered_ports)
