@@ -60,7 +60,6 @@
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
-    nodeset: legacy-ubuntu-xenial-2-node
 
 - job:
     name: kuryr-libnetwork-fullstack
