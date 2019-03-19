@@ -292,7 +292,7 @@ kuryr-libnetwork docker managed pluginv2
 How to build kuryr-libnetwork docker managed pluginv2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Docker Engine’s `plugins system <https://docs.docker.com/engine/extend>`_
+Docker Engine's `plugins system <https://docs.docker.com/engine/extend>`_
 allows you to install, start, stop, and remove plugins using Docker Engine
 for docker 1.13 and older.
 
