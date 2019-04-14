@@ -66,7 +66,7 @@
     parent: kuryr-libnetwork-fullstack-base
 
 - job:
-    name: kuryr-libnetwork-fullstack-py35
+    name: kuryr-libnetwork-fullstack-py3
     parent: kuryr-libnetwork-fullstack-base
     vars:
       use_python3: 1
@@ -96,7 +96,6 @@
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python-jobs
-      - openstack-python35-jobs
       - openstack-python36-jobs
       - openstack-python37-jobs
       - release-notes-jobs-python3
@@ -108,13 +107,13 @@
         - kuryr-libnetwork-kuryr_lib-src-fullstack
         - kuryr-libnetwork-fullstack
         - kuryr-libnetwork-kuryr_lib-src-rally
-        - kuryr-libnetwork-fullstack-py35
+        - kuryr-libnetwork-fullstack-py3
         - kuryr-libnetwork-rally
     gate:
       jobs:
         - kuryr-libnetwork-kuryr_lib-src-fullstack
         - kuryr-libnetwork-fullstack
-        - kuryr-libnetwork-fullstack-py35
+        - kuryr-libnetwork-fullstack-py3
     experimental:
       jobs:
         - kuryr-libnetwork-install-multinode
