@@ -8,7 +8,7 @@
     post-run: playbooks/kuryr-libnetwork-fullstack-base/post.yaml
     timeout: 7800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
@@ -22,7 +22,7 @@
     vars:
       use_src: 0
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
@@ -36,7 +36,7 @@
     post-run: playbooks/kuryr-libnetwork-install/post.yaml
     timeout: 7800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
@@ -49,7 +49,7 @@
     post-run: playbooks/kuryr-libnetwork-install-multinode/post.yaml
     timeout: 7800
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/devstack-plugin-container
       - openstack/kuryr
       - openstack/kuryr-libnetwork
