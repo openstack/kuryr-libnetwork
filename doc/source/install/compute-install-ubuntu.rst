@@ -41,7 +41,7 @@ Install and configure components
 
       # apt-get install python-pip
       # cd /var/lib/kuryr
-      # git clone -b stable/rocky https://git.openstack.org/openstack/kuryr-libnetwork.git
+      # git clone -b stable/stein https://git.openstack.org/openstack/kuryr-libnetwork.git
       # chown -R kuryr:kuryr kuryr-libnetwork
       # cd kuryr-libnetwork
       # pip install -r requirements.txt
