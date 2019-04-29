@@ -114,7 +114,7 @@ Then we start the container::
       -e SERVICE_PASSWORD=admin \
       -e SERVICE_DOMAIN_NAME=Default \
       -e USER_DOMAIN_NAME=Default \
-      -e IDENTITY_URL=http://127.0.0.1:35357/v3 \
+      -e IDENTITY_URL=http://127.0.0.1:5000/v3 \
       -v /var/log/kuryr:/var/log/kuryr \
       -v /var/run/openvswitch:/var/run/openvswitch \
       kuryr/libnetwork
@@ -194,7 +194,7 @@ Rename and copy config file at required path::
 For using Keystone v3, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
 
     [neutron]
-    auth_url = http://127.0.0.1:35357/v3/
+    auth_url = http://127.0.0.1:5000/v3/
     username = admin
     user_domain_name = Default
     password = ADMIN_PASSWORD
@@ -206,7 +206,7 @@ For using Keystone v3, edit the Neutron section in `/etc/kuryr/kuryr.conf`, repl
 Alternatively, for using Keystone v2, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
 
     [neutron]
-    auth_url = http://127.0.0.1:35357/v2.0/
+    auth_url = http://127.0.0.1:5000/v2.0/
     username = admin
     password = ADMIN_PASSWORD
     project_name = service
@@ -356,7 +356,7 @@ How to try out nested-containers locally
         link_iface = eth0 # VM vNIC
 
         [neutron]
-        auth_url = http://KEYSTONE_SERVER_IP:35357/v3/
+        auth_url = http://KEYSTONE_SERVER_IP:5000/v3/
         username = admin
         user_domain_name = Default
         password = ADMIN_PASSWORD
