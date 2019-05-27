@@ -26,7 +26,7 @@ Kuryr Workflow - Host Networking
 --------------------------------
 Kuryr resides in each host that runs Docker containers and serves `APIs <https://github.com/docker/libnetwork/blob/master/docs/design.md#api>`_
 required for the libnetwork remote network driver. It is planned to use the
-`Adding tags to resources <https://review.openstack.org/#/c/216021/>`_
+`Adding tags to resources <https://review.opendev.org/#/c/216021/>`_
 new Neutron feature by Kuryr, to map between
 Neutron resource Id's and Docker Id's (UUID's)
 

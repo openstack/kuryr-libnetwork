@@ -17,8 +17,8 @@ ENABLE_PLUGINV2=False
 LIBS_FROM_GIT=kuryr
 
 enable_plugin devstack-plugin-container https://github.com/openstack/devstack-plugin-container
-enable_plugin kuryr-libnetwork https://git.openstack.org/openstack/kuryr-libnetwork
-enable_plugin neutron https://git.openstack.org/openstack/neutron
+enable_plugin kuryr-libnetwork https://opendev.org/openstack/kuryr-libnetwork
+enable_plugin neutron https://opendev.org/openstack/neutron
 
 # Use Neutron instead of nova-network
 disable_service n-net

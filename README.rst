@@ -30,7 +30,7 @@ K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 
 * Free software: Apache license
 * Documentation: https://docs.openstack.org/kuryr-libnetwork/latest/
-* Source: http://git.openstack.org/cgit/openstack/kuryr-libnetwork
+* Source: http://opendev.org/openstack/kuryr-libnetwork
 * Bugs: http://bugs.launchpad.net/kuryr-libnetwork
 
 Features
@@ -158,7 +158,7 @@ Getting it from source
 
 ::
 
-    $ git clone https://git.openstack.org/openstack/kuryr-libnetwork
+    $ git clone https://opendev.org/openstack/kuryr-libnetwork
     $ cd kuryr-libnetwork
 
 
@@ -301,7 +301,7 @@ contrib/docker/v2plugin/v2plugin_rootfs.sh in the top folder of
 kuryr-libentwork. This script will copy config.json to the top
 folder and build rootfs. ::
 
-    $ git clone https://git.openstack.org/openstack/kuryr-libnetwork
+    $ git clone https://opendev.org/openstack/kuryr-libnetwork
     $ cd kuryr-libnetwork
     $ ./contrib/docker/v2plugin/v2plugin_rootfs.sh
     $ docker plugin create kuryr/libnetwork2 ./

@@ -41,7 +41,7 @@ Install and configure components
 
       # apt-get install python3-pip
       # cd /var/lib/kuryr
-      # git clone -b master https://git.openstack.org/openstack/kuryr-libnetwork.git
+      # git clone -b master https://opendev.org/openstack/kuryr-libnetwork.git
       # chown -R kuryr:kuryr kuryr-libnetwork
       # cd kuryr-libnetwork
       # pip3 install -r requirements.txt
