@@ -30,7 +30,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
     """Unit tests for the failures for creating endpoints.
 
     This test covers error responses listed in the spec:
-      http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+      https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
       http://developer.openstack.org/api-ref-networking-v2-ext.html#createPort  # noqa
     """
     def _invoke_create_request(self, docker_network_id, docker_endpoint_id):

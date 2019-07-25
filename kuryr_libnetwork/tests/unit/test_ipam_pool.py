@@ -24,7 +24,7 @@ class TestIpamRequestPoolFailures(base.TestKuryrFailures):
     """Unit tests for testing request pool failures.
 
     This test covers error responses listed in the spec:
-    http://developer.openstack.org/api-ref/networking/v2/index.html#subnet-pools-extension-subnetpools # noqa
+    https://docs.openstack.org/api-ref/network/v2/index.html#subnet-pools-extension-subnetpools # noqa
     """
     def _invoke_create_request(self, pool):
         fake_request = {

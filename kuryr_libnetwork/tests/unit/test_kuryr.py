@@ -122,7 +122,7 @@ class TestKuryr(base.TestKuryrBase):
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_create_network_response = {
                 "network": fake_network
             }
@@ -250,7 +250,7 @@ class TestKuryr(base.TestKuryrBase):
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_create_network_response = {
                 "network": fake_network
             }
@@ -390,7 +390,7 @@ class TestKuryr(base.TestKuryrBase):
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_create_network_response = {
                 "network": fake_network
             }
@@ -804,7 +804,7 @@ class TestKuryr(base.TestKuryrBase):
         }
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
         fake_neutron_net_id = uuidutils.generate_uuid()
         driver_value = fake_neutron_net_id if driver_default_net else None
         mock_get_default_network_id.return_value = driver_value
@@ -836,7 +836,7 @@ class TestKuryr(base.TestKuryrBase):
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_create_network_response = {
                 "network": fake_network
             }
@@ -971,7 +971,7 @@ class TestKuryr(base.TestKuryrBase):
         }
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
         fake_neutron_net_id = "4e8e5957-649f-477b-9e5b-f1f75b21c03c"
         driver_value = fake_neutron_net_id if driver_default_net else None
         mock_get_default_network_id.return_value = driver_value
@@ -1003,7 +1003,7 @@ class TestKuryr(base.TestKuryrBase):
             }
             fake_network['name'] = utils.make_net_name(docker_network_id)
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_create_network_response = {
                 "network": fake_network
             }
@@ -1134,7 +1134,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_kuryr_v6_subnetpool_id, name=fake_v6_pool_name)
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
         fake_neutron_net_id = uuidutils.generate_uuid()
         driver_value = fake_neutron_net_id if driver_default_net else None
         mock_get_default_network_id.return_value = driver_value
@@ -1165,7 +1165,7 @@ class TestKuryr(base.TestKuryrBase):
                 }
             }
             # The following fake response is retrieved from the Neutron doc:
-            #   http://developer.openstack.org/api-ref-networking-v2.html#createNetwork  # noqa
+            #   https://docs.openstack.org/api-ref/network/v2/index.html#create-network  # noqa
             fake_network['name'] = utils.make_net_name(docker_network_id)
             fake_create_network_response = {
                 "network": fake_network
@@ -1432,7 +1432,7 @@ class TestKuryr(base.TestKuryrBase):
                     fake_neutron_net_id)
         mock_list_networks.side_effect = mock_network
         # The following fake response is retrieved from the Neutron doc:
-        # http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        # https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
         subnet_v4_id = "9436e561-47bf-436a-b1f1-fe23a926e031"
         subnet_v6_id = "64dd4a98-3d7a-4bfd-acf4-91137a8d2f51"
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -1505,7 +1505,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_net_id)
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
         subnet_v4_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
             fake_docker_network_id, fake_docker_endpoint_id, subnet_v4_id)
@@ -1618,7 +1618,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_net_id)
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
         subnet_v4_id = uuidutils.generate_uuid()
         subnet_v6_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -1772,7 +1772,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_net_id)
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
         subnet_v4_id = uuidutils.generate_uuid()
         subnet_v6_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
@@ -1911,7 +1911,7 @@ class TestKuryr(base.TestKuryrBase):
             fake_neutron_net_id)
 
         # The following fake response is retrieved from the Neutron doc:
-        #   http://developer.openstack.org/api-ref-networking-v2.html#createSubnet  # noqa
+        #   https://docs.openstack.org/api-ref/network/v2/index.html#create-subnet  # noqa
         subnet_v4_id = uuidutils.generate_uuid()
         subnet_v6_id = uuidutils.generate_uuid()
         fake_v4_subnet = self._get_fake_v4_subnet(
