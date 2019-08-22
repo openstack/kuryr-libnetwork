@@ -31,6 +31,6 @@ GITDIR["kuryr"]=$DEST/kuryr
 
 enable_service kuryr-libnetwork docker-engine
 
-if [[ ${HOST_IP} == ${SERVICE_HOST} ]]; then
+if [[ ${HOST_IP} == ${SERVICE_HOST} ]] || [[ "[${HOST_IPV6}]" == "${SERVICE_HOST}" ]]; then
     enable_service etcd3
 fi
