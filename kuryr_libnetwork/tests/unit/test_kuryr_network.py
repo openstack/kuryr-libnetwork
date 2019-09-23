@@ -173,7 +173,7 @@ class TestKuryrNetworkCreateFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         # TODO(tfukushima): Add the better error message validation.
         self.assertIn(invalid_docker_network_id, decoded_json['Err'])
-        self.assertIn('NetworkID', decoded_json['Err'])
+        self.assertIn('Failed validating ', decoded_json['Err'])
 
 
 @ddt
@@ -268,7 +268,7 @@ class TestKuryrNetworkDeleteFailures(base.TestKuryrFailures):
         decoded_json = jsonutils.loads(response.data)
         self.assertIn('Err', decoded_json)
         self.assertIn(invalid_docker_network_id, decoded_json['Err'])
-        self.assertIn('NetworkID', decoded_json['Err'])
+        self.assertIn('Failed validating ', decoded_json['Err'])
 
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.delete_subnet')
     @mock.patch('kuryr_libnetwork.controllers.app.neutron.list_subnetpools')

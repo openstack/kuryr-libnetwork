@@ -238,7 +238,7 @@ class TestKuryrEndpointCreateFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         # TODO(tfukushima): Add the better error message validation.
         self.assertIn(invalid_docker_endpoint_id, decoded_json['Err'])
-        self.assertIn('EndpointID', decoded_json['Err'])
+        self.assertIn('Failed validating ', decoded_json['Err'])
 
 
 @ddt.ddt
@@ -311,4 +311,4 @@ class TestKuryrEndpointDeleteFailures(base.TestKuryrFailures):
         self.assertIn('Err', decoded_json)
         # TODO(tfukushima): Add the better error message validation.
         self.assertIn(invalid_docker_endpoint_id, decoded_json['Err'])
-        self.assertIn('EndpointID', decoded_json['Err'])
+        self.assertIn('Failed validating ', decoded_json['Err'])
