@@ -72,6 +72,13 @@
       use_python3: 1
 
 - job:
+    name: kuryr-libnetwork-fullstack-ipv6-only
+    parent: kuryr-libnetwork-fullstack-py3
+    run: playbooks/kuryr-libnetwork-fullstack-base/run-ipv6.yaml
+    required-projects:
+      - openstack/tempest
+
+- job:
     name: kuryr-libnetwork-kuryr_lib-src-fullstack
     parent: kuryr-libnetwork-fullstack-base
     vars:
@@ -108,11 +115,13 @@
         - kuryr-libnetwork-kuryr_lib-src-rally
         - kuryr-libnetwork-fullstack-py3
         - kuryr-libnetwork-rally
+        - kuryr-libnetwork-fullstack-ipv6-only
     gate:
       jobs:
         - kuryr-libnetwork-kuryr_lib-src-fullstack
         - kuryr-libnetwork-fullstack
         - kuryr-libnetwork-fullstack-py3
+        - kuryr-libnetwork-fullstack-ipv6-only
     experimental:
       jobs:
         - kuryr-libnetwork-install-multinode
