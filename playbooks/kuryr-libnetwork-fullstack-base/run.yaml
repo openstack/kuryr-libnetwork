@@ -49,20 +49,10 @@
           if [ "$BRANCH_OVERRIDE" != "default" ] ; then
               export OVERRIDE_ZUUL_BRANCH=$BRANCH_OVERRIDE
           fi
-
+          export DEVSTACK_GATE_USE_PYTHON3=True
           export PROJECTS="openstack/kuryr-libnetwork $PROJECTS"
           if [ "{{ use_src }}" -eq 1 ] ; then
               export DEVSTACK_PROJECT_FROM_GIT="kuryr"
-          fi
-          if [ "{{ use_python3 }}" -eq 1 ]; then
-              export DEVSTACK_GATE_USE_PYTHON3=True
-              # swift is not ready for python3 yet
-              export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service s-account"
-              export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service s-container"
-              export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service s-object"
-              export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service s-proxy"
-          else
-              export DEVSTACK_GATE_USE_PYTHON3=False
           fi
           export PROJECTS="openstack/devstack-plugin-container $PROJECTS"
 
