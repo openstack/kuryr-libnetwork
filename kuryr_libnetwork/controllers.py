@@ -16,8 +16,10 @@ import flask
 import ipaddress
 from itertools import groupby
 import jsonschema
+import math
 from operator import itemgetter
 import six
+import time
 
 from neutronclient.common import exceptions as n_exceptions
 from oslo_concurrency import processutils
@@ -74,13 +76,29 @@ def neutron_client():
 
 def check_for_neutron_ext_support():
     """Validates for mandatory extension support availability in neutron."""
-    try:
-        app.neutron.show_extension(MANDATORY_NEUTRON_EXTENSION)
-    except n_exceptions.NeutronClientException as e:
-        if e.status_code == n_exceptions.NotFound.status_code:
-            raise exceptions.MandatoryApiMissing(
-                "Neutron extension with alias '{0}' not found"
-                            .format(MANDATORY_NEUTRON_EXTENSION))
+    max_attempts = 8
+    for attempt in range(max_attempts):
+        try:
+            app.neutron.show_extension(MANDATORY_NEUTRON_EXTENSION)
+            break
+        except n_exceptions.NeutronClientException as e:
+            if e.status_code == n_exceptions.NotFound.status_code:
+                raise exceptions.MandatoryApiMissing(
+                    "Neutron extension with alias '{0}' not found"
+                                .format(MANDATORY_NEUTRON_EXTENSION))
+            elif attempt == max_attempts - 1:
+                raise
+            else:
+                LOG.error("Error happened during retrieving neutron "
+                          "extensions")
+        except Exception as e:
+            if attempt == max_attempts - 1:
+                raise
+            else:
+                LOG.error("Error happened during retrieving neutron "
+                          "extensions: %s", e)
+        backoff = int(math.pow(2, attempt) - 1)
+        time.sleep(backoff)
 
 
 def check_for_neutron_tag_support():
