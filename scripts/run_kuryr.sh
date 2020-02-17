@@ -105,5 +105,5 @@ if [[ $KURYR_USE_UWSGI == "True" ]]; then
         --threads "$KURYR_UWSGI_THREADS" \
         "${UWSGI_ADDITIONAL_ARGS[@]}"
 else
-    PYTHONPATH="${KURYR_HOME}" python "${KURYR_HOME}/scripts/run_server.py"  --config-file "${KURYR_CONFIG}" "$@"
+    PYTHONPATH="${KURYR_HOME}" python3 "${KURYR_HOME}/scripts/run_server.py"  --config-file "${KURYR_CONFIG}" "$@"
 fi
