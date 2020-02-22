@@ -399,7 +399,7 @@ class IpamTest(kuryr_base.KuryrBaseTest):
                 },
                 {
                     "Subnet": "fe81::/64",
-                    "Gateway": "fe81::1"
+                    "Gateway": "fe81::"
                 },
             ]
         }
