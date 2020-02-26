@@ -39,13 +39,13 @@ Install and configure components
 
    .. code-block:: console
 
-      # apt-get install python-pip
+      # apt-get install python3-pip
       # cd /var/lib/kuryr
       # git clone -b master https://git.openstack.org/openstack/kuryr-libnetwork.git
       # chown -R kuryr:kuryr kuryr-libnetwork
       # cd kuryr-libnetwork
-      # pip install -r requirements.txt
-      # python setup.py install
+      # pip3 install -r requirements.txt
+      # python3 setup.py install
 
 #. Generate a sample configuration file:
 

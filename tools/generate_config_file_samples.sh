@@ -27,7 +27,7 @@ prerequisites() (
     if ! [ -f "${DIST_PATH}/kuryr_libnetwork.egg-info/entry_points.txt" ]; then
         curr_dir=$(pwd)
         cd "${DIST_PATH}"
-        python setup.py egg_info  # Generate entrypoints for config generation
+        python3 setup.py egg_info  # Generate entrypoints for config generation
         cd "${curr_dir}"
     fi
 

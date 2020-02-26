@@ -167,7 +167,7 @@ Install prerequisites
 
 ::
 
-    $ sudo pip install -r requirements.txt
+    $ sudo pip3 install -r requirements.txt
 
 
 Installing Kuryr's libnetwork driver
@@ -175,7 +175,7 @@ Installing Kuryr's libnetwork driver
 
 Running the following will grab the requirements and install kuryr::
 
-    $ sudo pip install .
+    $ sudo pip3 install .
 
 
 Configuring Kuryr
@@ -415,12 +415,12 @@ Generating Documentation
 We use `Sphinx <https://pypi.org/project/Sphinx>`_ to maintain the
 documentation. You can install Sphinx using pip::
 
-    $ pip install -U Sphinx
+    $ pip3 install -U Sphinx
 
 In addition to Sphinx you will also need the following requirements
 (not covered by `requirements.txt`)::
 
-    $ pip install openstackdocstheme reno 'reno[sphinx]'
+    $ pip3 install openstackdocstheme reno 'reno[sphinx]'
 
 The source code of the documentation are under *doc*, you can generate the
 html files using the following command. If the generation succeeds,a
@@ -433,7 +433,7 @@ Now you can serve the documentation at http://localhost:8080 as a simple
 website::
 
     $ cd build/html
-    $ python -m SimpleHTTPServer 8080
+    $ python3 -m SimpleHTTPServer 8080
 
 Limitations
 -----------
