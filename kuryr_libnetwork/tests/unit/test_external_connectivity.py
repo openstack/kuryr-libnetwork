@@ -12,8 +12,8 @@
 
 from collections import defaultdict
 from itertools import groupby
-import mock
 from operator import itemgetter
+from unittest import mock
 
 import ddt
 from oslo_serialization import jsonutils

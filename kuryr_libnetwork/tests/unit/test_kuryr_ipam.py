@@ -11,10 +11,11 @@
 # under the License.
 
 import ipaddress
+from unittest import mock
+
 import six
 
 import ddt
-import mock
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from werkzeug import exceptions as w_exceptions

@@ -11,8 +11,8 @@
 # under the License.
 
 import glob
-import mock
 import os
+from unittest import mock
 
 from oslo_utils import uuidutils
 

@@ -10,8 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from unittest import mock
+
 import ddt
-import mock
 
 from kuryr.lib import exceptions
 from kuryr_libnetwork.port_driver import base as d_base

@@ -10,8 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from unittest import mock
+
 import ddt
-import mock
 from neutronclient.common import exceptions as n_exceptions
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
