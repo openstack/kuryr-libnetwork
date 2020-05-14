@@ -363,7 +363,6 @@ class TestKuryrBase(TestCase):
                 }],
                 "id": "65c0ee9f-d634-4522-8954-51021b570b0d",
                 "security_groups": [],
-                "device_id": ""
             }
         }
         return fake_port

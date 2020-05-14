@@ -1044,7 +1044,7 @@ def network_driver_delete_network():
                     subnet_name = subnet.get('name')
                     if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
                         app.neutron.delete_subnet(subnet['id'])
-                except n_exceptions.Conflict as ex:
+                except n_exceptions.Conflict:
                     LOG.error("Subnet %s is in use, "
                               "can't be deleted.", subnet['id'])
                 except n_exceptions.NeutronClientException as ex:
@@ -1086,7 +1086,7 @@ def network_driver_delete_network():
                     # and it's totally the normal case. So we'd just log that
                     # and continue to proceed.
                     app.neutron.delete_subnet(subnet['id'])
-            except n_exceptions.Conflict as ex:
+            except n_exceptions.Conflict:
                 LOG.error("Subnet, %s, is in use. Network can't "
                           "be deleted.", subnet['id'])
                 raise
@@ -1856,7 +1856,7 @@ def ipam_release_pool():
 
     try:
         app.neutron.delete_subnetpool(pool_id)
-    except n_exceptions.Conflict as ex:
+    except n_exceptions.Conflict:
         LOG.info("The subnetpool with ID %s is still in use."
                  " It can't be deleted for now.", pool_id)
     except n_exceptions.NeutronClientException as ex:

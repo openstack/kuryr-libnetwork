@@ -106,8 +106,8 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_compatible(self, m_conf):
         m_conf.binding.enabled_drivers = ['macvlan']
-        message = "Configuration file error: port driver 'veth' is not " \
-                  "compatible with binding driver '\['macvlan'\]'"
+        message = r"Configuration file error: port driver 'veth' is not " \
+                  r"compatible with binding driver '\['macvlan'\]'"
 
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('veth',)
@@ -118,8 +118,8 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
     def test__verify_binding_driver_compatibility_not_compatible_multi_drivers(
             self, m_conf):
         m_conf.binding.enabled_drivers = ['macvlan', 'sriov']
-        message = "Configuration file error: port driver 'veth' is not " \
-                  "compatible with binding driver '\['macvlan'\, 'sriov']'"
+        message = r"Configuration file error: port driver 'veth' is not " \
+                  r"compatible with binding driver '\['macvlan'\, 'sriov']'"
 
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('veth',)
@@ -129,8 +129,9 @@ class TestNestedDriverFailures(base.TestKuryrFailures):
     @mock.patch('kuryr_libnetwork.config.CONF')
     def test__verify_binding_driver_compatibility_not_supported(self, m_conf):
         m_conf.binding.enabled_drivers = ['ipvlan']
-        message = "Configuration file error: binding driver '\['ipvlan'\]' is " \
-                  "currently not supported with 'nested' port driver"
+        message = r"Configuration file error: binding driver " \
+                  r"'\['ipvlan'\]' is currently not supported " \
+                  r"with 'nested' port driver"
 
         fake_driver = mock.Mock(spec=driver.Driver)
         fake_driver.get_supported_bindings.return_value = ('ipvlan',)
