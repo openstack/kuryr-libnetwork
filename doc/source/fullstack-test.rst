@@ -16,12 +16,12 @@ Clone DevStack::
     sudo mkdir -p /opt/stack
     sudo chown $USER /opt/stack
 
-    git clone https://git.openstack.org/openstack-dev/devstack /opt/stack/devstack
+    git clone https://opendev.org/openstack/devstack /opt/stack/devstack
 
 We will run devstack with minimal local.conf settings required. You can use the
 sample local.conf as a quick-start::
 
-    git clone https://git.openstack.org/openstack/kuryr-libnetwork /opt/stack/kuryr-libnetwork
+    git clone https://opendev.org/openstack/kuryr-libnetwork /opt/stack/kuryr-libnetwork
     cp /opt/stack/kuryr-libnetwork/devstack/local.conf.sample /opt/stack/devstack/local.conf
 
 Run DevStack::
