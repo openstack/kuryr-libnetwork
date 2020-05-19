@@ -32,6 +32,7 @@ K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 * Documentation: https://docs.openstack.org/kuryr-libnetwork/latest/
 * Source: http://git.openstack.org/cgit/openstack/kuryr-libnetwork
 * Bugs: http://bugs.launchpad.net/kuryr-libnetwork
+* Release Notes: https://docs.openstack.org/releasenotes/kuryr-libnetwork
 
 Features
 --------
