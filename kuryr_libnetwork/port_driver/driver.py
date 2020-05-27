@@ -11,7 +11,6 @@
 # under the License.
 
 import abc
-import six
 
 from oslo_log import log
 from oslo_utils import importutils
@@ -28,8 +27,7 @@ from kuryr_libnetwork import utils as libnet_utils
 LOG = log.getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Driver(object):
+class Driver(object, metaclass=abc.ABCMeta):
     """Interface class for port drivers.
 
     In order to create compliant implementations subclasses must be named with

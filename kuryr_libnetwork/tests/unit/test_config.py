@@ -10,12 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
 import ddt
 import os
-from six.moves.urllib import parse
 import sys
+from unittest import mock
+from urllib import parse
 
 from neutronclient.common import exceptions as n_exceptions
 

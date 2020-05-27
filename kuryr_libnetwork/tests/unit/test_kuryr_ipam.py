@@ -13,7 +13,6 @@
 import ipaddress
 from unittest import mock
 
-import six
 
 import ddt
 from oslo_serialization import jsonutils
@@ -72,7 +71,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         neutron_subnet_v4_id = uuidutils.generate_uuid()
 
         pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-        prefixlen = ipaddress.ip_network(six.text_type(pool_cidr)).prefixlen
+        prefixlen = ipaddress.ip_network(str(pool_cidr)).prefixlen
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': prefixlen,
@@ -129,7 +128,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         neutron_subnet_v4_id = uuidutils.generate_uuid()
 
         pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-        prefixlen = ipaddress.ip_network(six.text_type(pool_cidr)).prefixlen
+        prefixlen = ipaddress.ip_network(str(pool_cidr)).prefixlen
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': prefixlen,
@@ -205,7 +204,7 @@ class TestKuryrIpam(base.TestKuryrBase):
 
         mock_list_subnets.return_value = fake_subnets
         pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-        prefixlen = ipaddress.ip_network(six.text_type(pool_cidr)).prefixlen
+        prefixlen = ipaddress.ip_network(str(pool_cidr)).prefixlen
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': prefixlen,
@@ -262,7 +261,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         fake_subnet = {"subnets": []}
         mock_list_subnets.return_value = fake_subnet
         pool_name = lib_utils.get_neutron_subnetpool_name(pool_cidr)
-        prefixlen = ipaddress.ip_network(six.text_type(pool_cidr)).prefixlen
+        prefixlen = ipaddress.ip_network(str(pool_cidr)).prefixlen
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': prefixlen,
@@ -427,7 +426,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         else:
             subnet_cidr = subnet_ip6_cidr
         pool_name = lib_utils.get_neutron_subnetpool_name(subnet_cidr)
-        prefixlen = ipaddress.ip_network(six.text_type(subnet_cidr)).prefixlen
+        prefixlen = ipaddress.ip_network(str(subnet_cidr)).prefixlen
         new_subnetpool = {
             'name': pool_name,
             'default_prefixlen': prefixlen,
