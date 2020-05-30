@@ -41,10 +41,10 @@ project = u'kuryr-libnetwork'
 copyright = u'2013, OpenStack Foundation'
 
 # openstackdocstheme options
-repository_name = 'openstack/kuryr-libnetwork'
-bug_project = 'kuryr-libnetwork'
-bug_tag = ''
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
+openstackdocs_repo_name = 'openstack/kuryr-libnetwork'
+openstackdocs_auto_name = False
+openstackdocs_bug_project = 'kuryr-libnetwork'
+openstackdocs_bug_tag = ''
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 add_function_parentheses = True

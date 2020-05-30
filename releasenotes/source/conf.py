@@ -53,10 +53,10 @@ copyright = u'2017, Kuryr-Libnetwork Developers'
 author = u'Kuryr-Libnetwork Developers'
 
 # openstackdocstheme options
-repository_name = 'openstack/kuryr-libnetwork'
-bug_project = 'kuryr-libnetwork'
-bug_tag = ''
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
+openstackdocs_repo_name = 'openstack/kuryr-libnetwork'
+openstackdocs_auto_name = False
+openstackdocs_bug_project = 'kuryr-libnetwork'
+openstackdocs_bug_tag = ''
 
 # Release notes do not need a version number in the title, they
 # cover multiple releases.
