@@ -11,7 +11,6 @@
 # under the License.
 
 import abc
-import six
 
 from kuryr.lib.binding.drivers import utils
 from kuryr.lib import exceptions
@@ -20,8 +19,7 @@ from kuryr_libnetwork import config
 from kuryr_libnetwork.port_driver import driver
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseNestedDriver(driver.Driver):
+class BaseNestedDriver(driver.Driver, metaclass=abc.ABCMeta):
     """Driver for container-in-VM deployments with MACVLAN and IPVLAN."""
 
     def __init__(self):

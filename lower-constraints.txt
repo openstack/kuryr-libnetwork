@@ -100,7 +100,6 @@ requestsexceptions==1.4.0
 rfc3986==1.1.0
 Routes==2.4.1
 simplejson==3.13.2
-six==1.10.0
 snowballstemmer==1.2.1
 Sphinx==2.0.0
 sphinxcontrib-websupport==1.0.1

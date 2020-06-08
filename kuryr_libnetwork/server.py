@@ -13,7 +13,7 @@ import os
 import sys
 
 from oslo_log import log
-from six.moves.urllib import parse
+from urllib import parse
 
 from kuryr.lib._i18n import _
 from kuryr_libnetwork import app
