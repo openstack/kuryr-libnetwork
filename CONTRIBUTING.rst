@@ -10,6 +10,9 @@ submitted for review via the Gerrit tool:
 
    https://docs.openstack.org/infra/manual/developers.html#development-workflow
 
+Please note that the team is currently pretty small, so we decided to adopt a
+policy of a single +2 in Gerrit required to merge the patches.
+
 Pull requests submitted through GitHub will be ignored.
 
 Bugs should be filed on Launchpad, not GitHub:
