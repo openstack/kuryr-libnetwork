@@ -51,6 +51,7 @@ sudo chown -R $owner:stack "$KURYR_LIBNETWORK_DIR"
 # Run tests
 echo "Running Kuryr $venv tests"
 set +e
+sudo pip install tox
 sudo -H -u "$owner" tox -e "$venv"
 testr_exit_code=$?
 set -e
