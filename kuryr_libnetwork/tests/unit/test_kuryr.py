@@ -2158,7 +2158,8 @@ class TestKuryr(base.TestKuryrBase):
                 'DstPrefix': config.CONF.binding.veth_dst_prefix,
                 'SrcName': fake_iface_name,
             },
-            'StaticRoutes': []
+            'StaticRoutes': [],
+            'DisableGatewayService': True
         }
 
         self.assertEqual(200, response.status_code)
@@ -2276,7 +2277,8 @@ class TestKuryr(base.TestKuryrBase):
                 'DstPrefix': config.CONF.binding.veth_dst_prefix,
                 'SrcName': fake_iface_name,
             },
-            'StaticRoutes': []
+            'StaticRoutes': [],
+            'DisableGatewayService': True
         }
 
         self.assertEqual(200, response.status_code)
@@ -2385,7 +2387,8 @@ class TestKuryr(base.TestKuryrBase):
                  fake_v4_subnet['subnet']['host_routes'][0]['nexthop'],
                  'Destination':
                  fake_v4_subnet['subnet']['host_routes'][0]['destination'],
-                 'RouteType': constants.ROUTE_TYPE['NEXTHOP']}]
+                 'RouteType': constants.ROUTE_TYPE['NEXTHOP']}],
+            'DisableGatewayService': True
         }
 
         self.assertEqual(200, response.status_code)

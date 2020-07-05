@@ -1370,7 +1370,8 @@ def network_driver_join():
                 "SrcName": iface_name,
                 "DstPrefix": config.CONF.binding.veth_dst_prefix
             },
-            "StaticRoutes": []
+            "StaticRoutes": [],
+            "DisableGatewayService": True,
         }
 
         for subnet in all_subnets:
@@ -1699,7 +1700,12 @@ def ipam_request_address():
         if is_gateway:
             # check if request gateway ip same with existed gateway ip
             existed_gateway_ip = subnet.get('gateway_ip', '')
-            if req_address == existed_gateway_ip:
+            if not req_address:
+                if subnet['ip_version'] == 4:
+                    allocated_address = "0.0.0.0/0"
+                else:
+                    allocated_address = "::/0"
+            elif req_address == existed_gateway_ip:
                 allocated_address = '{}/{}'.format(req_address,
                                                    subnet_cidr.prefixlen)
             else:
