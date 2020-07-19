@@ -2,7 +2,7 @@
     name: kuryr-libnetwork-fullstack-base
     parent: legacy-dsvm-base
     vars:
-      use_python3: 0
+      use_python3: 1
       use_src: 0
     run: playbooks/kuryr-libnetwork-fullstack-base/run.yaml
     post-run: playbooks/kuryr-libnetwork-fullstack-base/post.yaml
@@ -66,8 +66,6 @@
 - job:
     name: kuryr-libnetwork-fullstack-py3
     parent: kuryr-libnetwork-fullstack-base
-    vars:
-      use_python3: 1
 
 - job:
     name: kuryr-libnetwork-fullstack-ipv6-only
