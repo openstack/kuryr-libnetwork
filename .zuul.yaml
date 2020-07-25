@@ -11,8 +11,6 @@
       devstack_plugins:
         kuryr-libnetwork: https://opendev.org/openstack/kuryr-libnetwork
         devstack-plugin-container: https://opendev.org/openstack/devstack-plugin-container
-    run: playbooks/run_fullstack_job.yaml
-    post-run: playbooks/post_fullstack_job.yaml
     timeout: 7800
     required-projects:
       - opendev.org/openstack/devstack
