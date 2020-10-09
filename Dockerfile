@@ -16,10 +16,10 @@ RUN \
       linux-headers \
       musl-dev \
       python-dev \
-  && pip install -U pip setuptools \
+  && pip --no-cache-dir install -U pip setuptools \
   \
   && cd /opt/kuryr-libnetwork \
-  && pip install . \
+  && pip --no-cache-dir install . \
   && cd / \
   && apk del build-deps
 
