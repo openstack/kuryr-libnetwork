@@ -95,6 +95,7 @@ Install and configure components
       [Service]
       ExecStart = /usr/local/bin/kuryr-server --config-file /etc/kuryr/kuryr.conf
       CapabilityBoundingSet = CAP_NET_ADMIN
+      AmbientCapabilities = CAP_NET_ADMIN
 
       [Install]
       WantedBy = multi-user.target
