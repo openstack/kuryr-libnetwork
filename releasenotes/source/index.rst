@@ -5,6 +5,7 @@ Welcome to Kuryr-Libnetwork's documentation!
    :maxdepth: 1
 
    unreleased
+   wallaby
    victoria
    ussuri
    train
