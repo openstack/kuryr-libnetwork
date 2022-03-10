@@ -5,6 +5,7 @@ Welcome to Kuryr-Libnetwork's documentation!
    :maxdepth: 1
 
    unreleased
+   yoga
    xena
    wallaby
    victoria
