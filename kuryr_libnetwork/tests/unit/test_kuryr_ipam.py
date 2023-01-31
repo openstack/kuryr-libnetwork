@@ -570,7 +570,7 @@ class TestKuryrIpam(base.TestKuryrBase):
         if mock_app.tag_ext:
             mock_list_subnetpools.assert_called_with(
                 id=fake_kuryr_subnetpool_id)
-            mock_list_subnets.assert_called_with(
+            mock_list_subnets.assert_any_call(
                 cidr=FAKE_IP4_CIDR)
             mock_remove_tag.assert_called_with('subnets',
                                                subnet_v4_id,

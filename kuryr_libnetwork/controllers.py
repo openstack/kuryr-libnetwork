@@ -1859,6 +1859,21 @@ def ipam_release_pool():
                       'subnetpool.')
             return flask.jsonify(const.SCHEMA['SUCCESS'])
 
+    # Delete subnets created by kuryr
+    filtered_subnets = _get_subnets_by_attrs(
+        subnetpool_id=pool_id)
+    for subnet in filtered_subnets:
+        try:
+            subnet_name = subnet.get('name')
+            if str(subnet_name).startswith(const.SUBNET_NAME_PREFIX):
+                app.neutron.delete_subnet(subnet['id'])
+        except n_exceptions.Conflict:
+            LOG.error("Subnet %s is in use, "
+                      "can't be deleted.", subnet['id'])
+        except n_exceptions.NeutronClientException as ex:
+            LOG.error("Error happened during deleting a "
+                      "subnet created by kuryr: %s", ex)
+
     try:
         app.neutron.delete_subnetpool(pool_id)
     except n_exceptions.Conflict:
