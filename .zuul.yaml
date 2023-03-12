@@ -59,7 +59,6 @@
     vars:
       devstack_localrc:
         KURYR_CONFIG_DIR: /etc/kuryr-libnetwork
-        KURYR_CAPABILITY_SCOPE: global
       devstack_plugins:
         devstack-plugin-container: https://opendev.org/openstack/devstack-plugin-container
         kuryr-libnetwork: https://opendev.org/openstack/kuryr-libnetwork
