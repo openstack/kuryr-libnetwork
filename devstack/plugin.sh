@@ -74,7 +74,7 @@ function configure_kuryr {
 
 # main loop
 if is_service_enabled kuryr-libnetwork; then
-    DISTRO_DISTUTILS_DATA_PATH=$(python3 -c "import distutils.dist;import distutils.command.install;inst = distutils.command.install.install(distutils.dist.Distribution());inst.finalize_options();print(inst.install_data)")
+    DISTRO_DISTUTILS_DATA_PATH=$($PYTHON -c "import distutils.dist;import distutils.command.install;inst = distutils.command.install.install(distutils.dist.Distribution());inst.finalize_options();print(inst.install_data)")
     if [[ "$1" == "stack" && "$2" == "install" ]]; then
         # Install kuryr-lib from git so we make sure we're testing
         # the latest code.
