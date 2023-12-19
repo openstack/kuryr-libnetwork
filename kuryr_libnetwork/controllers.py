@@ -624,10 +624,12 @@ def _create_kuryr_subnetpool(pool_cidr, pool_tag, shared):
     if pool_tag:
         kwargs['tags'] = [pool_tag]
     pools = _get_subnetpools_by_attrs(**kwargs)
-    if len(pools):
+    if len(pools) == 1:
+        LOG.info("Subnetpool has already been created")
+        return pools[0]
+    elif len(pools) > 1:
         raise exceptions.KuryrException(
-            "Another pool with same cidr exist. ipam and network"
-            " options not used to pass pool name")
+            "Multiple subnetpools have the same pool name")
 
     cidr = ipaddress.ip_network(str(pool_cidr))
     new_subnetpool = {
