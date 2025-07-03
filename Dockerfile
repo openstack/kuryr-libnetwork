@@ -1,38 +1,43 @@
-FROM alpine:3.4
-MAINTAINER Antoni Segura Puimedon "toni@kuryr.org"
-WORKDIR /
-COPY . /opt/kuryr-libnetwork
-RUN \
-  apk add --no-cache \
-    bash \
-    iproute2 \
-    openvswitch \
-    py-pip \
-    python \
-    uwsgi-python \
-  && apk add --no-cache --virtual build-deps \
-      gcc \
-      git \
-      linux-headers \
-      musl-dev \
-      python-dev \
-  && pip --no-cache-dir install -U pip setuptools \
-  \
-  && cd /opt/kuryr-libnetwork \
-  && pip --no-cache-dir install . \
-  && cd / \
-  && apk del build-deps
+FROM alpine:3.18
 
-ENV SERVICE_USER="admin"
-ENV SERVICE_PROJECT_NAME="admin"
-ENV SERVICE_PASSWORD="pass"
-ENV SERVICE_DOMAIN_NAME="Default"
-ENV USER_DOMAIN_NAME="Default"
-ENV IDENTITY_URL="http://127.0.0.1:5000/v3"
-ENV CAPABILITY_SCOPE="local"
-ENV HTTP_SOCKET=":23750"
-ENV LOG_LEVEL="INFO"
-ENV PROCESSES=2
+LABEL maintainer="Antoni Segura Puimedon <toni@kuryr.org>"
+
+WORKDIR /
+
+COPY . /opt/kuryr-libnetwork
+
+RUN set -ex && \
+    apk add --no-cache \
+        bash \
+        iproute2 \
+        openvswitch \
+        py3-pip \
+        python3 \
+        uwsgi-python3 \
+    && apk add --no-cache --virtual build-deps \
+        gcc \
+        git \
+        linux-headers \
+        musl-dev \
+        python3-dev \
+    && pip3 install --upgrade pip setuptools \
+    && cd /opt/kuryr-libnetwork \
+    && pip3 install . \
+    && cd / \
+    && apk del build-deps \
+    && rm -rf /root/.cache /var/cache/apk/*
+
+# Environment variables (can be overridden at runtime)
+ENV SERVICE_USER="admin" \
+    SERVICE_PROJECT_NAME="admin" \
+    SERVICE_PASSWORD="pass" \
+    SERVICE_DOMAIN_NAME="Default" \
+    USER_DOMAIN_NAME="Default" \
+    IDENTITY_URL="http://127.0.0.1:5000/v3" \
+    CAPABILITY_SCOPE="local" \
+    HTTP_SOCKET=":23750" \
+    LOG_LEVEL="INFO" \
+    PROCESSES=2
 
 VOLUME /var/log/kuryr
 
