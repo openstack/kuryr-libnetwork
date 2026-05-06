@@ -34,7 +34,7 @@ _kuryr_libnetwork_opts = [
 
 
 def list_kuryr_libnetwork_opts():
-    """Return a list of oslo_config options available in kuryr-libnetwork service.
+    """Return a list of oslo_config options available in kuryr-libnetwork.
 
     Each element of the list is a tuple. The first element is the name of the
     group under which the list of elements in the second element will be
