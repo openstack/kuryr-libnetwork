@@ -1,24 +1,17 @@
-========================
-Team and repository tags
-========================
-
-.. image:: https://governance.openstack.org/tc/badges/kuryr-libnetwork.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
-
-.. Change things from this point on
-
 ================
 kuryr-libnetwork
 ================
+
+.. image:: https://governance.openstack.org/tc/badges/kuryr-libnetwork.svg
 
 .. image:: https://raw.githubusercontent.com/openstack/kuryr/master/doc/images/kuryr_logo.png
     :alt: Kuryr mascot
     :align: center
 
 
-Docker for OpenStack Neutron
+Docker for OpenStack Neutron.
 
-Kuryr-libnetwork is `Kuryr's <https://github.com/openstack/kuryr>`_ Docker
+Kuryr-libnetwork is `Kuryr's <https://opendev.org/openstack/kuryr>`_ Docker
 libnetwork driver that uses Neutron to provide networking services. It provides
 containerised images for the common Neutron plugins.
 
@@ -27,11 +20,10 @@ for libnetwork apis. All the logic/utilities that can be shared among
 different container networking frameworks such as Docker's libnetwork,
 K8s's CNI and so on, is maintained in separate Kuryr repo as a common library.
 
-
 * Free software: Apache license
 * Documentation: https://docs.openstack.org/kuryr-libnetwork/latest/
-* Source: http://opendev.org/openstack/kuryr-libnetwork
-* Bugs: http://bugs.launchpad.net/kuryr-libnetwork
+* Source: https://opendev.org/openstack/kuryr-libnetwork
+* Bugs: https://bugs.launchpad.net/kuryr-libnetwork
 * Release Notes: https://docs.openstack.org/releasenotes/kuryr-libnetwork
 * Blueprints: https://blueprints.launchpad.net/kuryr-libnetwork
 
@@ -154,7 +146,6 @@ container::
       -v /var/run/openvswitch:/var/run/openvswitch:rw \
       kuryr/libnetwork
 
-
 Getting it from source
 ----------------------
 
@@ -171,14 +162,12 @@ Install prerequisites
 
     $ sudo pip3 install -r requirements.txt
 
-
 Installing Kuryr's libnetwork driver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Running the following will grab the requirements and install kuryr::
 
     $ sudo pip3 install .
-
 
 Configuring Kuryr
 ~~~~~~~~~~~~~~~~~
@@ -192,11 +181,10 @@ Rename and copy config file at required path::
 
     $ cp etc/kuryr.conf.sample /etc/kuryr/kuryr.conf
 
-
 For using Keystone v3, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
 
     [neutron]
-    auth_url = http://127.0.0.1:5000/v3/
+    auth_url = http://127.0.0.1:5000
     username = admin
     user_domain_name = Default
     password = ADMIN_PASSWORD
@@ -204,23 +192,11 @@ For using Keystone v3, edit the Neutron section in `/etc/kuryr/kuryr.conf`, repl
     project_domain_name = Default
     auth_type = password
 
-
-Alternatively, for using Keystone v2, edit the Neutron section in `/etc/kuryr/kuryr.conf`, replace ADMIN_PASSWORD::
-
-    [neutron]
-    auth_url = http://127.0.0.1:5000/v2.0/
-    username = admin
-    password = ADMIN_PASSWORD
-    project_name = service
-    auth_type = password
-
-
 In the same file uncomment the `bindir` parameter with the path for the Kuryr
 vif binding executables. For example, if you installed it on Debian or Ubuntu::
 
     [DEFAULT]
     bindir = /usr/local/libexec/kuryr
-
 
 Running Kuryr
 ~~~~~~~~~~~~~
@@ -286,7 +262,6 @@ The bash script creates the following file if it is missing:
 
 Note the root privilege is required for creating and deleting the veth pairs
 with `pyroute2 <http://docs.pyroute2.org/>`_ to run.
-
 
 kuryr-libnetwork docker managed pluginv2
 ----------------------------------------
@@ -477,10 +452,3 @@ pools with the same name::
       --ipam-opt=neutron.pool.uuid=2d5767a4-6c96-4522-ab1d-a06d7adc9e23 \
       bar
       0aed1efbe21f6c29dc77eccd0dd17ba729274f9275070e1469230c864f9054ff
-
-
-External Resources
-------------------
-
-The latest and most in-depth documentation is available at:
-    <https://github.com/openstack/kuryr/tree/master/doc/source>
