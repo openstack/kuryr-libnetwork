@@ -32,7 +32,7 @@ class TestKuryrSchema(base.TestKuryrBase):
         target_schema = commons.COMMONS[u'definitions'][u'id']
         self._validate_schema(network_id, target_schema)
 
-    def test_network_id_invalid_charactor(self):
+    def test_network_id_invalid_character(self):
         network_id = '@#qzd9p112o4kvok38n3cax&%'
         target_schema = commons.COMMONS[u'definitions'][u'id']
         self.assertRaises(ValidationError, jsonschema.validate, network_id,
