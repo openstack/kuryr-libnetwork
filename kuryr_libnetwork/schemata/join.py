@@ -14,39 +14,39 @@ from kuryr_libnetwork.schemata.commons import COMMONS
 
 
 JOIN_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.Join',
-        u'description': u'Join the network',
-        u'rel': u'self',
-        u'title': u'Create'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.Join',
+        'description': 'Join the network',
+        'rel': 'self',
+        'title': 'Create'
     }],
-    u'title': u'Join endpoint',
-    u'required': [
-        u'NetworkID',
-        u'EndpointID',
-        u'SandboxKey'
+    'title': 'Join endpoint',
+    'required': [
+        'NetworkID',
+        'EndpointID',
+        'SandboxKey'
     ],
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'Network ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'properties': {
+        'NetworkID': {
+            'description': 'Network ID',
+            '$ref': '#/definitions/commons/definitions/id'
         },
-        u'SandboxKey': {
-            u'description': u'Sandbox Key',
-            u'$ref': u'#/definitions/commons/definitions/sandbox_key'
+        'SandboxKey': {
+            'description': 'Sandbox Key',
+            '$ref': '#/definitions/commons/definitions/sandbox_key'
         },
-        u'Options': {
-            u'$ref': u'#/definitions/commons/definitions/options'
+        'Options': {
+            '$ref': '#/definitions/commons/definitions/options'
         },
-        u'EndpointID': {
-            u'description': u'Endpoint ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+        'EndpointID': {
+            'description': 'Endpoint ID',
+            '$ref': '#/definitions/commons/definitions/id'
         }
     },
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
 }
 
-JOIN_SCHEMA[u'definitions'][u'commons'] = COMMONS
+JOIN_SCHEMA['definitions']['commons'] = COMMONS

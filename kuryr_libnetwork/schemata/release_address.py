@@ -13,29 +13,29 @@
 from kuryr_libnetwork.schemata import commons
 
 RELEASE_ADDRESS_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/IpamDriver.ReleaseAddress',
-        u'description': u'Release an ip address',
-        u'rel': u'self',
-        u'title': u'Release'
+    'links': [{
+        'method': 'POST',
+        'href': '/IpamDriver.ReleaseAddress',
+        'description': 'Release an ip address',
+        'rel': 'self',
+        'title': 'Release'
     }],
-    u'title': u'Release an IP',
-    u'required': [u'PoolID', u'Address'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'PoolID': {
-            u'description': u'neutron uuid of allocated subnetpool',
-            u'$ref': u'#/definitions/commons/definitions/uuid'
+    'title': 'Release an IP',
+    'required': ['PoolID', 'Address'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'PoolID': {
+            'description': 'neutron uuid of allocated subnetpool',
+            '$ref': '#/definitions/commons/definitions/uuid'
         },
-        u'Address': {
-            u'description': u'Address in IP(v4 or v6) form',
-            u'$ref': u'#/definitions/commons/definitions/ipv4_or_ipv6'
+        'Address': {
+            'description': 'Address in IP(v4 or v6) form',
+            '$ref': '#/definitions/commons/definitions/ipv4_or_ipv6'
         }
     }
 
 }
 
-RELEASE_ADDRESS_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+RELEASE_ADDRESS_SCHEMA['definitions']['commons'] = commons.COMMONS

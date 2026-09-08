@@ -13,46 +13,46 @@
 from kuryr_libnetwork.schemata import commons
 
 REQUEST_POOL_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/IpamDriver.RequestPool',
-        u'description': u'Allocate pool of ip addresses',
-        u'rel': u'self',
-        u'title': u'Create'
+    'links': [{
+        'method': 'POST',
+        'href': '/IpamDriver.RequestPool',
+        'description': 'Allocate pool of ip addresses',
+        'rel': 'self',
+        'title': 'Create'
     }],
-    u'title': u'Create pool',
-    u'required': [u'AddressSpace', u'Pool', u'SubPool', u'V6'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'AddressSpace': {
-            u'description': u'The name of the address space.',
-            u'type': u'string',
-            u'example': u'foo',
+    'title': 'Create pool',
+    'required': ['AddressSpace', 'Pool', 'SubPool', 'V6'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'AddressSpace': {
+            'description': 'The name of the address space.',
+            'type': 'string',
+            'example': 'foo',
         },
-        u'Pool': {
-            u'description': u'A range of IP Addresses represented in '
-                            u'CIDR format address/mask.',
-            u'$ref': u'#/definitions/commons/definitions/cidrv4_or_cidrv6'
+        'Pool': {
+            'description': 'A range of IP Addresses represented in '
+                           'CIDR format address/mask.',
+            '$ref': '#/definitions/commons/definitions/cidrv4_or_cidrv6'
         },
-        u'SubPool': {
-            u'description': u'A subset of IP range from Pool in'
-                            u'CIDR format address/mask.',
-            u'$ref': u'#/definitions/commons/definitions/cidrv4_or_cidrv6'
+        'SubPool': {
+            'description': 'A subset of IP range from Pool in '
+                           'CIDR format address/mask.',
+            '$ref': '#/definitions/commons/definitions/cidrv4_or_cidrv6'
         },
-        u'Options': {
-            u'type': [u'object', u'null'],
-            u'description': u'Options',
-            u'example': {},
+        'Options': {
+            'type': ['object', 'null'],
+            'description': 'Options',
+            'example': {},
         },
-        u'V6': {
-            u'description': u'If set to "True", requesting IPv6 pool and '
-                            u'vice-versa.',
-            u'type': u'boolean',
-            u'example': False
+        'V6': {
+            'description': 'If set to "True", requesting IPv6 pool and '
+                           'vice-versa.',
+            'type': 'boolean',
+            'example': False
         }
     }
 }
 
-REQUEST_POOL_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+REQUEST_POOL_SCHEMA['definitions']['commons'] = commons.COMMONS

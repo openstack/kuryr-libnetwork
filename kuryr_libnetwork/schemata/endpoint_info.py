@@ -13,28 +13,28 @@
 from kuryr_libnetwork.schemata import commons
 
 ENDPOINT_INFO_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.EndpointOperInfo',
-        u'description': u'Show an Endpoint operational info',
-        u'rel': u'self',
-        u'title': u'Show'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.EndpointOperInfo',
+        'description': 'Show an Endpoint operational info',
+        'rel': 'self',
+        'title': 'Show'
     }],
-    u'title': u'Show endpoint operational info',
-    u'required': [u'NetworkID', u'EndpointID'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'Network ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'title': 'Show endpoint operational info',
+    'required': ['NetworkID', 'EndpointID'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'NetworkID': {
+            'description': 'Network ID',
+            '$ref': '#/definitions/commons/definitions/id'
         },
-        u'EndpointID': {
-            u'description': u'Endpoint ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+        'EndpointID': {
+            'description': 'Endpoint ID',
+            '$ref': '#/definitions/commons/definitions/id'
         }
     }
 }
 
-ENDPOINT_INFO_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+ENDPOINT_INFO_SCHEMA['definitions']['commons'] = commons.COMMONS

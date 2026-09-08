@@ -24,23 +24,23 @@ class TestKuryrSchema(base.TestKuryrBase):
     def test_network_id_64_len(self):
         network_id = '51c75a2515d47edecc3f720bb541e287224416fb66715eb' \
                      '7802011d6ffd499f1'
-        target_schema = commons.COMMONS[u'definitions'][u'id']
+        target_schema = commons.COMMONS['definitions']['id']
         self._validate_schema(network_id, target_schema)
 
     def test_network_id_25_len(self):
         network_id = 'xqqzd9p112o4kvok38n3caxjm'
-        target_schema = commons.COMMONS[u'definitions'][u'id']
+        target_schema = commons.COMMONS['definitions']['id']
         self._validate_schema(network_id, target_schema)
 
     def test_network_id_invalid_charactor(self):
         network_id = '@#qzd9p112o4kvok38n3cax&%'
-        target_schema = commons.COMMONS[u'definitions'][u'id']
+        target_schema = commons.COMMONS['definitions']['id']
         self.assertRaises(ValidationError, jsonschema.validate, network_id,
                           target_schema)
 
     def test_network_id_invalid_length(self):
         network_id = 'xqqzd9p112o4kvok38n3caxjmabcd'
-        target_schema = commons.COMMONS[u'definitions'][u'id']
+        target_schema = commons.COMMONS['definitions']['id']
         self.assertRaises(ValidationError, jsonschema.validate, network_id,
                           target_schema)
 

@@ -13,36 +13,36 @@
 from kuryr_libnetwork.schemata import commons
 
 ENDPOINT_CREATE_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.CreateEndpoint',
-        u'description': u'Create an Endpoint',
-        u'rel': u'self',
-        u'title': u'Create'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.CreateEndpoint',
+        'description': 'Create an Endpoint',
+        'rel': 'self',
+        'title': 'Create'
     }],
-    u'title': u'Create endpoint',
-    u'required': [u'NetworkID', u'EndpointID', u'Options', u'Interface'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'Network ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'title': 'Create endpoint',
+    'required': ['NetworkID', 'EndpointID', 'Options', 'Interface'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'NetworkID': {
+            'description': 'Network ID',
+            '$ref': '#/definitions/commons/definitions/id'
         },
-        u'Interface': {
-            u'$ref': u'#/definitions/commons/definitions/interface',
-            u'description': u'Interface information'
+        'Interface': {
+            '$ref': '#/definitions/commons/definitions/interface',
+            'description': 'Interface information'
         },
-        u'Options': {
-            u'description': u'Options',
-            u'$ref': u'#/definitions/commons/definitions/options'
+        'Options': {
+            'description': 'Options',
+            '$ref': '#/definitions/commons/definitions/options'
         },
-        u'EndpointID': {
-            u'description': u'Endpoint ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+        'EndpointID': {
+            'description': 'Endpoint ID',
+            '$ref': '#/definitions/commons/definitions/id'
         }
     }
 }
 
-ENDPOINT_CREATE_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+ENDPOINT_CREATE_SCHEMA['definitions']['commons'] = commons.COMMONS

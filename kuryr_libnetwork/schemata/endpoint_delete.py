@@ -13,28 +13,28 @@
 from kuryr_libnetwork.schemata import commons
 
 ENDPOINT_DELETE_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.DeleteEndpoint',
-        u'description': u'Delete an Endpoint',
-        u'rel': u'self',
-        u'title': u'Delete'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.DeleteEndpoint',
+        'description': 'Delete an Endpoint',
+        'rel': 'self',
+        'title': 'Delete'
     }],
-    u'title': u'Delete endpoint',
-    u'required': [u'NetworkID', u'EndpointID'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'Network ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'title': 'Delete endpoint',
+    'required': ['NetworkID', 'EndpointID'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'NetworkID': {
+            'description': 'Network ID',
+            '$ref': '#/definitions/commons/definitions/id'
         },
-        u'EndpointID': {
-            u'description': u'Endpoint ID',
-            u'$ref': u'#/definitions/commons/definitions/id'
+        'EndpointID': {
+            'description': 'Endpoint ID',
+            '$ref': '#/definitions/commons/definitions/id'
         }
     }
 }
 
-ENDPOINT_DELETE_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+ENDPOINT_DELETE_SCHEMA['definitions']['commons'] = commons.COMMONS
