@@ -116,9 +116,9 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
 
         port_opt = []
         for i in range(num_ports):
-            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_TCP})
-            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_UDP})
-        port_opt.append({u'Port': SINGLE_PORT, u'Proto': PROTOCOL_UDP})
+            port_opt.append({'Port': PORT + i, 'Proto': PROTOCOL_TCP})
+            port_opt.append({'Port': PORT + i, 'Proto': PROTOCOL_UDP})
+        port_opt.append({'Port': SINGLE_PORT, 'Proto': PROTOCOL_UDP})
         options = {'com.docker.network.endpoint.exposedports':
                    port_opt,
                    'com.docker.network.portmap':
@@ -164,9 +164,9 @@ class TestExternalConnectivityKuryr(base.TestKuryrBase):
 
         port_opt = []
         for i in range(num_ports):
-            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_TCP})
-            port_opt.append({u'Port': PORT + i, u'Proto': PROTOCOL_UDP})
-        port_opt.append({u'Port': SINGLE_PORT, u'Proto': PROTOCOL_UDP})
+            port_opt.append({'Port': PORT + i, 'Proto': PROTOCOL_TCP})
+            port_opt.append({'Port': PORT + i, 'Proto': PROTOCOL_UDP})
+        port_opt.append({'Port': SINGLE_PORT, 'Proto': PROTOCOL_UDP})
         options = {'com.docker.network.endpoint.exposedports':
                    port_opt,
                    'com.docker.network.portmap':

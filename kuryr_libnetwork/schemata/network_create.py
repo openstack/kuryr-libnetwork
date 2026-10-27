@@ -13,43 +13,43 @@
 from kuryr_libnetwork.schemata import commons
 
 NETWORK_CREATE_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.CreateNetwork',
-        u'description': u'Create a Network',
-        u'rel': u'self',
-        u'title': u'Create'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.CreateNetwork',
+        'description': 'Create a Network',
+        'rel': 'self',
+        'title': 'Create'
     }],
-    u'title': u'Create network',
-    u'required': [u'NetworkID', u'IPv4Data', u'IPv6Data'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'ID of a Network to be created',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'title': 'Create network',
+    'required': ['NetworkID', 'IPv4Data', 'IPv6Data'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'NetworkID': {
+            'description': 'ID of a Network to be created',
+            '$ref': '#/definitions/commons/definitions/id'
         },
-        u'IPv4Data': {
-            u'description': u'IPv4 data for the network',
-            u'type': u'array',
-            u'items': {
-                u'$ref': u'#/definitions/commons/definitions/ipv4datum'
+        'IPv4Data': {
+            'description': 'IPv4 data for the network',
+            'type': 'array',
+            'items': {
+                '$ref': '#/definitions/commons/definitions/ipv4datum'
             }
         },
-        u'IPv6Data': {
-            u'description': u'IPv6 data for the network',
-            u'type': u'array',
-            u'items': {
-                u'$ref': u'#/definitions/commons/definitions/ipv6datum'
+        'IPv6Data': {
+            'description': 'IPv6 data for the network',
+            'type': 'array',
+            'items': {
+                '$ref': '#/definitions/commons/definitions/ipv6datum'
             }
         },
-        u'Options': {
-            u'type': [u'object', u'null'],
-            u'description': u'Options',
-            u'example': {}
+        'Options': {
+            'type': ['object', 'null'],
+            'description': 'Options',
+            'example': {}
         }
     }
 }
 
-NETWORK_CREATE_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+NETWORK_CREATE_SCHEMA['definitions']['commons'] = commons.COMMONS

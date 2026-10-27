@@ -13,24 +13,24 @@
 from kuryr_libnetwork.schemata import commons
 
 NETWORK_DELETE_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/NetworkDriver.DeleteNetwork',
-        u'description': u'Delete a Network',
-        u'rel': u'self',
-        u'title': u'Delete'
+    'links': [{
+        'method': 'POST',
+        'href': '/NetworkDriver.DeleteNetwork',
+        'description': 'Delete a Network',
+        'rel': 'self',
+        'title': 'Delete'
     }],
-    u'title': u'Delete network',
-    u'required': [u'NetworkID'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'NetworkID': {
-            u'description': u'ID of the Network ID to be deleted',
-            u'$ref': u'#/definitions/commons/definitions/id'
+    'title': 'Delete network',
+    'required': ['NetworkID'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'NetworkID': {
+            'description': 'ID of the Network ID to be deleted',
+            '$ref': '#/definitions/commons/definitions/id'
         }
     }
 }
 
-NETWORK_DELETE_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+NETWORK_DELETE_SCHEMA['definitions']['commons'] = commons.COMMONS

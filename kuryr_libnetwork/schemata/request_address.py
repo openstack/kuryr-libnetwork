@@ -13,35 +13,35 @@
 from kuryr_libnetwork.schemata import commons
 
 REQUEST_ADDRESS_SCHEMA = {
-    u'links': [{
-        u'method': u'POST',
-        u'href': u'/IpamDriver.RequestAddress',
-        u'description': u'Allocate an ip addresses',
-        u'rel': u'self',
-        u'title': u'Create'
+    'links': [{
+        'method': 'POST',
+        'href': '/IpamDriver.RequestAddress',
+        'description': 'Allocate an ip addresses',
+        'rel': 'self',
+        'title': 'Create'
     }],
-    u'title': u'Create an IP',
-    u'required': [u'PoolID', u'Address', u'Options'],
-    u'definitions': {u'commons': {}},
-    u'$schema': u'http://json-schema.org/draft-04/hyper-schema',
-    u'type': u'object',
-    u'properties': {
-        u'PoolID': {
-            u'description': u'neutron uuid of allocated subnetpool',
-            u'$ref': u'#/definitions/commons/definitions/uuid'
+    'title': 'Create an IP',
+    'required': ['PoolID', 'Address', 'Options'],
+    'definitions': {'commons': {}},
+    '$schema': 'http://json-schema.org/draft-04/hyper-schema',
+    'type': 'object',
+    'properties': {
+        'PoolID': {
+            'description': 'neutron uuid of allocated subnetpool',
+            '$ref': '#/definitions/commons/definitions/uuid'
         },
-        u'Address': {
-            u'description': u'Preferred address in regular IP form.',
-            u'example': u'10.0.0.1',
-            u'$ref': u'#/definitions/commons/definitions/ipv4_or_ipv6'
+        'Address': {
+            'description': 'Preferred address in regular IP form.',
+            'example': '10.0.0.1',
+            '$ref': '#/definitions/commons/definitions/ipv4_or_ipv6'
         },
-        u'Options': {
-            u'type': [u'object', u'null'],
-            u'description': u'Options',
-            u'example': {}
+        'Options': {
+            'type': ['object', 'null'],
+            'description': 'Options',
+            'example': {}
         }
     }
 
 }
 
-REQUEST_ADDRESS_SCHEMA[u'definitions'][u'commons'] = commons.COMMONS
+REQUEST_ADDRESS_SCHEMA['definitions']['commons'] = commons.COMMONS

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Kuryr-Libnetwork documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 17 09:02:23 2017.
 #
@@ -15,11 +13,6 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
 
 # -- General configuration ------------------------------------------------
 
@@ -48,9 +41,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Kuryr-Libnetwork'
-copyright = u'2017, Kuryr-Libnetwork Developers'
-author = u'Kuryr-Libnetwork Developers'
+project = 'Kuryr-Libnetwork'
+copyright = '2017, Kuryr-Libnetwork Developers'
+author = 'Kuryr-Libnetwork Developers'
 
 # openstackdocstheme options
 openstackdocs_repo_name = 'openstack/kuryr-libnetwork'
@@ -133,20 +126,18 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Kuryr-Libnetwork.tex', u'Kuryr-Libnetwork Documentation',
-     u'Kuryr-Libnetwork Developers', 'manual'),
+    (master_doc, 'Kuryr-Libnetwork.tex', 'Kuryr-Libnetwork Documentation',
+     'Kuryr-Libnetwork Developers', 'manual'),
 ]
-
 
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'kuryr-libnetwork', u'Kuryr-Libnetwork Documentation',
+    (master_doc, 'kuryr-libnetwork', 'Kuryr-Libnetwork Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output -------------------------------------------
 
@@ -154,7 +145,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Kuryr-Libnetwork', u'Kuryr-Libnetwork Documentation',
+    (master_doc, 'Kuryr-Libnetwork', 'Kuryr-Libnetwork Documentation',
      author, 'Kuryr-Libnetwork', 'One line description of project.',
      'Miscellaneous'),
 ]
